@@ -23,14 +23,38 @@ echo "mise: using $MISE"
 echo "bootstrap: installing core tools..."
 
 if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
-  echo "$ARCH detected: using apt fallback for bootstrap tools"
+  echo "$ARCH detected: using apt/manual fallback for bootstrap tools"
 
   if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
-    sudo apt-get install -y age chezmoi
+    sudo apt-get install -y age tar gzip
   else
     echo "apt-get not found; cannot install bootstrap tools on $ARCH"
     exit 1
+  fi
+
+  if ! command -v chezmoi >/dev/null 2>&1; then
+    CHEZMOI_VERSION="$(
+      curl -fsIL https://github.com/twpayne/chezmoi/releases/latest \
+        | awk -F/ '/^location:/ {print $NF}' \
+        | tr -d '\r' \
+        | sed 's/^v//'
+    )"
+
+    [ -n "$CHEZMOI_VERSION" ] || {
+      echo "chezmoi: failed to resolve latest version"
+      exit 1
+    }
+
+    CHEZMOI_TARBALL="chezmoi_${CHEZMOI_VERSION}_linux_arm.tar.gz"
+    CHEZMOI_URL="https://github.com/twpayne/chezmoi/releases/download/v${CHEZMOI_VERSION}/${CHEZMOI_TARBALL}"
+
+    tmpdir="$(mktemp -d)"
+    curl -fsSL -o "$tmpdir/$CHEZMOI_TARBALL" "$CHEZMOI_URL"
+    tar -xzf "$tmpdir/$CHEZMOI_TARBALL" -C "$tmpdir"
+    mkdir -p "$HOME/.local/bin"
+    install -m 755 "$tmpdir/chezmoi" "$HOME/.local/bin/chezmoi"
+    rm -rf "$tmpdir"
   fi
 
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
