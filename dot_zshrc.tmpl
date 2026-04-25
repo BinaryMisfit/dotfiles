@@ -151,6 +151,11 @@ fi
 [[ -n "${FZF_DEFAULT_COMMAND:-}" ]] && export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-} --height=40% --layout=reverse --ansi --preview='$FZF_PREVIEW_COMMAND' --bind='ctrl-z:ignore'"
 
+if command -v atuin >/dev/null 2>&1; then
+  eval "$(atuin init zsh --disable-up-arrow --disable-ai)"
+  bindkey '^R' atuin-search
+fi
+
 # -----------------------------------------------------------------------------
 # Copy text to client clipboard via OSC52
 # -----------------------------------------------------------------------------
