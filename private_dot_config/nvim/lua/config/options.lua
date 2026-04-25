@@ -23,6 +23,21 @@ o.swapfile = false
 o.backup = false
 
 o.termguicolors = true
-o.clipboard = "unnamedplus" -- will fallback gracefully over SSH
 
 vim.opt.termguicolors = true
+vim.g.loaded_node_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider = 0
+
+if vim.g.format_on_save_enabled == nil then
+	vim.g.format_on_save_enabled = true
+end
+
+vim.diagnostic.config({
+	virtual_text = false,
+	signs = true,
+	underline = true,
+	update_in_insert = false,
+	severity_sort = true,
+})
