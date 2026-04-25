@@ -7,6 +7,14 @@ fi
 # Only proceed for interactive shells
 [[ -o interactive ]] || return
 
+# Private environment
+[[ -r "$HOME/.config/shell/env.zsh" ]] && source "$HOME/.config/shell/env.zsh"
+
+# mise
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
 # mise
 if command -v mise >/dev/null 2>&1; then
   eval "$(mise activate zsh)"
