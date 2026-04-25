@@ -20,4 +20,4 @@ if ! command -v chezmoi >/dev/null 2>&1; then
   mise use -g chezmoi@latest
 fi
 
-mise exec chezmoi@latest -- chezmoi init --apply "$REPO"
+"$HOME/.local/share/mise/shims/chezmoi" init --apply "$REPO"
