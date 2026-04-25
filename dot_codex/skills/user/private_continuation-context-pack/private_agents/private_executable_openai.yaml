@@ -1,0 +1,3 @@
+display_name: Continuation Context Pack
+short_description: Generate compact session handoff packets.
+default_prompt: Pack my context.
