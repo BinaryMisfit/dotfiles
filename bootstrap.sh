@@ -2,13 +2,13 @@
 set -eu
 
 REPO="${CHEZMOI_REPO:-BinaryMisfit}"
+ARCH="$(uname -m)"
 
 echo "bootstrap: starting"
+echo "bootstrap: arch=$ARCH"
 
-# Base PATH
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
-# Install mise if missing
 if ! command -v mise >/dev/null 2>&1; then
   echo "mise: installing..."
   curl -fsLS https://mise.run | sh
@@ -20,9 +20,6 @@ MISE="$(command -v mise || true)"
 [ -n "$MISE" ] || { echo "mise: not found after install"; exit 1; }
 
 echo "mise: using $MISE"
-
-ARCH="$(uname -m)"
-
 echo "bootstrap: installing core tools..."
 
 if [ "$ARCH" = "armv6l" ]; then
@@ -31,21 +28,25 @@ if [ "$ARCH" = "armv6l" ]; then
   if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
     sudo apt-get install -y age
+  else
+    echo "apt-get not found; cannot install age on armv6l"
+    exit 1
   fi
 
   if ! command -v chezmoi >/dev/null 2>&1; then
     sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "$HOME/.local/bin"
   fi
+
+  # On armv6l, prefer fallback binaries over mise shims.
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 else
   "$MISE" use -g age@latest
   "$MISE" use -g chezmoi@latest
   "$MISE" install age@latest chezmoi@latest
+  "$MISE" reshim || true
+
+  export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 fi
-
-"$MISE" reshim || true
-
-# Ensure PATH is correct after installs
-export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 
 CHEZMOI="$(command -v chezmoi || true)"
 AGE_KEYGEN="$(command -v age-keygen || true)"
@@ -56,7 +57,6 @@ AGE_KEYGEN="$(command -v age-keygen || true)"
 echo "chezmoi: using $CHEZMOI"
 echo "age-keygen: using $AGE_KEYGEN"
 
-# Setup chezmoi encryption config
 mkdir -p "$HOME/.config/chezmoi"
 
 if [ ! -f "$HOME/.config/chezmoi/age.key" ]; then
@@ -86,7 +86,6 @@ EOF
 
 chmod 600 "$HOME/.config/chezmoi/chezmoi.yaml"
 
-# Initialize repo if needed
 if [ ! -d "$HOME/.local/share/chezmoi" ]; then
   echo "chezmoi: init $REPO"
   "$CHEZMOI" init "$REPO"
@@ -94,7 +93,6 @@ else
   echo "chezmoi: source already exists"
 fi
 
-# Apply non-encrypted config only
 echo "chezmoi: applying public config..."
 "$CHEZMOI" apply --exclude=encrypted
 
