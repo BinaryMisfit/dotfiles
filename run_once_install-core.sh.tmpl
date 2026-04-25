@@ -1,13 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
-# install mise if missing
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+
 if ! command -v mise >/dev/null 2>&1; then
   curl https://mise.run | sh
 fi
 
-# ensure mise is usable in this session
-export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
-
-# optional: install core tools you rely on immediately
 mise install
