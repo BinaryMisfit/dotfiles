@@ -1,23 +1,25 @@
-#!/usr/bin/env sh
-set -eu
+# Ensure mise is available
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
-REPO="https://github.com/BinaryMisfit/dotfiles.git"
-
-export PATH="$HOME/.local/bin:$HOME/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/share/mise/shims:$PATH"
-
-if ! command -v curl >/dev/null 2>&1; then
-  echo "curl is required but not installed."
+MISE="$(command -v mise || true)"
+if [ -z "$MISE" ]; then
+  echo "mise not found after install"
   exit 1
 fi
 
-if ! command -v mise >/dev/null 2>&1; then
-  curl https://mise.run | sh
-fi
-
-export PATH="$HOME/.local/bin:$HOME/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/share/mise/shims:$PATH"
-
+# Install chezmoi via mise if missing
 if ! command -v chezmoi >/dev/null 2>&1; then
-  mise use -g chezmoi@latest
+  echo "chezmoi: installing via mise..."
+  "$MISE" use -g chezmoi@latest
+  "$MISE" install chezmoi@latest
+  "$MISE" reshim || true
 fi
 
-"$HOME/.local/share/mise/shims/chezmoi" init --apply "$REPO"
+CHEZMOI="$(command -v chezmoi || true)"
+if [ -z "$CHEZMOI" ]; then
+  echo "chezmoi: still not found after mise install"
+  exit 1
+fi
+
+echo "chezmoi: using $CHEZMOI"
+"$CHEZMOI" init --apply BinaryMisfit
