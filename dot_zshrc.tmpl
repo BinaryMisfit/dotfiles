@@ -71,7 +71,8 @@ if command -v mise >/dev/null 2>&1; then
 fi
 
 # Terminal
-export TERM="${TERM:-xterm-256color}"
+export TERM=${TERM:-xterm-256color}
+export COLORTERM=${COLORTERM:-truecolor}
 
 # History config (must come before plugins that use history)
 HISTFILE="$HOME/.zsh_history"
