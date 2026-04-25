@@ -120,7 +120,7 @@ else
 fi
 
 echo "chezmoi: applying public config..."
-"$CHEZMOI" apply --exclude=encrypted
+"$CHEZMOI" apply --exclude=encrypted,scripts
 
 cat <<EOF
 
