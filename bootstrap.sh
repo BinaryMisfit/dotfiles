@@ -74,6 +74,19 @@ else
   export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 fi
 
+if ! command -v zsh >/dev/null 2>&1; then
+  echo "zsh: installing..."
+
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y zsh
+  elif command -v brew >/dev/null 2>&1; then
+    brew install zsh
+  else
+    echo "zsh: no supported package manager found"
+  fi
+fi
+
 CHEZMOI="$(command -v chezmoi || true)"
 AGE_KEYGEN="$(command -v age-keygen || true)"
 
