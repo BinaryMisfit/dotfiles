@@ -22,14 +22,14 @@ MISE="$(command -v mise || true)"
 echo "mise: using $MISE"
 echo "bootstrap: installing core tools..."
 
-if [ "$ARCH" = "armv6l" ]; then
-  echo "armv6l detected: using apt/script fallback"
+if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
+  echo "$ARCH detected: using apt/script fallback"
 
   if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
     sudo apt-get install -y age
   else
-    echo "apt-get not found; cannot install age on armv6l"
+    echo "apt-get not found; cannot install age on $ARCH"
     exit 1
   fi
 
