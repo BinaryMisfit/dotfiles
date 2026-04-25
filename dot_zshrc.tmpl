@@ -1,0 +1,205 @@
+# Enable Powerlevel10k instant prompt (if installed)
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Only proceed for interactive shells
+[[ -o interactive ]] || return
+
+# -----------------------------------------------------------------------------
+# Host / OS context
+# chezmoi renders this file per target machine. Keep OS-specific assumptions here,
+# not scattered across the rest of the shell config like confetti from a bad deploy.
+# -----------------------------------------------------------------------------
+export DOTFILES_OS="{{ .chezmoi.os }}"
+export DOTFILES_ARCH="{{ .chezmoi.arch }}"
+
+if [[ -r /etc/os-release ]]; then
+  . /etc/os-release
+  export DOTFILES_DISTRO="${ID:-linux}"
+  export DOTFILES_DISTRO_LIKE="${ID_LIKE:-}"
+else
+  export DOTFILES_DISTRO="$DOTFILES_OS"
+  export DOTFILES_DISTRO_LIKE=""
+fi
+
+# -----------------------------------------------------------------------------
+# PATH
+# Priority model:
+#   1. mise shims after activation
+#   2. user-local tools
+#   3. OS package manager tools
+#   4. system tools
+# -----------------------------------------------------------------------------
+path_prepend() {
+  [[ -d "$1" ]] || return 0
+  case ":$PATH:" in
+    *":$1:"*) ;;
+    *) export PATH="$1:$PATH" ;;
+  esac
+}
+
+path_prepend "$HOME/.local/bin"
+path_prepend "$HOME/bin"
+
+{{- if eq .chezmoi.os "darwin" }}
+# macOS Homebrew paths. Apple Silicon uses /opt/homebrew, Intel uses /usr/local.
+# Keep this macOS-only; Linux gets apt + mise, not Homebrew cosplay.
+if [[ -d /opt/homebrew/bin ]]; then
+  path_prepend /opt/homebrew/sbin
+  path_prepend /opt/homebrew/bin
+elif [[ -d /usr/local/bin ]]; then
+  path_prepend /usr/local/sbin
+  path_prepend /usr/local/bin
+fi
+{{- end }}
+
+{{- if eq .chezmoi.os "linux" }}
+# Debian / Ubuntu / Raspbian stay intentionally boring here.
+# System packages come from apt; developer tools come from mise.
+# No Linuxbrew path unless you deliberately add it later. Future-you is welcome.
+{{- end }}
+
+# Private environment. Source before mise so tools like aqua-backed mise installs
+# can see GITHUB_TOKEN and stop getting rate-limit punted by GitHub.
+[[ -r "$HOME/.config/shell/env.zsh" ]] && source "$HOME/.config/shell/env.zsh"
+
+# mise
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
+# Terminal
+export TERM="${TERM:-xterm-256color}"
+
+# History config (must come before plugins that use history)
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=10000
+SAVEHIST=10000
+HISTORY_SUBSTRING_SEARCH_PREFIXED=true
+
+# Zsh options
+setopt AUTOCD EXTENDED_GLOB HIST_FIND_NO_DUPS HIST_IGNORE_ALL_DUPS HIST_REDUCE_BLANKS INC_APPEND_HISTORY NO_BEEP SHARE_HISTORY
+
+# Fallback prompt only. Powerlevel10k owns the real prompt once loaded.
+if [[ -z "${POWERLEVEL9K_LEFT_PROMPT_ELEMENTS:-}" ]]; then
+  export PS1="%n@%m %1~ %# "
+fi
+
+# -----------------------------------------------------------------------------
+# Znap Plugin Manager
+# -----------------------------------------------------------------------------
+if [[ ! -d "$HOME/.zsh/plugins/znap" ]]; then
+  mkdir -p "$HOME/.zsh/plugins"
+  ( git clone --depth=1 https://github.com/marlonrichert/zsh-snap.git "$HOME/.zsh/plugins/znap" >/dev/null 2>&1 & )
+fi
+
+if [[ -s "$HOME/.zsh/plugins/znap/znap.zsh" ]]; then
+  source "$HOME/.zsh/plugins/znap/znap.zsh" 2>/dev/null || true
+
+  znap source marlonrichert/zsh-autosuggestions 2>/dev/null || true
+  znap source zdharma-continuum/fast-syntax-highlighting 2>/dev/null || true
+  znap source zsh-users/zsh-completions 2>/dev/null || true
+  znap source zsh-users/zsh-history-substring-search 2>/dev/null || true
+  znap source Aloxaf/fzf-tab 2>/dev/null || true
+  znap prompt romkatv/powerlevel10k 2>/dev/null || true
+
+  autoload -Uz compinit
+  compinit >/dev/null 2>&1 || true
+fi
+
+# Powerlevel10k user config
+[[ -f "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
+
+# -----------------------------------------------------------------------------
+# fzf shell integration from mise-managed fzf
+# -----------------------------------------------------------------------------
+if command -v fzf >/dev/null 2>&1; then
+  unset FZF_CTRL_R_COMMAND 2>/dev/null || true
+  source <(fzf --zsh)
+
+  if whence -w fzf-history-widget >/dev/null 2>&1; then
+    bindkey '^R' fzf-history-widget 2>/dev/null || true
+    bindkey '^[r' fzf-history-widget 2>/dev/null || bindkey 'M-r' fzf-history-widget 2>/dev/null || true
+  fi
+fi
+
+# fzf defaults
+if command -v fd >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+elif command -v fdfind >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND='fdfind --type f --hidden --follow --exclude .git'
+elif command -v rg >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
+fi
+
+if command -v bat >/dev/null 2>&1; then
+  export FZF_PREVIEW_COMMAND='bat --style=numbers --color=always {}'
+else
+  export FZF_PREVIEW_COMMAND='sed -n "1,200p" {} 2>/dev/null'
+fi
+
+[[ -n "${FZF_DEFAULT_COMMAND:-}" ]] && export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-} --height=40% --layout=reverse --ansi --preview='$FZF_PREVIEW_COMMAND' --bind='ctrl-z:ignore'"
+
+# -----------------------------------------------------------------------------
+# Copy text to client clipboard via OSC52
+# -----------------------------------------------------------------------------
+osc52_copy() {
+  local data b64 max_bytes=100000 seq
+
+  if [[ -t 0 ]]; then
+    data="$*"
+  else
+    data="$(cat -)"
+  fi
+
+  [[ -z "${data:-}" ]] && return 1
+
+  if [[ "${#data}" -gt "$max_bytes" ]]; then
+    printf 'osc52_copy: payload too large (%d bytes, limit %d)\n' "${#data}" "$max_bytes" >&2
+    return 2
+  fi
+
+  b64="$(printf '%s' "$data" | base64 | tr -d '\n')"
+  seq="$(printf '\033]52;c;%s\007' "$b64")"
+
+  if [[ -n "${TMUX:-}" ]]; then
+    printf '\033Ptmux;\033%s\033\\' "$seq"
+  else
+    printf '%s' "$seq"
+  fi
+}
+
+# Neovim
+export EDITOR=nvim
+export VISUAL=nvim
+
+# Aliases
+alias vi='nvim'
+alias vim='nvim'
+alias svi='sudoedit'
+alias svim='sudoedit'
+
+# Final keybinding overrides
+# Keep ↑/↓ as history-substring search, even if plugins get grabby.
+if (( $+functions[history-substring-search-up] )); then
+  # Normal cursor mode
+  bindkey -M emacs '^[[A' history-substring-search-up
+  bindkey -M emacs '^[[B' history-substring-search-down
+  bindkey -M viins '^[[A' history-substring-search-up
+  bindkey -M viins '^[[B' history-substring-search-down
+
+  # Application cursor mode, common in some terminals
+  bindkey -M emacs '^[OA' history-substring-search-up
+  bindkey -M emacs '^[OB' history-substring-search-down
+  bindkey -M viins '^[OA' history-substring-search-up
+  bindkey -M viins '^[OB' history-substring-search-down
+
+  # Ctrl-P / Ctrl-N fallback
+  bindkey -M emacs '^P' history-substring-search-up
+  bindkey -M emacs '^N' history-substring-search-down
+  bindkey -M viins '^P' history-substring-search-up
+  bindkey -M viins '^N' history-substring-search-down
+fi
