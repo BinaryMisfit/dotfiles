@@ -23,21 +23,16 @@ echo "mise: using $MISE"
 echo "bootstrap: installing core tools..."
 
 if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
-  echo "$ARCH detected: using apt/script fallback"
+  echo "$ARCH detected: using apt fallback for bootstrap tools"
 
   if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
-    sudo apt-get install -y age
+    sudo apt-get install -y age chezmoi
   else
-    echo "apt-get not found; cannot install age on $ARCH"
+    echo "apt-get not found; cannot install bootstrap tools on $ARCH"
     exit 1
   fi
 
-  if ! command -v chezmoi >/dev/null 2>&1; then
-    sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "$HOME/.local/bin"
-  fi
-
-  # On armv6l, prefer fallback binaries over mise shims.
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 else
   "$MISE" use -g age@latest
