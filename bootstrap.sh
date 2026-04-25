@@ -34,24 +34,21 @@ if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
   fi
 
   if ! command -v chezmoi >/dev/null 2>&1; then
-    CHEZMOI_VERSION="$(
-      curl -fsIL https://github.com/twpayne/chezmoi/releases/latest \
-        | awk -F/ '/^location:/ {print $NF}' \
-        | tr -d '\r' \
-        | sed 's/^v//'
+    echo "chezmoi: resolving latest linux_arm asset..."
+
+    CHEZMOI_URL="$(
+      curl -fsSL https://api.github.com/repos/twpayne/chezmoi/releases/latest \
+        | awk -F'"' '/browser_download_url/ && /linux_arm\.tar\.gz/ {print $4; exit}'
     )"
 
-    [ -n "$CHEZMOI_VERSION" ] || {
-      echo "chezmoi: failed to resolve latest version"
+    [ -n "$CHEZMOI_URL" ] || {
+      echo "chezmoi: failed to resolve linux_arm release asset"
       exit 1
     }
 
-    CHEZMOI_TARBALL="chezmoi_${CHEZMOI_VERSION}_linux_arm.tar.gz"
-    CHEZMOI_URL="https://github.com/twpayne/chezmoi/releases/download/v${CHEZMOI_VERSION}/${CHEZMOI_TARBALL}"
-
     tmpdir="$(mktemp -d)"
-    curl -fsSL -o "$tmpdir/$CHEZMOI_TARBALL" "$CHEZMOI_URL"
-    tar -xzf "$tmpdir/$CHEZMOI_TARBALL" -C "$tmpdir"
+    curl -fsSL -o "$tmpdir/chezmoi.tar.gz" "$CHEZMOI_URL"
+    tar -xzf "$tmpdir/chezmoi.tar.gz" -C "$tmpdir"
     mkdir -p "$HOME/.local/bin"
     install -m 755 "$tmpdir/chezmoi" "$HOME/.local/bin/chezmoi"
     rm -rf "$tmpdir"
