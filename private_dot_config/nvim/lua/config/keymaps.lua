@@ -111,3 +111,8 @@ map("n", "<leader>lc", "<cmd>lclose<cr>", opts)
 map("n", "<leader>qc", "<cmd>cclose<cr>", opts)
 map("n", "]l", "<cmd>lnext<cr>", opts)
 map("n", "[l", "<cmd>lprev<cr>", opts)
+
+map("n", "<leader>td", "<cmd>Trouble diagnostics toggle<cr>", opts)
+map("n", "<leader>tb", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", opts)
+map("n", "<leader>tq", "<cmd>Trouble qflist toggle<cr>", opts)
+map("n", "<leader>tl", "<cmd>Trouble loclist toggle<cr>", opts)

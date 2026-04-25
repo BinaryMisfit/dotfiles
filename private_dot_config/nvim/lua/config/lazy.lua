@@ -37,6 +37,12 @@ require("lazy").setup({
 	},
 
 	{
+		"folke/trouble.nvim",
+		cmd = "Trouble",
+		opts = {},
+	},
+
+	{
 		"neovim/nvim-lspconfig",
 		config = function()
 			require("plugins.lsp")
