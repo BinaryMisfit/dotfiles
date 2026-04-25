@@ -34,9 +34,27 @@ if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
   fi
 
   if ! command -v chezmoi >/dev/null 2>&1; then
-    echo "chezmoi: installing latest linux-arm binary..."
+    echo "chezmoi: resolving latest linux 32-bit ARM asset..."
 
-    CHEZMOI_URL="https://github.com/twpayne/chezmoi/releases/latest/download/chezmoi-linux-arm.tar.gz"
+    CHEZMOI_URL="$(
+      curl -fsSL https://api.github.com/repos/twpayne/chezmoi/releases/latest \
+        | awk -F'"' '
+            /browser_download_url/ &&
+            /linux_arm/ &&
+            !/linux_arm64/ &&
+            /\.tar\.gz/ {
+              print $4
+              exit
+            }
+          '
+    )"
+
+    [ -n "$CHEZMOI_URL" ] || {
+      echo "chezmoi: failed to resolve linux 32-bit ARM release asset"
+      exit 1
+    }
+
+    echo "chezmoi: downloading $CHEZMOI_URL"
 
     tmpdir="$(mktemp -d)"
     curl -fsSL -o "$tmpdir/chezmoi.tar.gz" "$CHEZMOI_URL"
