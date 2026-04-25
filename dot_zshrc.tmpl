@@ -203,3 +203,12 @@ if (( $+functions[history-substring-search-up] )); then
   bindkey -M viins '^P' history-substring-search-up
   bindkey -M viins '^N' history-substring-search-down
 fi
+
+# -----------------------------------------------------------------------------
+# iTerm2 shell integration
+# -----------------------------------------------------------------------------
+# Loaded late so prompt/plugins/keybindings have finished their little turf war.
+# Works locally and over SSH when the remote shell is running inside iTerm2.
+if [[ -n "${ITERM_SESSION_ID:-}" && -r "$HOME/.iterm2_shell_integration.zsh" ]]; then
+  source "$HOME/.iterm2_shell_integration.zsh"
+fi
