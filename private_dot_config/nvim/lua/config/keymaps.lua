@@ -66,8 +66,48 @@ map("n", "<leader>ll", function()
 end, opts)
 
 -- lua/plugins/lsp.lua (or keymaps if you prefer central)
-
 map("n", "K", vim.lsp.buf.hover, opts)
-map("n", "<leader>rn", vim.lsp.buf.rename, opts)
+map("n", "<leader>rn", function()
+	local curr = vim.fn.expand("<cword>")
+	local new = vim.fn.input("Rename → ", curr)
+
+	if new == "" or new == curr then
+		return
+	end
+
+	vim.lsp.buf.rename(new)
+end, opts)
 map("n", "gd", vim.lsp.buf.definition, opts)
 map("n", "gr", vim.lsp.buf.references, opts)
+
+-- diagnostics
+map("n", "<leader>co", function()
+	local diagnostics = vim.diagnostic.get(0)
+
+	if #diagnostics == 0 then
+		vim.notify("No diagnostics", vim.log.levels.INFO)
+		return
+	end
+
+	vim.diagnostic.open_float(nil, { border = "rounded" })
+end, opts)
+map("n", "<leader>cq", vim.diagnostic.setloclist, opts)
+map("n", "]d", function()
+	vim.diagnostic.jump({ count = 1, float = true })
+end, opts)
+
+map("n", "[d", function()
+	vim.diagnostic.jump({ count = -1, float = true })
+end, opts)
+
+-- symbols
+map("n", "<leader>ss", function()
+	vim.lsp.buf.document_symbol()
+end, opts)
+map("n", "<leader>sS", function()
+	vim.lsp.buf.workspace_symbol()
+end, opts)
+map("n", "<leader>lc", "<cmd>lclose<cr>", opts)
+map("n", "<leader>qc", "<cmd>cclose<cr>", opts)
+map("n", "]l", "<cmd>lnext<cr>", opts)
+map("n", "[l", "<cmd>lprev<cr>", opts)
