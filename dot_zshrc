@@ -21,17 +21,18 @@ export PS1="%n@%m %1~ %# "
 # --- Znap Plugin Manager ---
 if [[ ! -d "$HOME/.zsh/plugins/znap" ]]; then
   mkdir -p "$HOME/.zsh/plugins"
-  git clone --depth=1 https://github.com/marlonrichert/zsh-snap.git "$HOME/.zsh/plugins/znap"
+  ( git clone --depth=1 https://github.com/marlonrichert/zsh-snap.git "$HOME/.zsh/plugins/znap" >/dev/null 2>&1 & )
 fi
 
 if [[ -s "$HOME/.zsh/plugins/znap/znap.zsh" ]]; then
-  source "$HOME/.zsh/plugins/znap/znap.zsh"
+  source "$HOME/.zsh/plugins/znap/znap.zsh" 2>/dev/null || true
 
   znap source marlonrichert/zsh-autosuggestions 2>/dev/null || true
   znap source zdharma-continuum/fast-syntax-highlighting 2>/dev/null || true
   znap source zsh-users/zsh-completions 2>/dev/null || true
   znap source zsh-users/zsh-history-substring-search 2>/dev/null || true
   znap source Aloxaf/fzf-tab 2>/dev/null || true
+  znap prompt romkatv/powerlevel10k || true
 
   autoload -Uz compinit
   compinit >/dev/null 2>&1 || true
@@ -47,6 +48,7 @@ bindkey '^[[B' history-substring-search-down
 bindkey '^P' history-substring-search-up
 bindkey '^N' history-substring-search-down
 
+# History config (must come before plugins that use history)
 HISTFILE="$HOME/.zsh_history"
 HISTSIZE=10000
 SAVEHIST=10000
