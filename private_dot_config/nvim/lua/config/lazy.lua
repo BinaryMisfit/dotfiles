@@ -43,6 +43,15 @@ require("lazy").setup({
 	},
 
 	{
+		"stevearc/aerial.nvim",
+		opts = {
+			layout = {
+				min_width = 28,
+			},
+		},
+	},
+
+	{
 		"neovim/nvim-lspconfig",
 		config = function()
 			require("plugins.lsp")
