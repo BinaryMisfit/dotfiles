@@ -102,7 +102,6 @@ if [[ -s "$HOME/.zsh/plugins/znap/znap.zsh" ]]; then
   znap source zdharma-continuum/fast-syntax-highlighting 2>/dev/null || true
   znap source zsh-users/zsh-completions 2>/dev/null || true
   znap source zsh-users/zsh-history-substring-search 2>/dev/null || true
-  znap source Aloxaf/fzf-tab 2>/dev/null || true
   znap prompt romkatv/powerlevel10k 2>/dev/null || true
 fi
 
@@ -111,6 +110,12 @@ fi
 # cloning/updating/missing. zsh-completions is loaded above when available.
 autoload -Uz compinit
 compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zcompdump" >/dev/null 2>&1 || true
+
+# fzf-tab must load after compinit. Loading it before compinit causes platform-
+# specific completion weirdness, because apparently Tab needs a throne order.
+if (( $+commands[znap] )); then
+  znap source Aloxaf/fzf-tab 2>/dev/null || true
+fi
 
 # Powerlevel10k user config
 [[ -f "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
@@ -121,14 +126,6 @@ compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zcompdump" >/dev/null 2>&1 || true
 if command -v fzf >/dev/null 2>&1; then
   unset FZF_CTRL_R_COMMAND 2>/dev/null || true
   source <(fzf --zsh)
-
-  # fzf's shell integration also binds Tab. fzf-tab owns completion UI here;
-  # otherwise emacs/viins can end up split between two different completion widgets.
-  if (( $+functions[fzf-tab-complete] )); then
-    bindkey '^I' fzf-tab-complete 2>/dev/null || true
-    bindkey -M emacs '^I' fzf-tab-complete 2>/dev/null || true
-    bindkey -M viins '^I' fzf-tab-complete 2>/dev/null || true
-  fi
 
   if whence -w fzf-history-widget >/dev/null 2>&1; then
     bindkey '^R' fzf-history-widget 2>/dev/null || true
@@ -194,6 +191,17 @@ alias svi='sudoedit'
 alias svim='sudoedit'
 
 # Final keybinding overrides
+# Keep Tab deterministic after fzf and fzf-tab have both tried to claim the throne.
+if (( $+functions[fzf-tab-complete] )); then
+  bindkey '^I' fzf-tab-complete 2>/dev/null || true
+  bindkey -M emacs '^I' fzf-tab-complete 2>/dev/null || true
+  bindkey -M viins '^I' fzf-tab-complete 2>/dev/null || true
+else
+  bindkey '^I' complete-word 2>/dev/null || true
+  bindkey -M emacs '^I' complete-word 2>/dev/null || true
+  bindkey -M viins '^I' complete-word 2>/dev/null || true
+fi
+
 # Keep ↑/↓ as history-substring search, even if plugins get grabby.
 if (( $+functions[history-substring-search-up] )); then
   # Normal cursor mode
