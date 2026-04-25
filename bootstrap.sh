@@ -23,19 +23,23 @@ echo "mise: using $MISE"
 
 ARCH="$(uname -m)"
 
-echo "mise: installing core tools..."
+echo "bootstrap: installing core tools..."
 
-# Install age via mise (always)
-"$MISE" use -g age@latest
-"$MISE" install age@latest
-
-# Install chezmoi (armv6l fallback)
 if [ "$ARCH" = "armv6l" ]; then
-  echo "chezmoi: armv6l detected, installing via official installer..."
-  sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "$HOME/.local/bin"
+  echo "armv6l detected: using apt/script fallback"
+
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y age
+  fi
+
+  if ! command -v chezmoi >/dev/null 2>&1; then
+    sh -c "$(curl -fsLS https://get.chezmoi.io)" -- -b "$HOME/.local/bin"
+  fi
 else
+  "$MISE" use -g age@latest
   "$MISE" use -g chezmoi@latest
-  "$MISE" install chezmoi@latest
+  "$MISE" install age@latest chezmoi@latest
 fi
 
 "$MISE" reshim || true
