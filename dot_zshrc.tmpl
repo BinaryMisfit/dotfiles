@@ -104,10 +104,13 @@ if [[ -s "$HOME/.zsh/plugins/znap/znap.zsh" ]]; then
   znap source zsh-users/zsh-history-substring-search 2>/dev/null || true
   znap source Aloxaf/fzf-tab 2>/dev/null || true
   znap prompt romkatv/powerlevel10k 2>/dev/null || true
-
-  autoload -Uz compinit
-  compinit >/dev/null 2>&1 || true
 fi
+
+# Completion
+# Run outside the znap block so baseline completion still works while znap is
+# cloning/updating/missing. zsh-completions is loaded above when available.
+autoload -Uz compinit
+compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zcompdump" >/dev/null 2>&1 || true
 
 # Powerlevel10k user config
 [[ -f "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
@@ -118,6 +121,14 @@ fi
 if command -v fzf >/dev/null 2>&1; then
   unset FZF_CTRL_R_COMMAND 2>/dev/null || true
   source <(fzf --zsh)
+
+  # fzf's shell integration also binds Tab. fzf-tab owns completion UI here;
+  # otherwise emacs/viins can end up split between two different completion widgets.
+  if (( $+functions[fzf-tab-complete] )); then
+    bindkey '^I' fzf-tab-complete 2>/dev/null || true
+    bindkey -M emacs '^I' fzf-tab-complete 2>/dev/null || true
+    bindkey -M viins '^I' fzf-tab-complete 2>/dev/null || true
+  fi
 
   if whence -w fzf-history-widget >/dev/null 2>&1; then
     bindkey '^R' fzf-history-widget 2>/dev/null || true
@@ -204,11 +215,12 @@ if (( $+functions[history-substring-search-up] )); then
   bindkey -M viins '^N' history-substring-search-down
 fi
 
+
 # -----------------------------------------------------------------------------
 # iTerm2 shell integration
 # -----------------------------------------------------------------------------
 # Loaded late so prompt/plugins/keybindings have finished their little turf war.
-# Works locally and over SSH when the remote shell is running inside iTerm2.
+# Do not require ITERM_SESSION_ID: it is not present on normal SSH sessions.
 if [[ -o interactive && -r "$HOME/.iterm2_shell_integration.zsh" ]]; then
   source "$HOME/.iterm2_shell_integration.zsh"
 fi
