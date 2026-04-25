@@ -98,13 +98,35 @@ bootstrap: public config applied.
 age public key for this machine:
 $AGE_RECIPIENT
 
-Next:
-  1. Add this public key as a recipient on an existing trusted machine.
-  2. Re-encrypt encrypted files.
-  3. Commit and push.
-  4. On this machine run:
+=== SECRET ENROLLMENT REQUIRED ===
 
-     chezmoi update
-     chezmoi apply
+On an EXISTING trusted machine, run:
+
+  chezmoi cd
+  chezmoi edit-config   # ensure your own age recipient is already present
+
+Then add this new recipient:
+  $AGE_RECIPIENT
+
+Re-encrypt secrets (example for env.zsh):
+
+  chezmoi cd
+  chezmoi decrypt private_dot_config/shell/env.zsh.age > /tmp/env.zsh
+  chezmoi encrypt -o private_dot_config/shell/env.zsh.age /tmp/env.zsh
+  rm -f /tmp/env.zsh
+
+Commit + push:
+
+  git add .
+  git commit -m "Add new machine age recipient"
+  git push
+
+Back on THIS machine:
+
+  chezmoi update
+  chezmoi apply
 
 EOF
+
+echo "bootstrap: waiting for encrypted secrets to be configured..."
+exit 0
