@@ -17,7 +17,10 @@ fi
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 MISE="$(command -v mise || true)"
-[ -n "$MISE" ] || { echo "mise: not found after install"; exit 1; }
+[ -n "$MISE" ] || {
+  echo "mise: not found after install"
+  exit 1
+}
 
 echo "mise: using $MISE"
 echo "bootstrap: installing core tools..."
@@ -37,8 +40,8 @@ if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
     echo "chezmoi: resolving latest linux 32-bit ARM asset..."
 
     CHEZMOI_URL="$(
-      curl -fsSL https://api.github.com/repos/twpayne/chezmoi/releases/latest \
-        | awk -F'"' '
+      curl -fsSL https://api.github.com/repos/twpayne/chezmoi/releases/latest |
+        awk -F'"' '
             /browser_download_url/ &&
             /linux_arm/ &&
             !/linux_arm64/ &&
@@ -87,11 +90,24 @@ if ! command -v zsh >/dev/null 2>&1; then
   fi
 fi
 
+if command -v zsh >/dev/null 2>&1; then
+  if [[ ! -f "$HOME/.iterm2_shell_integration.zsh" ]]; then
+    curl -fsSL https://iterm2.com/shell_integration/zsh \
+      -o "$HOME/.iterm2_shell_integration.zsh"
+  fi
+fi
+
 CHEZMOI="$(command -v chezmoi || true)"
 AGE_KEYGEN="$(command -v age-keygen || true)"
 
-[ -n "$CHEZMOI" ] || { echo "chezmoi: not found after install"; exit 1; }
-[ -n "$AGE_KEYGEN" ] || { echo "age-keygen: not found after install"; exit 1; }
+[ -n "$CHEZMOI" ] || {
+  echo "chezmoi: not found after install"
+  exit 1
+}
+[ -n "$AGE_KEYGEN" ] || {
+  echo "age-keygen: not found after install"
+  exit 1
+}
 
 echo "chezmoi: using $CHEZMOI"
 echo "age-keygen: using $AGE_KEYGEN"
@@ -113,7 +129,7 @@ AGE_RECIPIENT="$(
   exit 1
 }
 
-cat > "$HOME/.config/chezmoi/chezmoi.yaml" <<EOF
+cat >"$HOME/.config/chezmoi/chezmoi.yaml" <<EOF
 encryption: age
 
 age:
