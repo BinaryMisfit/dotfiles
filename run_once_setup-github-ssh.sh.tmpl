@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+set -eu
+
+KEY="$HOME/.ssh/id_ed25519"
+
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+
+if [ ! -f "$KEY" ]; then
+  ssh-keygen -t ed25519 -C "$(hostname)" -f "$KEY" -N ""
+fi
+
+eval "$(ssh-agent -s)"
+ssh-add "$KEY"
+
+echo
+echo "Add this public key to GitHub:"
+echo "--------------------------------"
+cat "$KEY.pub"
+echo "--------------------------------"
+echo
+echo "Then test with:"
+echo "ssh -T git@github.com"
