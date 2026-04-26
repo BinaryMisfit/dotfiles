@@ -9,3 +9,7 @@ setup-github-ssh.sh
 {{ if eq .chezmoi.os "windows" }}
 .config/shell/env.zsh
 {{ end }}
+
+{{ if ne .chezmoi.os "windows" }}
+Documents/PowerShell/
+{{ end }}
