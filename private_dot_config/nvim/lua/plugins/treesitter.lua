@@ -1,3 +1,7 @@
+if vim.loop.os_uname().sysname == "Windows_NT" then
+	vim.env.CC = "clang"
+end
+
 local treesitter = require("nvim-treesitter")
 
 treesitter.setup({
