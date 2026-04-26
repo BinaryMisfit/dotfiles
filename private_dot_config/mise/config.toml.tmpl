@@ -1,23 +1,27 @@
 [tools]
 age = "latest"
-atuin = "latest"
 bat = "latest"
 chezmoi = "latest"
 fd = "latest"
 fzf = "latest"
 jq = "latest"
 lazygit = "latest"
-lua-language-server = "latest"
-neovim = "stable"
 node = "lts"
 python = "3.14"
 ripgrep = "latest"
-shellcheck = "latest"
-shfmt = "latest"
-stylua = "latest"
 tree-sitter = "latest"
 yq = "latest"
+
 "npm:@github/copilot" = "latest"
 "npm:@openai/codex" = "latest"
 "npm:vscode-langservers-extracted" = "latest"
 "npm:yaml-language-server" = "latest"
+
+{{ if ne .chezmoi.os "windows" }}
+atuin = "latest"
+lua-language-server = "latest"
+neovim = "stable"
+shellcheck = "latest"
+shfmt = "latest"
+stylua = "latest"
+{{ end }}
