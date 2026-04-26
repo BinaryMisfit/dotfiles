@@ -1,9 +1,6 @@
-# Global defaults
-Host *
-  AddKeysToAgent yes
-  ServerAliveInterval 60
-  ServerAliveCountMax 3
-  SendEnv LANG LC_*
+# Local overrides (NOT tracked)
+Include ~/.ssh/config.local
+Include ~/.ssh/conf.d/*
 
 # Github
 Host github.com
@@ -13,6 +10,10 @@ Host github.com
   IdentitiesOnly yes
   AddKeysToAgent yes
 
-# Local overrides (NOT tracked)
-Include ~/.ssh/config.local
-Include ~/.ssh/conf.d/*
+# Global defaults
+Host *
+  AddKeysToAgent yes
+  ServerAliveInterval 60
+  ServerAliveCountMax 3
+  SendEnv LANG LC_*
+
