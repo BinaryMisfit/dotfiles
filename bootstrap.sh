@@ -2,143 +2,122 @@
 set -eu
 
 REPO="${CHEZMOI_REPO:-BinaryMisfit/dotfiles}"
-ARCH="$(uname -m)"
 
-echo "bootstrap: starting"
-echo "bootstrap: repo=$REPO"
-echo "bootstrap: arch=$ARCH"
+LOCAL_BIN="$HOME/.local/bin"
+MISE_SHIMS="$HOME/.local/share/mise/shims"
 
-export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+CHEZMOI_DIR="$HOME/.config/chezmoi"
+CHEZMOI_CONFIG="$CHEZMOI_DIR/chezmoi.yaml"
+
+AGE_DIR="$HOME/.config/age"
+AGE_KEY="$AGE_DIR/key.txt"
+
+SOURCE_DIR="$HOME/.local/share/chezmoi"
+
+SSH_DIR="$HOME/.ssh"
+SSH_KEY="$SSH_DIR/id_ed25519_github"
+
+export PATH="$LOCAL_BIN:$MISE_SHIMS:$PATH"
+
+section() {
+  printf '\n==> %s\n' "$1"
+}
+
+info() {
+  printf '  %s\n' "$1"
+}
+
+die() {
+  printf 'ERROR: %s\n' "$1" >&2
+  exit 1
+}
+
+section "bootstrap"
+info "repo: $REPO"
+
+section "mise"
 
 if ! command -v mise >/dev/null 2>&1; then
-  echo "mise: installing..."
+  info "installing mise"
   curl -fsLS https://mise.run | sh
+else
+  info "mise already installed"
 fi
 
-export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+export PATH="$LOCAL_BIN:$MISE_SHIMS:$PATH"
 
 MISE="$(command -v mise || true)"
+[ -n "$MISE" ] || die "mise not found after install"
 
-if [ -z "$MISE" ]; then
-  echo "mise: not found after install"
-  exit 1
-fi
+info "using: $MISE"
 
-echo "mise: using $MISE"
-echo "bootstrap: installing core tools..."
+section "core tools"
 
-if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
-  echo "$ARCH detected: using apt/manual fallback for bootstrap tools"
+"$MISE" use -g age@latest
+"$MISE" use -g chezmoi@latest
+"$MISE" install age@latest chezmoi@latest
+"$MISE" reshim || true
 
-  if command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get update
-    sudo apt-get install -y age tar gzip
-  else
-    echo "apt-get not found; cannot install bootstrap tools on $ARCH"
-    exit 1
-  fi
+export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 
-  if ! command -v chezmoi >/dev/null 2>&1; then
-    echo "chezmoi: resolving latest linux 32-bit ARM asset..."
+CHEZMOI="$(command -v chezmoi || true)"
+AGE_KEYGEN="$(command -v age-keygen || true)"
+SSH_KEYGEN="$(command -v ssh-keygen || true)"
 
-    CHEZMOI_URL="$(
-      curl -fsSL https://api.github.com/repos/twpayne/chezmoi/releases/latest |
-        awk -F'"' '
-          /browser_download_url/ &&
-          /linux_arm/ &&
-          !/linux_arm64/ &&
-          /\.tar\.gz/ {
-            print $4
-            exit
-          }
-        '
-    )"
+[ -n "$CHEZMOI" ] || die "chezmoi not found after install"
+[ -n "$AGE_KEYGEN" ] || die "age-keygen not found after install"
+[ -n "$SSH_KEYGEN" ] || die "ssh-keygen not found"
 
-    if [ -z "$CHEZMOI_URL" ]; then
-      echo "chezmoi: failed to resolve linux 32-bit ARM release asset"
-      exit 1
-    fi
+info "chezmoi: $CHEZMOI"
+info "age-keygen: $AGE_KEYGEN"
 
-    echo "chezmoi: downloading $CHEZMOI_URL"
-
-    tmpdir="$(mktemp -d)"
-    curl -fsSL -o "$tmpdir/chezmoi.tar.gz" "$CHEZMOI_URL"
-    tar -xzf "$tmpdir/chezmoi.tar.gz" -C "$tmpdir"
-    mkdir -p "$HOME/.local/bin"
-    install -m 755 "$tmpdir/chezmoi" "$HOME/.local/bin/chezmoi"
-    rm -rf "$tmpdir"
-  fi
-
-  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
-else
-  "$MISE" use -g age@latest
-  "$MISE" use -g chezmoi@latest
-  "$MISE" install age@latest chezmoi@latest
-  "$MISE" reshim || true
-
-  export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
-fi
+section "shell"
 
 if ! command -v zsh >/dev/null 2>&1; then
-  echo "zsh: installing..."
-
   if command -v apt-get >/dev/null 2>&1; then
+    info "installing zsh via apt"
     sudo apt-get update
     sudo apt-get install -y zsh
   elif command -v brew >/dev/null 2>&1; then
+    info "installing zsh via brew"
     brew install zsh
   else
-    echo "zsh: no supported package manager found"
+    info "no supported package manager found for zsh"
   fi
+else
+  info "zsh already installed"
 fi
 
 if command -v zsh >/dev/null 2>&1; then
   if [ ! -f "$HOME/.iterm2_shell_integration.zsh" ]; then
+    info "installing iTerm2 shell integration"
     curl -fsSL https://iterm2.com/shell_integration/zsh \
-      -o "$HOME/.iterm2_shell_integration.zsh"
+      -o "$HOME/.iterm2_shell_integration.zsh" || true
+  else
+    info "iTerm2 shell integration already exists"
   fi
 fi
 
-CHEZMOI="$(command -v chezmoi || true)"
-AGE_KEYGEN="$(command -v age-keygen || true)"
+section "age identity"
 
-if [ -z "$CHEZMOI" ]; then
-  echo "chezmoi: not found after install"
-  exit 1
-fi
-
-if [ -z "$AGE_KEYGEN" ]; then
-  echo "age-keygen: not found after install"
-  exit 1
-fi
-
-echo "chezmoi: using $CHEZMOI"
-echo "age-keygen: using $AGE_KEYGEN"
-
-CHEZMOI_DIR="$HOME/.config/chezmoi"
-CHEZMOI_CONFIG="$CHEZMOI_DIR/chezmoi.yaml"
-AGE_KEY="$CHEZMOI_DIR/age.key"
-CHEZMOI_SOURCE="$HOME/.local/share/chezmoi"
-
-mkdir -p "$CHEZMOI_DIR"
+mkdir -p "$CHEZMOI_DIR" "$AGE_DIR"
 
 if [ ! -f "$AGE_KEY" ]; then
-  echo "age: generating machine-local key..."
+  info "generating machine-local age key"
   "$AGE_KEYGEN" -o "$AGE_KEY"
   chmod 600 "$AGE_KEY"
+else
+  info "key already exists: $AGE_KEY"
 fi
 
 AGE_RECIPIENT="$(
   sed -n 's/^# public key: //p' "$AGE_KEY" | head -n 1
 )"
 
-if [ -z "$AGE_RECIPIENT" ]; then
-  echo "age: failed to read public key"
-  exit 1
-fi
+[ -n "$AGE_RECIPIENT" ] || die "failed to read age public key"
 
-# Create chezmoi config only if missing.
-# Do not overwrite: machine-local data such as git identity lives here.
+section "chezmoi config"
+
 if [ ! -f "$CHEZMOI_CONFIG" ]; then
   cat >"$CHEZMOI_CONFIG" <<EOF
 encryption: age
@@ -150,102 +129,67 @@ age:
     - $AGE_RECIPIENT
 EOF
 
-  chmod 600 "$CHEZMOI_CONFIG"
-  echo "chezmoi: created config at $CHEZMOI_CONFIG"
+  info "created: $CHEZMOI_CONFIG"
 else
-  echo "chezmoi: config already exists, leaving it untouched"
-fi
-
-if [ ! -d "$CHEZMOI_SOURCE" ]; then
-  echo "chezmoi: init $REPO"
-  "$CHEZMOI" init "$REPO"
-else
-  echo "chezmoi: source already exists at $CHEZMOI_SOURCE"
+  info "config already exists, leaving untouched"
 fi
 
 HAS_GIT_IDENTITY=0
-if grep -Eq '^[[:space:]]*git:[[:space:]]*$' "$CHEZMOI_CONFIG" 2>/dev/null; then
+if grep -Eq '^[[:space:]]*git:[[:space:]]*$' "$CHEZMOI_CONFIG"; then
   HAS_GIT_IDENTITY=1
 fi
 
-cat <<EOF
+section "github ssh key"
 
-bootstrap: setup complete
+mkdir -p "$SSH_DIR"
+chmod 700 "$SSH_DIR"
 
-age public key for this machine:
-$AGE_RECIPIENT
-
-IMPORTANT:
-  Back up this file:
-    $AGE_KEY
-
-  Losing it = losing access to encrypted secrets.
-
-EOF
-
-if [ "$HAS_GIT_IDENTITY" -ne 1 ]; then
-  cat <<EOF
-=== GIT IDENTITY REQUIRED ===
-
-Edit:
-  $CHEZMOI_CONFIG
-
-Add:
-data:
-  git:
-    name: Your Name
-    email: you@example.com
-
-EOF
+if [ ! -f "$SSH_KEY" ]; then
+  info "generating machine-local GitHub SSH key"
+  "$SSH_KEYGEN" -t ed25519 -C "github-dotfiles-$(hostname)" -f "$SSH_KEY" -N ""
+  chmod 600 "$SSH_KEY"
+  chmod 644 "$SSH_KEY.pub"
+else
+  info "key already exists: $SSH_KEY"
 fi
 
-cat <<EOF
-=== SECRET ENROLLMENT REQUIRED ===
+SSH_PUBLIC_KEY="$(cat "$SSH_KEY.pub")"
 
-On an EXISTING trusted machine:
+section "chezmoi source"
 
-  chezmoi edit-config
+if [ ! -d "$SOURCE_DIR" ]; then
+  info "initializing source: $REPO"
+  "$CHEZMOI" init "$REPO"
+else
+  info "source already exists: $SOURCE_DIR"
+fi
 
-Add this recipient:
+section "next steps"
 
-  age:
-    recipients:
-      - existing_recipient
-      - $AGE_RECIPIENT
+REENC='chezmoi cd && chezmoi decrypt private_dot_config/shell/encrypted_private_env.age > /tmp/env && chezmoi encrypt < /tmp/env > private_dot_config/shell/encrypted_private_env.age && rm -f /tmp/env && git add . && git commit -m "Add new machine age recipient" && git push'
+CHEZ='chezmoi update && chezmoi diff && chezmoi apply'
 
-Re-encrypt secrets:
+printf '\n'
+printf 'Age Public Key:\n  %s\n\n' "$AGE_RECIPIENT"
+printf 'GitHub SSH Key:\n  %s\n\n' "$SSH_PUBLIC_KEY"
 
-  chezmoi cd
-  find . -name '*.age' | while read -r f; do
-    tmp="\$(mktemp)"
-    chezmoi decrypt "\$f" > "\$tmp"
-    chezmoi encrypt -o "\$f" "\$tmp"
-    rm -f "\$tmp"
-  done
+if [ "$HAS_GIT_IDENTITY" -eq 0 ]; then
+  printf 'Git username/email missing from %s\n' "$CHEZMOI_CONFIG"
+  printf 'Add:\n'
+  printf '  data:\n'
+  printf '    git:\n'
+  printf '      name: Your Name\n'
+  printf '      email: you@example.com\n\n'
+fi
 
-Commit + push:
+printf 'To re-encrypt, add key to recipients in chezmoi config on source machine and run:\n'
+printf '  %s\n\n' "$REENC"
 
-  git add .
-  git commit -m "Add new machine age recipient"
-  git push
+printf 'When done run:\n'
+printf '  %s\n\n' "$CHEZ"
 
-Back on THIS machine:
+printf 'Verify:\n'
+printf '  ssh -T git@github.com\n'
+printf '  mise doctor\n\n'
 
-  chezmoi update
-  chezmoi diff
-  chezmoi apply
-
-Next:
-  chezmoi diff
-  chezmoi apply
-
-After apply, verify:
-  chezmoi managed
-  git config user.name
-  git config user.email
-  mise doctor
-
-bootstrap: complete (apply pending)
-EOF
-
-exit 0
+printf 'bootstrap: complete\n'
