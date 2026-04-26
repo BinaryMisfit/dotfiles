@@ -6,9 +6,11 @@ if (Test-Path $envLoader) {
     . $envLoader
 }
 
-# Prompt (Oh My Posh - P10K equivalent)
-if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\powerlevel10k_classic.omp.json" | Invoke-Expression
+# oh-my-posh
+$ompTheme = "$HOME\Documents\PowerShell\themes\pwsh10k.omp.json"
+
+if ((Get-Command oh-my-posh -ErrorAction SilentlyContinue) -and (Test-Path $ompTheme)) {
+    oh-my-posh init pwsh --config $ompTheme | Invoke-Expression
 }
 
 # mise
