@@ -1,3 +1,4 @@
+{{ if ne .chezmoi.os "windows" -}}
 #!/usr/bin/env sh
 set -eu
 
@@ -26,10 +27,10 @@ install_mise
 export PATH="$HOME/.local/bin:$HOME/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 ARCH="$(uname -m)"
-
 if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
   echo "install-core: $ARCH detected, skipping mise install during core setup"
   exit 0
 fi
 
 mise install
+{{ end -}}
