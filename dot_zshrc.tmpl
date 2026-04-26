@@ -197,6 +197,17 @@ alias vim='nvim'
 alias svi='sudoedit'
 alias svim='sudoedit'
 
+if command -v eza >/dev/null 2>&1; then
+  alias ls='eza'
+  alias ll='eza -lh --git --icons=auto'
+  alias la='eza -lah --git --icons=auto'
+  alias lt='eza --tree --level=2 --icons=auto'
+fi
+
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
 # Final keybinding overrides
 # Keep Tab deterministic after fzf and fzf-tab have both tried to claim the throne.
 if (( $+functions[fzf-tab-complete] )); then
