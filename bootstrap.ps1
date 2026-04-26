@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Repo = "BinaryMisfit/dotpwsh"
+$Repo = "BinaryMisfit/dotfiles"
 
 Write-Host "bootstrap: starting"
 Write-Host "bootstrap: repo=$Repo"
@@ -27,41 +27,40 @@ $chezmoi = Get-Command chezmoi -ErrorAction SilentlyContinue
 $agekeygen = Get-Command age-keygen -ErrorAction SilentlyContinue
 $sshkeygen = Get-Command ssh-keygen -ErrorAction SilentlyContinue
 
-if (-not $chezmoi) {
-    throw "chezmoi not found after install"
-}
-
-if (-not $agekeygen) {
-    throw "age-keygen not found after install"
-}
-
-if (-not $sshkeygen) {
-    throw "ssh-keygen not found"
-}
+if (-not $chezmoi) { throw "chezmoi not found after install" }
+if (-not $agekeygen) { throw "age-keygen not found after install" }
+if (-not $sshkeygen) { throw "ssh-keygen not found" }
 
 Write-Host "chezmoi: using $($chezmoi.Source)"
 Write-Host "age-keygen: using $($agekeygen.Source)"
 Write-Host "ssh-keygen: using $($sshkeygen.Source)"
 
-# Setup chezmoi config dir
+# Paths
 $chezmoiDir = "$HOME\.config\chezmoi"
 $chezmoiConfig = "$chezmoiDir\chezmoi.yaml"
-$keyPath = "$chezmoiDir\age.key"
+
+$ageDir = "$HOME\.config\age"
+$keyPath = "$ageDir\key.txt"
+
+$sshDir = "$HOME\.ssh"
+$sshKeyPath = "$sshDir\id_ed25519_github"
 
 New-Item -ItemType Directory -Force -Path $chezmoiDir | Out-Null
+New-Item -ItemType Directory -Force -Path $ageDir | Out-Null
+New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
 
 # Generate machine-local age key
 if (-not (Test-Path $keyPath)) {
     Write-Host "age: generating machine-local key..."
     age-keygen -o $keyPath | Out-Null
 } else {
-    Write-Host "age: key already exists"
+    Write-Host "age: key already exists at $keyPath"
 }
 
-# Extract public key
-$recipient = Select-String "# public key:" $keyPath | ForEach-Object {
-    $_.Line -replace "# public key: ", ""
-} | Select-Object -First 1
+# Extract age public key
+$recipient = Select-String "# public key:" $keyPath |
+    ForEach-Object { $_.Line -replace "# public key: ", "" } |
+    Select-Object -First 1
 
 if (-not $recipient) {
     throw "age: failed to read public key from $keyPath"
@@ -86,20 +85,14 @@ age:
 }
 
 # Generate machine-local SSH key for GitHub
-$sshDir = "$HOME\.ssh"
-$sshKeyPath = "$sshDir\id_ed25519_github"
-
-New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
-
 if (-not (Test-Path $sshKeyPath)) {
     Write-Host "ssh: generating machine-local GitHub key..."
-    ssh-keygen -t ed25519 -C "github-dotpwsh-$env:COMPUTERNAME" -f $sshKeyPath -N "" | Out-Null
+    ssh-keygen -t ed25519 -C "github-dotfiles-$env:COMPUTERNAME" -f $sshKeyPath -N "" | Out-Null
 } else {
-    Write-Host "ssh: GitHub key already exists"
+    Write-Host "ssh: GitHub key already exists at $sshKeyPath"
 }
 
 $sshPublicKey = Get-Content "$sshKeyPath.pub" -ErrorAction SilentlyContinue
-
 if (-not $sshPublicKey) {
     throw "ssh: failed to read public key from $sshKeyPath.pub"
 }
@@ -124,27 +117,31 @@ $hasGitIdentity = Select-String `
 Write-Host ""
 Write-Host "bootstrap: setup complete"
 Write-Host ""
+
 Write-Host "age public key for this machine:"
 Write-Host $recipient
 Write-Host ""
+
 Write-Host "ssh public key for GitHub:"
 Write-Host $sshPublicKey
 Write-Host ""
+
 Write-Host "IMPORTANT:"
-Write-Host "  Back up this file:"
-Write-Host "    $keyPath"
+Write-Host " Back up this file:"
+Write-Host " $keyPath"
 Write-Host ""
-Write-Host "  Losing it = losing access to encrypted secrets."
+Write-Host " Losing it = losing access to encrypted secrets."
 Write-Host ""
+
 Write-Host "Add SSH key to GitHub:"
-Write-Host "  GitHub -> Settings -> SSH and GPG keys -> New SSH key"
+Write-Host " GitHub -> Settings -> SSH and GPG keys -> New SSH key"
 Write-Host ""
 
 if (-not $hasGitIdentity) {
     Write-Host "=== GIT IDENTITY REQUIRED ==="
     Write-Host ""
     Write-Host "Edit:"
-    Write-Host "  $chezmoiConfig"
+    Write-Host " $chezmoiConfig"
     Write-Host ""
     Write-Host "Add:"
     Write-Host "data:"
@@ -155,14 +152,16 @@ if (-not $hasGitIdentity) {
 }
 
 Write-Host "Next:"
-Write-Host "  chezmoi diff"
-Write-Host "  chezmoi apply"
+Write-Host " chezmoi diff"
+Write-Host " chezmoi apply"
 Write-Host ""
+
 Write-Host "After apply, verify:"
-Write-Host "  chezmoi managed"
-Write-Host "  git config user.name"
-Write-Host "  git config user.email"
-Write-Host "  mise doctor"
-Write-Host "  ssh -T git@github.com"
+Write-Host " chezmoi managed"
+Write-Host " git config user.name"
+Write-Host " git config user.email"
+Write-Host " mise doctor"
+Write-Host " ssh -T git@github.com"
 Write-Host ""
+
 Write-Host "bootstrap: complete"
