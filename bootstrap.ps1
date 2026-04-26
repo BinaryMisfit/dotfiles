@@ -49,7 +49,7 @@ $env:PATH = "$HOME\scoop\shims;$HOME\.local\share\mise\shims;$env:PATH"
 
 Section "core tools"
 
-$Tools = @("git", "chezmoi", "age", "mise", "starship", "openssh")
+$Tools = @("git", "chezmoi", "age", "mise", "oh-my-posh", "openssh")
 
 foreach ($Tool in $Tools) {
     Info "ensuring $Tool"
