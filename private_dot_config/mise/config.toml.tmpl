@@ -11,6 +11,9 @@ python = "3.14"
 ripgrep = "latest"
 tree-sitter = "latest"
 yq = "latest"
+lua-language-server = "latest"
+neovim = "stable"
+stylua = "latest"
 
 "npm:@github/copilot" = "latest"
 "npm:@openai/codex" = "latest"
@@ -19,9 +22,6 @@ yq = "latest"
 
 {{ if ne .chezmoi.os "windows" }}
 atuin = "latest"
-lua-language-server = "latest"
-neovim = "stable"
 shellcheck = "latest"
 shfmt = "latest"
-stylua = "latest"
 {{ end }}
