@@ -3,20 +3,15 @@ Host *
   AddKeysToAgent yes
   ServerAliveInterval 60
   ServerAliveCountMax 3
-
-  # Connection reuse
-  ControlMaster auto
-  ControlPath ~/.ssh/cm-%r@%h:%p
-  ControlPersist 10m
-
-  # Environment
   SendEnv LANG LC_*
 
-# GitHub
+# Github
 Host github.com
   HostName github.com
   User git
-  IdentityFile ~/.ssh/id_ed25519
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+  AddKeysToAgent yes
 
 # Local overrides (NOT tracked)
 Include ~/.ssh/config.local
