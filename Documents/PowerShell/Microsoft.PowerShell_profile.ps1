@@ -1,5 +1,11 @@
 [Console]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
+# Token loader
+$envLoader = "$HOME\Documents\PowerShell\env.ps1"
+if (Test-Path $envLoader) {
+    . $envLoader
+}
+
 # starship
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
