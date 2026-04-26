@@ -33,8 +33,10 @@ This repo is the single source of truth for configuration across macOS, Linux, a
 
 ```sh
 sh -c "$(curl -fsLS https://raw.githubusercontent.com/BinaryMisfit/dotfiles/main/bootstrap.sh)"
+```
 
 ### Windows
 
 ```powershell
 irm https://raw.githubusercontent.com/BinaryMisfit/dotfiles/main/bootstrap.ps1 | iex
+```
