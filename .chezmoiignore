@@ -1,2 +1,11 @@
 bootstrap.sh
+bootstrap.ps1
 README.md
+install-core.ps1
+install-core.sh
+setup-github-ssh.ps1
+setup-github-ssh.sh
+
+{{ if eq .chezmoi.os "windows" }}
+.config/shell/env.zsh
+{{ end }}
