@@ -1,0 +1,16 @@
+[user]
+    name = {{ .git.name }}
+    email = {{ .git.email }}
+
+[core]
+    editor = nvim
+    autocrlf = input
+
+[pull]
+    rebase = false
+
+[init]
+    defaultBranch = main
+
+[push]
+    autoSetupRemote = true
