@@ -1,0 +1,28 @@
+$ErrorActionPreference = "Stop"
+
+if ($env:OS -ne "Windows_NT") {
+    exit 0
+}
+
+$source = Join-Path $HOME ".config\nvim"
+$target = Join-Path $env:LOCALAPPDATA "nvim"
+
+if (-not (Test-Path $source)) {
+    Write-Host "nvim source not found: $source"
+    exit 0
+}
+
+if (Test-Path $target) {
+    $item = Get-Item $target -Force
+
+    if ($item.LinkType -eq "Junction" -and $item.Target -eq $source) {
+        Write-Host "nvim junction already exists"
+        exit 0
+    }
+
+    Write-Host "nvim target exists, leaving untouched: $target"
+    exit 0
+}
+
+New-Item -ItemType Junction -Path $target -Target $source | Out-Null
+Write-Host "created nvim junction: $target -> $source"
