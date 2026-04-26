@@ -1,10 +1,11 @@
 #!/usr/bin/env sh
 set -eu
 
-REPO="${CHEZMOI_REPO:-BinaryMisfit}"
+REPO="${CHEZMOI_REPO:-BinaryMisfit/dotfiles}"
 ARCH="$(uname -m)"
 
 echo "bootstrap: starting"
+echo "bootstrap: repo=$REPO"
 echo "bootstrap: arch=$ARCH"
 
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
@@ -17,10 +18,11 @@ fi
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 MISE="$(command -v mise || true)"
-[ -n "$MISE" ] || {
+
+if [ -z "$MISE" ]; then
   echo "mise: not found after install"
   exit 1
-}
+fi
 
 echo "mise: using $MISE"
 echo "bootstrap: installing core tools..."
@@ -42,20 +44,20 @@ if [ "$ARCH" = "armv6l" ] || [ "$ARCH" = "armv7l" ]; then
     CHEZMOI_URL="$(
       curl -fsSL https://api.github.com/repos/twpayne/chezmoi/releases/latest |
         awk -F'"' '
-            /browser_download_url/ &&
-            /linux_arm/ &&
-            !/linux_arm64/ &&
-            /\.tar\.gz/ {
-              print $4
-              exit
-            }
-          '
+          /browser_download_url/ &&
+          /linux_arm/ &&
+          !/linux_arm64/ &&
+          /\.tar\.gz/ {
+            print $4
+            exit
+          }
+        '
     )"
 
-    [ -n "$CHEZMOI_URL" ] || {
+    if [ -z "$CHEZMOI_URL" ]; then
       echo "chezmoi: failed to resolve linux 32-bit ARM release asset"
       exit 1
-    }
+    fi
 
     echo "chezmoi: downloading $CHEZMOI_URL"
 
@@ -91,7 +93,7 @@ if ! command -v zsh >/dev/null 2>&1; then
 fi
 
 if command -v zsh >/dev/null 2>&1; then
-  if [[ ! -f "$HOME/.iterm2_shell_integration.zsh" ]]; then
+  if [ ! -f "$HOME/.iterm2_shell_integration.zsh" ]; then
     curl -fsSL https://iterm2.com/shell_integration/zsh \
       -o "$HOME/.iterm2_shell_integration.zsh"
   fi
@@ -100,70 +102,104 @@ fi
 CHEZMOI="$(command -v chezmoi || true)"
 AGE_KEYGEN="$(command -v age-keygen || true)"
 
-[ -n "$CHEZMOI" ] || {
+if [ -z "$CHEZMOI" ]; then
   echo "chezmoi: not found after install"
   exit 1
-}
-[ -n "$AGE_KEYGEN" ] || {
+fi
+
+if [ -z "$AGE_KEYGEN" ]; then
   echo "age-keygen: not found after install"
   exit 1
-}
+fi
 
 echo "chezmoi: using $CHEZMOI"
 echo "age-keygen: using $AGE_KEYGEN"
 
-mkdir -p "$HOME/.config/chezmoi"
+CHEZMOI_DIR="$HOME/.config/chezmoi"
+CHEZMOI_CONFIG="$CHEZMOI_DIR/chezmoi.yaml"
+AGE_KEY="$CHEZMOI_DIR/age.key"
+CHEZMOI_SOURCE="$HOME/.local/share/chezmoi"
 
-if [ ! -f "$HOME/.config/chezmoi/age.key" ]; then
+mkdir -p "$CHEZMOI_DIR"
+
+if [ ! -f "$AGE_KEY" ]; then
   echo "age: generating machine-local key..."
-  "$AGE_KEYGEN" -o "$HOME/.config/chezmoi/age.key"
-  chmod 600 "$HOME/.config/chezmoi/age.key"
+  "$AGE_KEYGEN" -o "$AGE_KEY"
+  chmod 600 "$AGE_KEY"
 fi
 
 AGE_RECIPIENT="$(
-  sed -n 's/^# public key: //p' "$HOME/.config/chezmoi/age.key" | head -n 1
+  sed -n 's/^# public key: //p' "$AGE_KEY" | head -n 1
 )"
 
-[ -n "$AGE_RECIPIENT" ] || {
+if [ -z "$AGE_RECIPIENT" ]; then
   echo "age: failed to read public key"
   exit 1
-}
+fi
 
-cat >"$HOME/.config/chezmoi/chezmoi.yaml" <<EOF
+# Create chezmoi config only if missing.
+# Do not overwrite: machine-local data such as git identity lives here.
+if [ ! -f "$CHEZMOI_CONFIG" ]; then
+  cat >"$CHEZMOI_CONFIG" <<EOF
 encryption: age
 
 age:
   identities:
-    - $HOME/.config/chezmoi/age.key
+    - $AGE_KEY
   recipients:
     - $AGE_RECIPIENT
 EOF
 
-chmod 600 "$HOME/.config/chezmoi/chezmoi.yaml"
+  chmod 600 "$CHEZMOI_CONFIG"
+  echo "chezmoi: created config at $CHEZMOI_CONFIG"
+else
+  echo "chezmoi: config already exists, leaving it untouched"
+fi
 
-if [ ! -d "$HOME/.local/share/chezmoi" ]; then
+if [ ! -d "$CHEZMOI_SOURCE" ]; then
   echo "chezmoi: init $REPO"
   "$CHEZMOI" init "$REPO"
 else
-  echo "chezmoi: source already exists"
+  echo "chezmoi: source already exists at $CHEZMOI_SOURCE"
 fi
 
-echo "chezmoi: applying public config..."
-"$CHEZMOI" apply --exclude=encrypted,scripts
+HAS_GIT_IDENTITY=0
+if grep -Eq '^[[:space:]]*git:[[:space:]]*$' "$CHEZMOI_CONFIG" 2>/dev/null; then
+  HAS_GIT_IDENTITY=1
+fi
 
 cat <<EOF
 
-bootstrap: public config applied.
+bootstrap: setup complete
 
 age public key for this machine:
 $AGE_RECIPIENT
 
-NOTE:
+IMPORTANT:
   Back up this file:
-    ~/.config/chezmoi/age.key
+    $AGE_KEY
 
   Losing it = losing access to encrypted secrets.
 
+EOF
+
+if [ "$HAS_GIT_IDENTITY" -ne 1 ]; then
+  cat <<EOF
+=== GIT IDENTITY REQUIRED ===
+
+Edit:
+  $CHEZMOI_CONFIG
+
+Add:
+data:
+  git:
+    name: Your Name
+    email: you@example.com
+
+EOF
+fi
+
+cat <<EOF
 === SECRET ENROLLMENT REQUIRED ===
 
 On an EXISTING trusted machine:
@@ -196,10 +232,20 @@ Commit + push:
 Back on THIS machine:
 
   chezmoi update
+  chezmoi diff
   chezmoi apply
 
-bootstrap: complete (secrets pending)
+Next:
+  chezmoi diff
+  chezmoi apply
 
+After apply, verify:
+  chezmoi managed
+  git config user.name
+  git config user.email
+  mise doctor
+
+bootstrap: complete (apply pending)
 EOF
 
 exit 0
