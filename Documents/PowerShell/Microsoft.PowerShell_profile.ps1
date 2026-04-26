@@ -21,6 +21,10 @@ if (Get-Command mise -ErrorAction SilentlyContinue) {
 # basic aliases
 Set-Alias ll Get-ChildItem
 Set-Alias g git
+Set-Alias vim nvim
+Set-Alias vi nvim
+
+# Keymaps
 Set-PSReadlineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadlineKeyHandler -Key DownArrow -Function HistorySearchForward
 Set-PSReadLineOption -BellStyle None
