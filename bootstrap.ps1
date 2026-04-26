@@ -45,8 +45,6 @@ if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
     Info "scoop already installed"
 }
 
-$env:PATH = "$HOME\scoop\shims;$HOME\.local\share\mise\shims;$env:PATH"
-
 Section "core tools"
 
 $Tools = @("git", "chezmoi", "age", "mise", "oh-my-posh", "openssh", "llvm")
@@ -55,8 +53,6 @@ foreach ($Tool in $Tools) {
     Info "ensuring $Tool"
     scoop install $Tool
 }
-
-$env:PATH = "$HOME\scoop\shims;$HOME\.local\share\mise\shims;$env:PATH"
 
 $Chezmoi = Get-Command chezmoi -ErrorAction SilentlyContinue
 $AgeKeygen = Get-Command age-keygen -ErrorAction SilentlyContinue
