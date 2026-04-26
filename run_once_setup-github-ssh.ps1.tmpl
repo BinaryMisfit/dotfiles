@@ -1,0 +1,23 @@
+{{ if eq .chezmoi.os "windows" -}}
+$ErrorActionPreference = "Stop"
+
+$keyPath = Join-Path $HOME ".ssh\id_ed25519_github"
+$sshDir = Split-Path $keyPath
+
+if (-not (Test-Path $sshDir)) {
+    New-Item -ItemType Directory -Path $sshDir | Out-Null
+}
+
+if (-not (Test-Path $keyPath)) {
+    ssh-keygen -t ed25519 -f $keyPath -N '""' -C "$env:USERNAME@$env:COMPUTERNAME-github"
+
+    Write-Host ""
+    Write-Host "Add this public key to GitHub:"
+    Write-Host "--------------------------------"
+    Get-Content "$keyPath.pub"
+    Write-Host "--------------------------------"
+    Write-Host ""
+    Write-Host "Then test with:"
+    Write-Host "ssh -T git@github.com"
+}
+{{ end -}}
