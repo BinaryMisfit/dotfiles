@@ -1,8 +1,5 @@
 {
   "firstLaunchAt": "2026-04-25T21:54:25.815Z",
-  "trustedFolders": [
-    "/Users/binarymisfit/.local/share/chezmoi"
-  ],
   "model": "gpt-5-mini",
   "experimental": true,
   "footer": {
