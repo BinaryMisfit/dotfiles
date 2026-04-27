@@ -1,8 +1,5 @@
+{{ if eq .chezmoi.os "windows" -}}
 $ErrorActionPreference = "Stop"
-
-if ($env:OS -ne "Windows_NT") {
-    exit 0
-}
 
 $source = Join-Path $HOME ".config\nvim"
 $target = Join-Path $env:LOCALAPPDATA "nvim"
@@ -16,7 +13,7 @@ if (Test-Path $target) {
     $item = Get-Item $target -Force
 
     if ($item.LinkType -eq "Junction" -and $item.Target -eq $source) {
-        Write-Host "nvim junction already exists"
+        Write-Host "nvim junction already exists: $target"
         exit 0
     }
 
@@ -26,3 +23,4 @@ if (Test-Path $target) {
 
 New-Item -ItemType Junction -Path $target -Target $source | Out-Null
 Write-Host "created nvim junction: $target -> $source"
+{{ end -}}
