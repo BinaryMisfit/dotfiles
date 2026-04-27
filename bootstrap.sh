@@ -13,6 +13,7 @@ AGE_DIR="$HOME/.config/age"
 AGE_KEY="$AGE_DIR/key.txt"
 
 SOURCE_DIR="$HOME/.local/share/chezmoi"
+SSH_REMOTE="git@github.com:${REPO}.git"
 
 SSH_DIR="$HOME/.ssh"
 SSH_KEY="$SSH_DIR/id_ed25519_github"
@@ -164,6 +165,21 @@ else
   info "source already exists: $SOURCE_DIR"
 fi
 
+section "git remote"
+
+if [ -d "$SOURCE_DIR/.git" ]; then
+  CURRENT_REMOTE="$(git -C "$SOURCE_DIR" remote get-url origin 2>/dev/null || true)"
+
+  if [ "$CURRENT_REMOTE" != "$SSH_REMOTE" ]; then
+    info "setting origin to SSH: $SSH_REMOTE"
+    git -C "$SOURCE_DIR" remote set-url origin "$SSH_REMOTE"
+  else
+    info "origin already uses SSH"
+  fi
+else
+  info "chezmoi source is not a git repo, skipping remote update"
+fi
+
 section "next steps"
 
 REENC='chezmoi cd && chezmoi decrypt private_dot_config/shell/encrypted_private_env.age > /tmp/env && chezmoi encrypt < /tmp/env > private_dot_config/shell/encrypted_private_env.age && rm -f /tmp/env && git add . && git commit -m "Add new machine age recipient" && git push'
@@ -190,6 +206,7 @@ printf '  %s\n\n' "$CHEZ"
 
 printf 'Verify:\n'
 printf '  ssh -T git@github.com\n'
+printf '  git -C "$HOME/.local/share/chezmoi" remote -v\n'
 printf '  mise doctor\n\n'
 
 printf 'bootstrap: complete\n'

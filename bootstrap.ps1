@@ -12,6 +12,7 @@ $AgeDir = "$HOME\.config\age"
 $AgeKey = "$AgeDir\key.txt"
 
 $SourceDir = "$HOME\.local\share\chezmoi"
+$SshRemote = "git@github.com:$Repo.git"
 
 $SshDir = "$HOME\.ssh"
 $SshKey = "$SshDir\id_ed25519_github"
@@ -137,6 +138,21 @@ if (-not (Test-Path $SourceDir)) {
     Info "source already exists: $SourceDir"
 }
 
+Section "git remote"
+
+if (Test-Path "$SourceDir\.git") {
+    $CurrentRemote = git -C $SourceDir remote get-url origin 2>$null
+
+    if ($CurrentRemote -ne $SshRemote) {
+        Info "setting origin to SSH: $SshRemote"
+        git -C $SourceDir remote set-url origin $SshRemote
+    } else {
+        Info "origin already uses SSH"
+    }
+} else {
+    Info "chezmoi source is not a git repo, skipping remote update"
+}
+
 Section "next steps"
 
 $Reencrypt = 'chezmoi cd; chezmoi decrypt private_dot_config/shell/encrypted_private_env.age > $env:TEMP\env; Get-Content $env:TEMP\env | chezmoi encrypt > private_dot_config/shell/encrypted_private_env.age; Remove-Item $env:TEMP\env; git add .; git commit -m "Add new machine age recipient"; git push'
@@ -171,6 +187,7 @@ Write-Host ""
 
 Write-Host "Verify:"
 Write-Host "  ssh -T git@github.com"
+Write-Host '  git -C "$HOME\.local\share\chezmoi" remote -v'
 Write-Host "  mise doctor"
 Write-Host ""
 
