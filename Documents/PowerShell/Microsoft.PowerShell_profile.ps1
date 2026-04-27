@@ -2,12 +2,6 @@
 
 $profileDir = Split-Path -Parent $PROFILE
 
-# Token loader
-$envLoader = Join-Path $profileDir "env.ps1"
-if (Test-Path $envLoader) {
-    . $envLoader
-}
-
 # oh-my-posh
 $ompTheme = Join-Path $profileDir "themes\pwsh10k.omp.json"
 

@@ -61,10 +61,6 @@ fi
 # No Linuxbrew path unless you deliberately add it later. Future-you is welcome.
 {{- end }}
 
-# Private environment. Source before mise so tools like aqua-backed mise installs
-# can see GITHUB_TOKEN and stop getting rate-limit punted by GitHub.
-[[ -r "$HOME/.config/shell/env.zsh" ]] && source "$HOME/.config/shell/env.zsh"
-
 # mise
 if command -v mise >/dev/null 2>&1; then
   eval "$(mise activate zsh)"
