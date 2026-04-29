@@ -1,1 +1,15 @@
 readonly_OneDrive*/
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+.env
+.venv/
+venv/
+node_modules/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.DS_Store
+*.log
