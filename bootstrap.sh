@@ -36,6 +36,13 @@ die() {
 section "bootstrap"
 info "repo: $REPO"
 
+# Ensure git exists (Raspbian/Debian minimal images don't include it)
+if ! command -v git >/dev/null 2>&1; then
+  info "installing git"
+  sudo apt-get update -y
+  sudo apt-get install -y git
+fi
+
 section "mise"
 
 if ! command -v mise >/dev/null 2>&1; then
