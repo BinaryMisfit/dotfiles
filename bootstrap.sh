@@ -18,7 +18,8 @@ SSH_REMOTE="git@github.com:${REPO}.git"
 SSH_DIR="$HOME/.ssh"
 SSH_KEY="$SSH_DIR/id_ed25519_github"
 
-export PATH="$LOCAL_BIN:$MISE_SHIMS:$PATH"
+# Hard PATH (no magic, no guessing)
+export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 
 section() { printf '\n==> %s\n' "$1"; }
 info() { printf '  %s\n' "$1"; }
@@ -47,28 +48,25 @@ fi
 # --------------------------------------------------
 section "mise"
 
-if ! command -v mise >/dev/null 2>&1; then
+if [ ! -x "$LOCAL_BIN/mise" ]; then
   info "installing mise"
   curl -fsLS https://mise.run | sh
 else
   info "mise already installed"
 fi
 
-MISE="$(command -v mise || true)"
-[ -n "$MISE" ] || die "mise not found after install"
+MISE="$LOCAL_BIN/mise"
+[ -x "$MISE" ] || die "mise not found after install"
 
 info "using: $MISE"
 
-# activate mise NOW (fixes shim issues)
-eval "$($MISE activate sh)"
-
-# persist activation
-if [ -f "$HOME/.bashrc" ] && ! grep -q 'mise activate bash' "$HOME/.bashrc"; then
+# persist activation for future shells (not required for this run)
+if [ -f "$HOME/.bashrc" ] && ! grep -q 'mise activate' "$HOME/.bashrc"; then
   info "persisting mise activation"
-  echo 'eval "$($HOME/.local/bin/mise activate bash)"' >>"$HOME/.bashrc"
+  echo 'eval "$($HOME/.local/bin/mise activate sh)"' >>"$HOME/.bashrc"
 fi
 
-# ensure PATH is correct post-activation
+# enforce PATH again after install
 export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 
 # --------------------------------------------------
@@ -81,14 +79,15 @@ section "core tools"
 "$MISE" install age@latest chezmoi@latest
 "$MISE" reshim || true
 
+# hard PATH again (yes, again, because reality is annoying)
 export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 
-CHEZMOI="$(command -v chezmoi || true)"
-AGE_KEYGEN="$(command -v age-keygen || true)"
+CHEZMOI="$MISE_SHIMS/chezmoi"
+AGE_KEYGEN="$MISE_SHIMS/age-keygen"
 SSH_KEYGEN="$(command -v ssh-keygen || true)"
 
-[ -n "$CHEZMOI" ] || die "chezmoi not found after install"
-[ -n "$AGE_KEYGEN" ] || die "age-keygen not found after install"
+[ -x "$CHEZMOI" ] || die "chezmoi not found after install"
+[ -x "$AGE_KEYGEN" ] || die "age-keygen not found after install"
 [ -n "$SSH_KEYGEN" ] || die "ssh-keygen not found"
 
 info "chezmoi: $CHEZMOI"
@@ -107,12 +106,6 @@ elif command -v apt-get >/dev/null 2>&1; then
   info "installing bubblewrap via apt"
   sudo apt-get update
   sudo apt-get install -y bubblewrap
-elif command -v dnf >/dev/null 2>&1; then
-  info "installing bubblewrap via dnf"
-  sudo dnf install -y bubblewrap
-elif command -v pacman >/dev/null 2>&1; then
-  info "installing bubblewrap via pacman"
-  sudo pacman -S --needed --noconfirm bubblewrap
 else
   info "no supported package manager found for bubblewrap"
 fi
@@ -137,7 +130,7 @@ else
   info "zsh already installed"
 fi
 
-# switch default shell (Linux only)
+# switch to zsh (Linux only)
 if [ "$(uname -s)" != "Darwin" ] && command -v zsh >/dev/null 2>&1; then
   CURRENT_SHELL="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 || echo "")"
   ZSH_PATH="$(command -v zsh)"
