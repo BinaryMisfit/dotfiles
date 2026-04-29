@@ -74,9 +74,13 @@ export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 # --------------------------------------------------
 section "core tools"
 
+section "core tools"
+
 "$MISE" use -g age@latest
 "$MISE" use -g chezmoi@latest
-"$MISE" install age@latest chezmoi@latest
+"$MISE" use -g node@lts
+
+"$MISE" install age@latest chezmoi@latest node@lts
 "$MISE" reshim || true
 
 # hard PATH again (yes, again, because reality is annoying)
