@@ -6,12 +6,26 @@ install-core.sh
 setup-github-ssh.ps1
 setup-github-ssh.sh
 
-{{ if eq .chezmoi.os "windows" }}
+{{- $isWindows := eq .chezmoi.os "windows" -}}
+{{- $rawUser := .chezmoi.username -}}
+{{- $user := lower (last (splitList "\\" $rawUser)) -}}
+{{- $isMixWork := and $isWindows (eq $user "willier") -}}
+
+{{ if $isWindows }}
 .config/shell/env.zsh
 .scripts/*.sh
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" }}
 Documents/PowerShell/
+OneDrive - Powerfleet/
 .scripts/*.ps1
+{{ end }}
+
+{{ if and $isWindows $isMixWork }}
+Documents/PowerShell/
+{{ end }}
+
+{{ if and $isWindows (not $isMixWork) }}
+OneDrive - Powerfleet/
 {{ end }}
