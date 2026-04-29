@@ -72,6 +72,29 @@ SSH_KEYGEN="$(command -v ssh-keygen || true)"
 info "chezmoi: $CHEZMOI"
 info "age-keygen: $AGE_KEYGEN"
 
+section "codex sandbox"
+
+# Required for Codex sandboxing on Linux/WSL2.
+# macOS uses Apple Seatbelt instead, so do not install bubblewrap there.
+# https://developers.openai.com/codex/concepts/sandboxing#prerequisites
+if [ "$(uname -s)" = "Darwin" ]; then
+  info "macOS detected, skipping bubblewrap"
+elif command -v bwrap >/dev/null 2>&1; then
+  info "bubblewrap already installed"
+elif command -v apt-get >/dev/null 2>&1; then
+  info "installing bubblewrap via apt"
+  sudo apt-get update
+  sudo apt-get install -y bubblewrap
+elif command -v dnf >/dev/null 2>&1; then
+  info "installing bubblewrap via dnf"
+  sudo dnf install -y bubblewrap
+elif command -v pacman >/dev/null 2>&1; then
+  info "installing bubblewrap via pacman"
+  sudo pacman -S --needed --noconfirm bubblewrap
+else
+  info "no supported package manager found for bubblewrap"
+fi
+
 section "shell"
 
 if ! command -v zsh >/dev/null 2>&1; then
