@@ -60,7 +60,7 @@ MISE="$(command -v mise || true)"
 info "using: $MISE"
 
 # activate mise NOW (fixes shim issues)
-eval "$($MISE activate bash)"
+eval "$($MISE activate sh)"
 
 # persist activation
 if [ -f "$HOME/.bashrc" ] && ! grep -q 'mise activate bash' "$HOME/.bashrc"; then
