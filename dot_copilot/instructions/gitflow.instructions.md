@@ -53,3 +53,10 @@ Note: Local workspace file deletion is handled separately in K1ra's confirmation
 - All Git ops in current repo
 - Exceptions: .copilot/project-config.md (project overrides)
 - Emergency: user can request "force" + explicit confirmation
+
+Enforcement & Configuration
+- Policy-config file: .copilot/rules/gitflow.yml (repo-level) or user-level at ~/.copilot/rules/gitflow.yml (use homedir expansion). This file defines protected_paths, protected_branches, auto_commit thresholds, commit-trailer rules, and confirmation gates.
+- Cross-platform: Implementations must be cross-platform. Core logic should be in Python or Node (use pathlib/os.path), avoid shell-only scripts. Hook-installer should write PowerShell scripts on Windows and POSIX shell scripts on macOS/Linux. For file permissions: on POSIX set chmod, on Windows set ACLs (Set-Acl/icacls). The validator should check file ACLs and warn if rules files are world-readable.
+- Runtime enforcement: Copilot uses copilot-hooks (msg-validator, preflight) and the gitflow-guard skill to apply policy in "workspace-first" mode (no Git repo required). When a .git is present and the user opts in, the hook-installer extension writes real Git hooks (commit-msg, pre-commit, pre-push). The preflight hook invokes the policy-config validator; skills/hooks should call the validator before any LLM use to ensure deterministic checks.
+- Loader precedence: repo .copilot/rules/ → user ~/.copilot/rules/ → built-in defaults.
+- Server-side enforcement: For hosted repositories, server hooks (pre-receive) and CI checks should be configured to immutably enforce protected-branch policies.
