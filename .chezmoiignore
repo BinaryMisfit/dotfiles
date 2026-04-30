@@ -12,13 +12,14 @@ setup-github-ssh.sh
 {{- $isMixWork := and $isWindows (eq $user "willier") -}}
 
 {{ if $isWindows }}
-Documents
-OneDrive - Powerfleet
+Documents/
+OneDrive - Powerfleet/
 .config/shell/env.zsh
 .scripts/*.sh
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" }}
+Documents/
 Documents/PowerShell/
 OneDrive - Powerfleet/
 .scripts/*.ps1
