@@ -1,0 +1,6 @@
+.copilot/extensions/hook-installer
+.copilot/extensions/llm_client
+.copilot/extensions/policy-config
+.copilot/extensions/token-cache
+.copilot/hooks
+.copilot/skills/gitflow-guard
