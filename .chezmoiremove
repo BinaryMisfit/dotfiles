@@ -5,3 +5,4 @@
 .copilot/hooks
 .copilot/skills/gitflow-guard
 .copilot/rules
+mise.toml
