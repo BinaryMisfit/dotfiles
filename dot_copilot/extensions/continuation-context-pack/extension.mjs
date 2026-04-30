@@ -21,7 +21,7 @@ This IS a state transfer artifact to resume work with zero prior context.
 Prepare continuation context:
 - Current state:
 - Key decisions:
-- Next action:
+- Next action: [describe step — DO NOT execute automatically; wait for explicit user instruction]
 - Constraints:
 - Files (if relevant):
 
@@ -75,7 +75,7 @@ Prepare continuation context:
 
 A new session should be able to:
 - Understand the current state instantly
-- Continue execution without clarification
+- Know exactly what to do next — but wait for the user to say so
 - Avoid rework or repeated decisions
 
 ---

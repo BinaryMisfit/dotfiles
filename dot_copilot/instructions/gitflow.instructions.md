@@ -1,3 +1,25 @@
+## Skill Integration
+
+### When to Use Built-in Workflows
+
+**Defect Triage:**
+When you mention investigating, triaging, or fixing a defect (e.g., "UATD-1234", "bug", "crash", "defect"), invoke the **defect-workflow skill**:
+- Automatically runs Phases 1–4 (load ticket, reproduce, root cause, blast radius)
+- Saves 10–15 turns of manual investigation
+- Structured briefing on fix approach before implementation
+
+**Feature Development:**
+When you mention starting, implementing, or kicking off a feature (e.g., "UA-1234", "feature", "implement", "start work on"), invoke the **feature-workflow skill**:
+- Automatically runs Phases 1–4 (load ticket, analyze repo, gap analysis, blockers)
+- Saves 10–15 turns of manual planning
+- Structured briefing on gaps and blockers before implementation
+
+**How to invoke:**
+- Say: "Investigate [TICKET_ID]" or "Start feature [TICKET_ID]"
+- Or explicitly: "Run defect-workflow for UATD-1234"
+
+---
+
 ## Source Control Policy
 
 ### Auto-Commit
@@ -25,7 +47,7 @@
 
 **Protected branches (main, master, production, staging, protected/*, release/*):**
 - ALL changes require PR from a new branch (never direct commits)
-- PR must be approved before push
+- PR must be approved before merge
 - Require explicit "Proceed" confirmation
 
 **Pre-flight:** CI/CD passes, conflicts resolved locally, target confirmed.
@@ -35,9 +57,14 @@
 ### Pull Requests
 **Policy:** User-initiated only. K1ra generates summary; user must explicitly request submission.
 
-**K1ra generates:** auto-summary, file list, breaking-tags (if [BREAKING] in commits).
+**K1ra generates:** title, body, file list, breaking-tags (if [BREAKING] in commits).
 
-**User provides:** base, head, title, body. Reviews and edits before "Proceed" to submit.
+**User confirms:** base, head, and replies "Proceed" to submit.
+
+**Always set on every PR:**
+- Auto-complete enabled (set by PR creator)
+- Merge strategy: `noFastForward` (merge commit — never squash or rebase)
+- Delete source branch on completion: `true`
 
 ---
 

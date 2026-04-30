@@ -16,10 +16,11 @@ When interacting with external services (JIRA, Azure DevOps, etc.):
 
 When requested to interact with JIRA:
 - Follow Shared Patterns (above)
-- Specific details: [Add JIRA-specific guidance if needed]
+- Auth env vars: `JIRA_URL`, `JIRA_USERNAME`, `JIRA_API_TOKEN`
 
 ## Azure DevOps
 
 When requested to interact with Azure DevOps:
 - Follow Shared Patterns (above)
-- Specific details: [Add Azure DevOps-specific guidance if needed]
+- Auth env vars: `ADO_MCP_AUTH_TOKEN` (PR creation, API operations)
+- Build feed token: `mixTelematicsDevopsAccessToken` (Maven feed only — not scoped for API)
