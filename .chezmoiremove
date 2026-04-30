@@ -4,3 +4,4 @@
 .copilot/extensions/token-cache
 .copilot/hooks
 .copilot/skills/gitflow-guard
+.copilot/rules
