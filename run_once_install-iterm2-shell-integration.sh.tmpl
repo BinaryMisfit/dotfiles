@@ -1,0 +1,10 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/usr/bin/env sh
+set -eu
+
+target="$HOME/.iterm2_shell_integration.zsh"
+
+if [ ! -f "$target" ]; then
+  curl -fsSL https://iterm2.com/shell_integration/zsh -o "$target"
+fi
+{{ end -}}
