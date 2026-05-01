@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.tmpl": "go-template",
+        ".chezmoiignore": "go-template"
+    },
+    "git.autofetch": true
+}
