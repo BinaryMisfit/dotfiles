@@ -34,16 +34,7 @@ PLIST_PATH="$HOME/Library/LaunchAgents/$LABEL.plist"
 mkdir -p "$BASE_DIR" "$SERVER_DIR" "$LOG_DIR" "$HOME/Library/LaunchAgents"
 
 if ! command -v uvx >/dev/null 2>&1; then
-  if command -v brew >/dev/null 2>&1; then
-    brew install uv
-  else
-    echo "install-mcp-atlassian: uvx is missing and Homebrew is unavailable. Install uv, then rerun." >&2
-    exit 1
-  fi
-fi
-
-if ! command -v uvx >/dev/null 2>&1; then
-  echo "install-mcp-atlassian: uvx is still unavailable after dependency installation." >&2
+  echo "install-mcp-atlassian: uvx is missing. Install uv manually, then rerun; this installer does not auto-install dependencies." >&2
   exit 1
 fi
 
@@ -129,16 +120,25 @@ const port = Number($.NSProcessInfo.processInfo.environment.objectForKey('PORT')
 const url = $.NSProcessInfo.processInfo.environment.objectForKey('URL').js;
 const fm = $.NSFileManager.defaultManager;
 let obj = { range: { start: 9310, end: 9399 }, servers: {} };
+let oldText = null;
 if (fm.fileExistsAtPath(path)) {
   const data = $.NSData.dataWithContentsOfFile(path);
-  const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
-  if (text.trim()) obj = JSON.parse(text);
+  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  if (oldText.trim()) obj = JSON.parse(oldText);
 }
 obj.range = { start: 9310, end: 9399 };
 obj.servers = obj.servers || {};
 obj.servers['mcp-atlassian'] = { port, url, transport: 'streamable-http' };
 const out = JSON.stringify(obj, null, 2);
-$(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+if (oldText !== out) {
+  if (oldText !== null) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  }
+  $(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
 EOF
 }
 
@@ -216,6 +216,56 @@ EOF
   fi
 }
 
+patch_codex_config() {
+  local path="$1"
+  local url="$2"
+  env TARGET_PATH="$path" MCP_URL="$url" /usr/bin/osascript -l JavaScript <<'EOF'
+ObjC.import('Foundation');
+const env = $.NSProcessInfo.processInfo.environment;
+const path = env.objectForKey('TARGET_PATH').js;
+const url = env.objectForKey('MCP_URL').js;
+const fm = $.NSFileManager.defaultManager;
+let oldText = null;
+let text = '';
+if (fm.fileExistsAtPath(path)) {
+  const data = $.NSData.dataWithContentsOfFile(path);
+  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  text = oldText;
+}
+const block = `[mcp_servers.atlassian]
+url = "${url}"
+enabled = true
+tool_timeout_sec = 120
+`;
+const removeBlock = (input, header) => {
+  const lines = input.split(/\r?\n/);
+  const out = [];
+  let skipping = false;
+  for (const line of lines) {
+    if (/^\s*\[.*\]\s*$/.test(line)) {
+      skipping = line.trim() === header;
+      if (skipping) continue;
+    }
+    if (!skipping) out.push(line);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+};
+let next = removeBlock(text, '[mcp_servers.atlassian]');
+next = next ? `${next}\n\n${block}` : block;
+if (oldText !== next) {
+  const dir = path.replace(/\/[^\/]+$/, '');
+  fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(dir, true, null, null);
+  if (oldText !== null) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  }
+  $(next).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
+EOF
+}
+
 PORT="$(select_port)"
 URL="http://127.0.0.1:$PORT/mcp"
 write_registry "$PORT"
@@ -240,7 +290,7 @@ set -a
 source "$ENV_PATH"
 set +a
 
-for key in JIRA_URL JIRA_USERNAME JIRA_API_TOKEN CONFLUENCE_URL CONFLUENCE_USERNAME CONFLUENCE_API_TOKEN; do
+for key in JIRA_URL JIRA_USERNAME JIRA_API_TOKEN TOOLSETS READ_ONLY_MODE; do
   value="${(P)key:-}"
   if [ -z "$value" ]; then
     echo "start.sh: required environment variable '$key' is missing in $ENV_PATH" >&2
@@ -351,6 +401,7 @@ PLIST_PATH="$HOME/Library/LaunchAgents/$LABEL.plist"
 VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
 COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
 COPILOT_PATH="$COPILOT_BASE/mcp-config.json"
+CODEX_PATH="${CODEX_HOME:-$HOME/.codex}/config.toml"
 
 if launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
   launchctl bootout "gui/$(id -u)" "$PLIST_PATH"
@@ -370,13 +421,47 @@ const data = $.NSData.dataWithContentsOfFile(path);
 const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
 const obj = text.trim() ? JSON.parse(text) : {};
 if (obj[top]) delete obj[top]['mcp-atlassian'];
-$(JSON.stringify(obj, null, 2)).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+const out = JSON.stringify(obj, null, 2);
+if (out !== text) {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  $(text).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  $(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
 EOS
 }
 
 remove_json_entry "$VSCODE_PATH" "servers"
 remove_json_entry "$COPILOT_PATH" "mcpServers"
 remove_json_entry "$REGISTRY_PATH" "servers"
+
+if [ -f "$CODEX_PATH" ]; then
+  TARGET_PATH="$CODEX_PATH" /usr/bin/osascript -l JavaScript <<'EOS'
+ObjC.import('Foundation');
+const path = $.NSProcessInfo.processInfo.environment.objectForKey('TARGET_PATH').js;
+const data = $.NSData.dataWithContentsOfFile(path);
+const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+const lines = text.split(/\r?\n/);
+const out = [];
+let skipping = false;
+for (const line of lines) {
+  if (/^\s*\[.*\]\s*$/.test(line)) {
+    skipping = line.trim() === '[mcp_servers.atlassian]';
+    if (skipping) continue;
+  }
+  if (!skipping) out.push(line);
+}
+const next = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+if (next !== text) {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  $(text).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  $(next).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
+EOS
+fi
 
 if [ -f "$ENV_PATH" ]; then
   mv -f "$ENV_PATH" "$SERVER_DIR/.env.backup"
@@ -428,12 +513,23 @@ launchctl kickstart -k "gui/$(id -u)/$LABEL"
 VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
 COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
 COPILOT_PATH="$COPILOT_BASE/mcp-config.json"
+CODEX_PATH="${CODEX_HOME:-$HOME/.codex}/config.toml"
 
 patch_vscode_config "$VSCODE_PATH" "$URL"
 patch_copilot_config "$COPILOT_PATH" "$URL"
+patch_codex_config "$CODEX_PATH" "$URL"
 
-echo "mcp-atlassian URL: $URL"
-echo "Edit secrets in: $ENV_PATH"
-echo "Status: $SERVER_DIR/status.sh"
-echo "VS Code MCP config: $VSCODE_PATH"
-echo "Copilot MCP config: $COPILOT_PATH"
+if agent_is_loaded; then
+  SERVICE_STATE="loaded"
+else
+  SERVICE_STATE="not loaded"
+fi
+
+echo "name: mcp-atlassian"
+echo "port: $PORT"
+echo "URL: $URL"
+echo "env path: $ENV_PATH"
+echo "logs path: $LOG_DIR"
+echo "service state: $SERVICE_STATE"
+echo "clients patched: VS Code ($VSCODE_PATH), Copilot CLI ($COPILOT_PATH), Codex ($CODEX_PATH)"
+echo "status: $SERVER_DIR/status.sh"

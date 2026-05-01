@@ -1,0 +1,130 @@
+#!/usr/bin/env zsh
+set -eu
+
+MEM0_URL="https://mcp.mem0.ai/mcp"
+ENV_PATH="$HOME/.config/mcp/mcp-mem0.env"
+VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
+COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
+COPILOT_PATH="$COPILOT_BASE/mcp-config.json"
+CODEX_PATH="${CODEX_HOME:-$HOME/.codex}/config.toml"
+
+if [ ! -f "$ENV_PATH" ]; then
+  echo "install-mcp-mem0: env file missing at $ENV_PATH. Copy ~/.config/mcp/mcp-mem0.env.example and set MEM0_API_KEY." >&2
+  exit 1
+fi
+
+set -a
+source "$ENV_PATH"
+set +a
+
+if [ -z "${MEM0_API_KEY:-}" ]; then
+  echo "install-mcp-mem0: MEM0_API_KEY is missing in $ENV_PATH." >&2
+  exit 1
+fi
+
+patch_json_config() {
+  local path="$1"
+  local top="$2"
+  if ! env TARGET_PATH="$path" TOP="$top" MCP_URL="$MEM0_URL" /usr/bin/osascript -l JavaScript <<'EOF'
+ObjC.import('Foundation');
+const env = $.NSProcessInfo.processInfo.environment;
+const path = env.objectForKey('TARGET_PATH').js;
+const top = env.objectForKey('TOP').js;
+const url = env.objectForKey('MCP_URL').js;
+const fm = $.NSFileManager.defaultManager;
+let obj = {};
+let oldText = null;
+if (fm.fileExistsAtPath(path)) {
+  const data = $.NSData.dataWithContentsOfFile(path);
+  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  if (oldText.trim()) obj = JSON.parse(oldText);
+}
+obj[top] = obj[top] || {};
+obj[top].mem0 = {
+  type: 'http',
+  url,
+  headers: {
+    Authorization: 'Token ${MEM0_API_KEY}'
+  }
+};
+const out = JSON.stringify(obj, null, 2);
+if (oldText !== out) {
+  const dir = path.replace(/\/[^\/]+$/, '');
+  fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(dir, true, null, null);
+  if (oldText !== null) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  }
+  $(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
+EOF
+  then
+    echo "install-mcp-mem0: invalid JSON or write failure in '$path'. Fix the JSON or use a clean config path." >&2
+    exit 1
+  fi
+}
+
+patch_codex_config() {
+  local path="$1"
+  env TARGET_PATH="$path" MCP_URL="$MEM0_URL" /usr/bin/osascript -l JavaScript <<'EOF'
+ObjC.import('Foundation');
+const env = $.NSProcessInfo.processInfo.environment;
+const path = env.objectForKey('TARGET_PATH').js;
+const url = env.objectForKey('MCP_URL').js;
+const fm = $.NSFileManager.defaultManager;
+let oldText = null;
+let text = '';
+if (fm.fileExistsAtPath(path)) {
+  const data = $.NSData.dataWithContentsOfFile(path);
+  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  text = oldText;
+}
+const block = `[mcp_servers.mem0]
+url = "${url}"
+enabled = true
+
+[mcp_servers.mem0.headers]
+Authorization = "Token \${MEM0_API_KEY}"
+`;
+const removeBlock = (input, header) => {
+  const lines = input.split(/\r?\n/);
+  const out = [];
+  let skipping = false;
+  for (const line of lines) {
+    if (/^\s*\[.*\]\s*$/.test(line)) {
+      skipping = line.trim() === header;
+      if (skipping) continue;
+    }
+    if (!skipping) out.push(line);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+};
+let next = removeBlock(text, '[mcp_servers.mem0]');
+next = removeBlock(next, '[mcp_servers.mem0.headers]');
+next = next ? `${next}\n\n${block}` : block;
+if (oldText !== next) {
+  const dir = path.replace(/\/[^\/]+$/, '');
+  fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(dir, true, null, null);
+  if (oldText !== null) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  }
+  $(next).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
+EOF
+}
+
+patch_json_config "$VSCODE_PATH" "servers"
+patch_json_config "$COPILOT_PATH" "mcpServers"
+patch_codex_config "$CODEX_PATH"
+
+echo "mem0 MCP configured"
+echo "URL: $MEM0_URL"
+echo "Env path: $ENV_PATH"
+echo "VS Code MCP config: $VSCODE_PATH"
+echo "Copilot MCP config: $COPILOT_PATH"
+echo "Codex config: $CODEX_PATH"

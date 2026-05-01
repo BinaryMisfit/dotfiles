@@ -22,30 +22,6 @@ function Get-CommandPath([string]$Name) {
     return $null
 }
 
-function Install-Tool([string]$Name, [string]$ScoopPackage, [string]$WingetId) {
-    if (Get-CommandPath $Name) { return }
-
-    $scoop = Get-CommandPath "scoop"
-    if ($scoop) {
-        try {
-            & scoop install $ScoopPackage
-        } catch {
-            Write-Warning "scoop install $ScoopPackage failed; trying winget"
-        }
-    }
-
-    if (Get-CommandPath $Name) { return }
-
-    $winget = Get-CommandPath "winget"
-    if ($winget) {
-        & winget install -e --id $WingetId
-    }
-
-    if (-not (Get-CommandPath $Name)) {
-        Write-Error "Required command '$Name' was not found and could not be installed with scoop or winget."
-    }
-}
-
 function Read-JsonFile([string]$Path, [object]$Default) {
     if (-not (Test-Path -LiteralPath $Path)) { return $Default }
     $raw = Get-Content -LiteralPath $Path -Raw
@@ -149,6 +125,52 @@ function Patch-CopilotConfig([string]$Path, [string]$Url) {
     Write-JsonFileIfChanged $Path $config -Backup | Out-Null
 }
 
+function Remove-TomlBlock([string]$Text, [string]$Header) {
+    $lines = $Text -split "`r?`n"
+    $out = New-Object System.Collections.Generic.List[string]
+    $skipping = $false
+    foreach ($line in $lines) {
+        if ($line -match '^\s*\[.*\]\s*$') {
+            $skipping = ($line.Trim() -eq $Header)
+            if ($skipping) { continue }
+        }
+        if (-not $skipping) { $out.Add($line) }
+    }
+    return (($out -join "`n") -replace "`n{3,}", "`n`n").Trim()
+}
+
+function Write-TextFileIfChanged([string]$Path, [string]$Text, [switch]$Backup) {
+    $old = $null
+    if (Test-Path -LiteralPath $Path) {
+        $old = Get-Content -LiteralPath $Path -Raw
+    }
+    if ($old -eq $Text) { return $false }
+    $dir = Split-Path -Parent $Path
+    if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    if ($Backup -and (Test-Path -LiteralPath $Path)) {
+        $stamp = Get-Date -Format "yyyyMMddHHmmss"
+        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
+    }
+    $Text | Set-Content -LiteralPath $Path -Encoding UTF8
+    return $true
+}
+
+function Patch-CodexConfig([string]$Path, [string]$Url) {
+    $text = ""
+    if (Test-Path -LiteralPath $Path) {
+        $text = Get-Content -LiteralPath $Path -Raw
+    }
+    $next = Remove-TomlBlock $text "[mcp_servers.atlassian]"
+    $block = @"
+[mcp_servers.atlassian]
+url = "$Url"
+enabled = true
+tool_timeout_sec = 120
+"@
+    if ($next) { $next = "$next`n`n$block" } else { $next = $block }
+    Write-TextFileIfChanged $Path $next -Backup | Out-Null
+}
+
 if (-not (Test-IsAdmin)) {
     Write-Error "Creating or updating the NSSM service requires elevation. Rerun PowerShell as Administrator; no service changes were made."
 }
@@ -164,8 +186,12 @@ $EnvExamplePath = Join-Path $env:USERPROFILE ".config\mcp\mcp-atlassian.env.exam
 
 New-Item -ItemType Directory -Force -Path $BaseDir, $ServerDir, $LogDir | Out-Null
 
-Install-Tool "uvx" "uv" "astral-sh.uv"
-Install-Tool "nssm" "nssm" "NSSM.NSSM"
+if (-not (Get-CommandPath "uvx")) {
+    Write-Error "Required command 'uvx' was not found. Install uv manually, then rerun; this installer does not auto-install dependencies."
+}
+if (-not (Get-CommandPath "nssm")) {
+    Write-Error "Required command 'nssm' was not found. Install NSSM manually, then rerun; this installer does not auto-install dependencies."
+}
 
 if (-not (Test-Path -LiteralPath $EnvPath)) {
     if (-not (Test-Path -LiteralPath $EnvExamplePath)) {
@@ -190,7 +216,7 @@ Ensure-ObjectProperty $registry.servers "mcp-atlassian" ([pscustomobject]@{
     url = $url
     transport = "streamable-http"
 })
-Write-JsonFileIfChanged $RegistryPath $registry | Out-Null
+Write-JsonFileIfChanged $RegistryPath $registry -Backup | Out-Null
 $port.ToString() | Set-Content -LiteralPath $PortPath -NoNewline -Encoding ASCII
 
 $startPath = Join-Path $ServerDir "start.ps1"
@@ -220,7 +246,7 @@ foreach ($line in Get-Content -LiteralPath $EnvPath) {
     [Environment]::SetEnvironmentVariable($key, $value, "Process")
 }
 
-$required = @("JIRA_URL", "JIRA_USERNAME", "JIRA_API_TOKEN", "CONFLUENCE_URL", "CONFLUENCE_USERNAME", "CONFLUENCE_API_TOKEN")
+$required = @("JIRA_URL", "JIRA_USERNAME", "JIRA_API_TOKEN", "TOOLSETS", "READ_ONLY_MODE")
 foreach ($key in $required) {
     if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($key, "Process"))) {
         Write-Error "Required environment variable '$key' is missing in $EnvPath"
@@ -300,8 +326,47 @@ function Read-JsonFile([string]$Path, [object]$Default) {
     return $raw | ConvertFrom-Json -Depth 32
 }
 
-function Write-JsonFile([string]$Path, [object]$Data) {
-    $Data | ConvertTo-Json -Depth 32 | Set-Content -LiteralPath $Path -Encoding UTF8
+function Write-JsonFileIfChanged([string]$Path, [object]$Data, [switch]$Backup) {
+    $new = ($Data | ConvertTo-Json -Depth 32)
+    $old = $null
+    if (Test-Path -LiteralPath $Path) {
+        $old = Get-Content -LiteralPath $Path -Raw
+    }
+    if ($old -eq $new) { return $false }
+    if ($Backup -and (Test-Path -LiteralPath $Path)) {
+        $stamp = Get-Date -Format "yyyyMMddHHmmss"
+        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
+    }
+    $new | Set-Content -LiteralPath $Path -Encoding UTF8
+    return $true
+}
+
+function Remove-TomlBlock([string]$Text, [string]$Header) {
+    $lines = $Text -split "`r?`n"
+    $out = New-Object System.Collections.Generic.List[string]
+    $skipping = $false
+    foreach ($line in $lines) {
+        if ($line -match '^\s*\[.*\]\s*$') {
+            $skipping = ($line.Trim() -eq $Header)
+            if ($skipping) { continue }
+        }
+        if (-not $skipping) { $out.Add($line) }
+    }
+    return (($out -join "`n") -replace "`n{3,}", "`n`n").Trim()
+}
+
+function Write-TextFileIfChanged([string]$Path, [string]$Text, [switch]$Backup) {
+    $old = $null
+    if (Test-Path -LiteralPath $Path) {
+        $old = Get-Content -LiteralPath $Path -Raw
+    }
+    if ($old -eq $Text) { return $false }
+    if ($Backup -and (Test-Path -LiteralPath $Path)) {
+        $stamp = Get-Date -Format "yyyyMMddHHmmss"
+        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
+    }
+    $Text | Set-Content -LiteralPath $Path -Encoding UTF8
+    return $true
 }
 
 function Remove-Property([object]$Object, [string]$Name) {
@@ -324,23 +389,30 @@ if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
 $vscode = if ($McpVSCodeConfigPath) { $McpVSCodeConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
 $copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
 $copilot = Join-Path $copilotHome "mcp-config.json"
+$codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
+$codex = Join-Path $codexHome "config.toml"
 
 if (Test-Path -LiteralPath $vscode) {
     $cfg = Read-JsonFile $vscode ([pscustomobject]@{})
     if ($cfg.servers) { Remove-Property $cfg.servers "mcp-atlassian" }
-    Write-JsonFile $vscode $cfg
+    Write-JsonFileIfChanged $vscode $cfg -Backup | Out-Null
 }
 
 if (Test-Path -LiteralPath $copilot) {
     $cfg = Read-JsonFile $copilot ([pscustomobject]@{})
     if ($cfg.mcpServers) { Remove-Property $cfg.mcpServers "mcp-atlassian" }
-    Write-JsonFile $copilot $cfg
+    Write-JsonFileIfChanged $copilot $cfg -Backup | Out-Null
+}
+
+if (Test-Path -LiteralPath $codex) {
+    $text = Get-Content -LiteralPath $codex -Raw
+    Write-TextFileIfChanged $codex (Remove-TomlBlock $text "[mcp_servers.atlassian]") -Backup | Out-Null
 }
 
 if (Test-Path -LiteralPath $RegistryPath) {
     $registry = Read-JsonFile $RegistryPath ([pscustomobject]@{})
     if ($registry.servers) { Remove-Property $registry.servers "mcp-atlassian" }
-    Write-JsonFile $RegistryPath $registry
+    Write-JsonFileIfChanged $RegistryPath $registry -Backup | Out-Null
 }
 
 if (Test-Path -LiteralPath $EnvPath) {
@@ -377,14 +449,23 @@ if (Test-ServiceExists $ServiceName) {
 $vscodePath = if ($McpVSCodeConfigPath) { $McpVSCodeConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
 $copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
 $copilotPath = Join-Path $copilotHome "mcp-config.json"
+$codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
+$codexPath = Join-Path $codexHome "config.toml"
 
 Patch-VSCodeConfig $vscodePath $url
 Patch-CopilotConfig $copilotPath $url
+Patch-CodexConfig $codexPath $url
 
 & nssm start $ServiceName | Out-Host
 
-Write-Host "mcp-atlassian URL: $url"
-Write-Host "Edit secrets in: $EnvPath"
-Write-Host "Status: $statusPath"
-Write-Host "VS Code MCP config: $vscodePath"
-Write-Host "Copilot MCP config: $copilotPath"
+$service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+$serviceState = if ($service) { $service.Status } else { "not installed" }
+
+Write-Host "name: mcp-atlassian"
+Write-Host "port: $port"
+Write-Host "URL: $url"
+Write-Host "env path: $EnvPath"
+Write-Host "logs path: $LogDir"
+Write-Host "service state: $serviceState"
+Write-Host "clients patched: VS Code ($vscodePath), Copilot CLI ($copilotPath), Codex ($codexPath)"
+Write-Host "status: $statusPath"
