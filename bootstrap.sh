@@ -18,7 +18,6 @@ SSH_REMOTE="git@github.com:${REPO}.git"
 SSH_DIR="$HOME/.ssh"
 SSH_KEY="$SSH_DIR/id_ed25519_github"
 
-# Hard PATH (no magic, no guessing)
 export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 
 section() { printf '\n==> %s\n' "$1"; }
@@ -26,6 +25,59 @@ info() { printf '  %s\n' "$1"; }
 die() {
   printf 'ERROR: %s\n' "$1" >&2
   exit 1
+}
+
+ensure_update_apply_false() {
+  [ -f "$CHEZMOI_CONFIG" ] || return 0
+
+  TMP="${CHEZMOI_CONFIG}.tmp"
+
+  if grep -Eq '^[[:space:]]*update:[[:space:]]*$' "$CHEZMOI_CONFIG"; then
+    awk '
+      BEGIN {
+        in_update = 0
+        saw_apply = 0
+      }
+
+      /^[^[:space:]][^:]*:[[:space:]]*$/ {
+        if (in_update && !saw_apply) {
+          print "  apply: false"
+        }
+        in_update = 0
+        saw_apply = 0
+      }
+
+      /^[[:space:]]*update:[[:space:]]*$/ {
+        in_update = 1
+        saw_apply = 0
+        print
+        next
+      }
+
+      in_update && /^[[:space:]]*apply:[[:space:]]*/ {
+        print "  apply: false"
+        saw_apply = 1
+        next
+      }
+
+      {
+        print
+      }
+
+      END {
+        if (in_update && !saw_apply) {
+          print "  apply: false"
+        }
+      }
+    ' "$CHEZMOI_CONFIG" >"$TMP"
+    mv "$TMP" "$CHEZMOI_CONFIG"
+  else
+    cat >>"$CHEZMOI_CONFIG" <<'EOF'
+
+update:
+  apply: false
+EOF
+  fi
 }
 
 section "bootstrap"
@@ -60,13 +112,11 @@ MISE="$LOCAL_BIN/mise"
 
 info "using: $MISE"
 
-# persist activation for future shells (not required for this run)
 if [ -f "$HOME/.bashrc" ] && ! grep -q 'mise activate' "$HOME/.bashrc"; then
   info "persisting mise activation"
   echo 'eval "$($HOME/.local/bin/mise activate sh)"' >>"$HOME/.bashrc"
 fi
 
-# enforce PATH again after install
 export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 
 # --------------------------------------------------
@@ -74,16 +124,13 @@ export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 # --------------------------------------------------
 section "core tools"
 
-section "core tools"
-
 "$MISE" use -g age@latest
 "$MISE" use -g chezmoi@latest
-"$MISE" use -g node@lts
+"$MISE" use -g node@20
 
-"$MISE" install age@latest chezmoi@latest node@lts
+"$MISE" install age@latest chezmoi@latest node@20
 "$MISE" reshim || true
 
-# hard PATH again (yes, again, because reality is annoying)
 export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
 
 CHEZMOI="$MISE_SHIMS/chezmoi"
@@ -134,7 +181,6 @@ else
   info "zsh already installed"
 fi
 
-# switch to zsh (Linux only)
 if [ "$(uname -s)" != "Darwin" ] && command -v zsh >/dev/null 2>&1; then
   CURRENT_SHELL="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 || echo "")"
   ZSH_PATH="$(command -v zsh)"
@@ -190,10 +236,14 @@ age:
     - $AGE_KEY
   recipients:
     - $AGE_RECIPIENT
+
+update:
+  apply: false
 EOF
   info "created: $CHEZMOI_CONFIG"
 else
-  info "config already exists, leaving untouched"
+  info "config already exists, enforcing update.apply=false"
+  ensure_update_apply_false
 fi
 
 HAS_GIT_IDENTITY=0
@@ -273,6 +323,7 @@ printf 'When done run:\n  %s\n\n' "$CHEZ"
 printf 'Verify:\n'
 printf '  ssh -T git@github.com\n'
 printf '  git -C "$HOME/.local/share/chezmoi" remote -v\n'
-printf '  mise doctor\n\n'
+printf '  mise doctor\n'
+printf '  chezmoi data | grep -A5 update\n\n'
 
 printf 'bootstrap: complete\n'

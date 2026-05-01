@@ -33,6 +33,58 @@ function Die {
     throw "ERROR: $Message"
 }
 
+function Ensure-ChezmoiUpdateApplyFalse {
+    if (-not (Test-Path $ChezmoiConfig)) {
+        return
+    }
+
+    $Lines = Get-Content $ChezmoiConfig
+    $Output = New-Object System.Collections.Generic.List[string]
+
+    $InUpdate = $false
+    $SawApply = $false
+    $SawUpdate = $false
+
+    foreach ($Line in $Lines) {
+        if ($Line -match '^\S[^:]*:\s*$') {
+            if ($InUpdate -and -not $SawApply) {
+                $Output.Add("  apply: false")
+            }
+
+            $InUpdate = $false
+            $SawApply = $false
+        }
+
+        if ($Line -match '^\s*update:\s*$') {
+            $SawUpdate = $true
+            $InUpdate = $true
+            $SawApply = $false
+            $Output.Add($Line)
+            continue
+        }
+
+        if ($InUpdate -and $Line -match '^\s*apply:\s*') {
+            $Output.Add("  apply: false")
+            $SawApply = $true
+            continue
+        }
+
+        $Output.Add($Line)
+    }
+
+    if ($InUpdate -and -not $SawApply) {
+        $Output.Add("  apply: false")
+    }
+
+    if (-not $SawUpdate) {
+        $Output.Add("")
+        $Output.Add("update:")
+        $Output.Add("  apply: false")
+    }
+
+    $Output | Set-Content $ChezmoiConfig
+}
+
 Section "bootstrap"
 Info "repo: $Repo"
 
@@ -97,11 +149,15 @@ age:
     - $AgeKey
   recipients:
     - $AgeRecipient
+
+update:
+  apply: false
 "@ | Set-Content $ChezmoiConfig
 
     Info "created: $ChezmoiConfig"
 } else {
-    Info "config already exists, leaving untouched"
+    Info "config already exists, enforcing update.apply=false"
+    Ensure-ChezmoiUpdateApplyFalse
 }
 
 $HasGitIdentity = $false
@@ -189,6 +245,7 @@ Write-Host "Verify:"
 Write-Host "  ssh -T git@github.com"
 Write-Host '  git -C "$HOME\.local\share\chezmoi" remote -v'
 Write-Host "  mise doctor"
+Write-Host "  chezmoi data | Select-String update"
 Write-Host ""
 
 Write-Host "bootstrap: complete"
