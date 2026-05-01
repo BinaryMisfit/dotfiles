@@ -16,7 +16,11 @@
 
   // --- Editor ---
   "editor.fontFamily": "FiraCode Nerd Font, Monaco, 'Courier New', monospace",
+  {{- if eq .chezmoi.os "windows" }}
+  "editor.fontSize": 16,
+  {{- else if eq .chezmoi.os "darwin" }}
   "editor.fontSize": 14,
+  {{- end }}
   "editor.fontLigatures": true,
   "editor.minimap.enabled": false,
   "editor.renderWhitespace": "boundary",
@@ -36,11 +40,20 @@
   "terminal.integrated.defaultLocation": "editor",
   "terminal.integrated.tabs.hideCondition": "singleTerminal",
   "terminal.integrated.fontFamily": "MesloLGS Nerd Font",
+  {{- if eq .chezmoi.os "windows" }}
+  "terminal.integrated.fontSize": 15,
+  {{- else if eq .chezmoi.os "darwin" }}
   "terminal.integrated.fontSize": 13,
+  {{- end}}
 
   // --- AI / Chat ---
   "chat.openOnStartup": false,
   "chat.editor.fontSize": 13,
+  "chat.progressBorder.enabled": true,
+  "chat.persistentProgress.enabled": true,
+  "chat.unifiedAgentsBar.enabled": true,
+  "chat.viewProgressBadge.enabled": true,
+  "chat.viewSessions.orientation": "stacked",
 
   // --- Vim ---
   "vim.useSystemClipboard": true,
@@ -49,4 +62,9 @@
   "vim.incsearch": true,
   "vim.ignorecase": true,
   "vim.smartcase": true
+
+  // --- Remote ---
+  "remote.SSH.remotePlatform": {
+    "netctrl": "linux"
+  }
 }
