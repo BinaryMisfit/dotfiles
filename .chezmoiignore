@@ -50,7 +50,7 @@ install-vscode-extensions.ps1
 
 # VS Code settings target selection on Windows
 {{ if and $isWindows $hasScoopVscode }}
-AppData/Roaming/Code/User/
+AppData/Roaming/Code/
 {{ end }}
 
 {{ if and $isWindows (not $hasScoopVscode) }}
