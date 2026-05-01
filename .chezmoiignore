@@ -12,7 +12,7 @@ setup-github-ssh.sh
 {{- $isMixWork := and $isWindows (eq $user "willier") -}}
 
 {{ if ne .chezmoi.os "darwin" }}
-Library/Application Support/Code/User/settings.json.tmpl
+Library/
 {{ end }}
 
 {{ if $isWindows }}
