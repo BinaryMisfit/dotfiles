@@ -6,34 +6,37 @@ install-core.sh
 setup-github-ssh.ps1
 setup-github-ssh.sh
 
-{{- $isWindows := eq .chezmoi.os "windows" -}}
-{{- $rawUser := .chezmoi.username -}}
-{{- $user := lower (last (splitList "\\" $rawUser)) -}}
-{{- $isMixWork := and $isWindows (eq $user "willier") -}}
+{{ $isWindows := eq .chezmoi.os "windows" }}
+{{ $isDarwin := eq .chezmoi.os "darwin" }}
+{{ $user := lower (last (splitList "\\" .chezmoi.username)) }}
+{{ $isWorkWin := and $isWindows (eq $user "willier") }}
+{{ $useWorkPwsh := $isWorkWin }}
+{{ $useLocalPwsh := and $isWindows (not $isWorkWin) }}
 
-{{ if ne .chezmoi.os "darwin" }}
+# macOS-only targets
+{{ if not $isDarwin }}
 Library/
 {{ end }}
 
-{{ if $isWindows }}
-Documents/
-OneDrive - Powerfleet/
-.config/shell/env.zsh
-.scripts/*.sh
-{{ end }}
-
-{{ if ne .chezmoi.os "windows" }}
+# Windows-only targets
+{{ if not $isWindows }}
 AppData/
 Documents/
-Documents/PowerShell/
 OneDrive - Powerfleet/
 .scripts/*.ps1
 {{ end }}
 
-{{ if and $isWindows $isMixWork }}
+# POSIX-only targets
+{{ if $isWindows }}
+.config/shell/env.zsh
+.scripts/*.sh
+{{ end }}
+
+# PowerShell profile location
+{{ if $useWorkPwsh }}
 Documents/PowerShell/
 {{ end }}
 
-{{ if and $isWindows (not $isMixWork) }}
+{{ if $useLocalPwsh }}
 OneDrive - Powerfleet/
 {{ end }}
