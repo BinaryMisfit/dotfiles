@@ -14,9 +14,8 @@ $CodexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USER
 $CodexPath = Join-Path $CodexHome "config.toml"
 
 function Read-EnvFile([string]$Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        Write-Error "install-mcp-mem0: env file missing at $Path. Copy ~/.config/mcp/mcp-mem0.env.example and set MEM0_API_KEY."
-    }
+    $values = @{}
+    if (-not (Test-Path -LiteralPath $Path)) { return $values }
     foreach ($line in Get-Content -LiteralPath $Path) {
         $trimmed = $line.Trim()
         if ($trimmed -eq "" -or $trimmed.StartsWith("#")) { continue }
@@ -24,8 +23,9 @@ function Read-EnvFile([string]$Path) {
         if ($idx -lt 1) { continue }
         $key = $trimmed.Substring(0, $idx).Trim()
         $value = $trimmed.Substring($idx + 1).Trim().Trim('"').Trim("'")
-        [Environment]::SetEnvironmentVariable($key, $value, "Process")
+        if ($key) { $values[$key] = $value }
     }
+    return $values
 }
 
 function Read-JsonFile([string]$Path, [object]$Default) {
@@ -40,7 +40,7 @@ function Read-JsonFile([string]$Path, [object]$Default) {
 }
 
 function Write-JsonFileIfChanged([string]$Path, [object]$Data) {
-    $new = ($Data | ConvertTo-Json -Depth 32)
+    $new = ($Data | ConvertTo-Json -Depth 32) + "`n"
     $old = $null
     if (Test-Path -LiteralPath $Path) {
         $old = Get-Content -LiteralPath $Path -Raw
@@ -64,18 +64,25 @@ function Ensure-ObjectProperty([object]$Object, [string]$Name, [object]$Value) {
     }
 }
 
-function Patch-JsonMcpConfig([string]$Path, [string]$Top) {
+function New-Mem0JsonEntry([bool]$HasApiKey) {
+    $entry = [pscustomobject]@{
+        type = "http"
+        url = $Mem0Url
+    }
+    if ($HasApiKey) {
+        Ensure-ObjectProperty $entry "headers" ([pscustomobject]@{
+            Authorization = 'Token ${MEM0_API_KEY}'
+        })
+    }
+    return $entry
+}
+
+function Patch-JsonMcpConfig([string]$Path, [string]$Top, [bool]$HasApiKey) {
     $config = Read-JsonFile $Path ([pscustomobject]@{})
     if (-not ($config.PSObject.Properties.Name -contains $Top) -or $null -eq $config.$Top) {
         Ensure-ObjectProperty $config $Top ([pscustomobject]@{})
     }
-    Ensure-ObjectProperty $config.$Top "mem0" ([pscustomobject]@{
-        type = "http"
-        url = $Mem0Url
-        headers = [pscustomobject]@{
-            Authorization = 'Token ${MEM0_API_KEY}'
-        }
-    })
+    Ensure-ObjectProperty $config.$Top "mem0" (New-Mem0JsonEntry $HasApiKey)
     Write-JsonFileIfChanged $Path $config | Out-Null
 }
 
@@ -93,7 +100,19 @@ function Remove-TomlBlock([string]$Text, [string]$Header) {
     return (($out -join "`n") -replace "`n{3,}", "`n`n").Trim()
 }
 
-function Patch-CodexConfig([string]$Path) {
+function New-CodexBlock([bool]$HasAuthHeader) {
+    $block = @"
+[mcp_servers.mem0]
+url = "$Mem0Url"
+enabled = true
+"@
+    if ($HasAuthHeader) {
+        $block = "$block`nenv_http_headers = { Authorization = `"MEM0_AUTH_HEADER`" }"
+    }
+    return "$block`n"
+}
+
+function Patch-CodexConfig([string]$Path, [bool]$HasAuthHeader) {
     $old = $null
     $text = ""
     if (Test-Path -LiteralPath $Path) {
@@ -102,14 +121,7 @@ function Patch-CodexConfig([string]$Path) {
     }
     $next = Remove-TomlBlock $text "[mcp_servers.mem0]"
     $next = Remove-TomlBlock $next "[mcp_servers.mem0.headers]"
-    $block = @"
-[mcp_servers.mem0]
-url = "$Mem0Url"
-enabled = true
-
-[mcp_servers.mem0.headers]
-Authorization = "Token `${MEM0_API_KEY}"
-"@
+    $block = New-CodexBlock $HasAuthHeader
     if ($next) { $next = "$next`n`n$block" } else { $next = $block }
     if ($old -eq $next) { return }
     $dir = Split-Path -Parent $Path
@@ -121,14 +133,19 @@ Authorization = "Token `${MEM0_API_KEY}"
     $next | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 
-Read-EnvFile $EnvPath
-if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable("MEM0_API_KEY", "Process"))) {
-    Write-Error "install-mcp-mem0: MEM0_API_KEY is missing in $EnvPath."
-}
+$EnvValues = Read-EnvFile $EnvPath
+$HasApiKey = $EnvValues.ContainsKey("MEM0_API_KEY") -and -not [string]::IsNullOrWhiteSpace($EnvValues["MEM0_API_KEY"])
+$HasAuthHeader = ($EnvValues.ContainsKey("MEM0_AUTH_HEADER") -and -not [string]::IsNullOrWhiteSpace($EnvValues["MEM0_AUTH_HEADER"])) -or $HasApiKey
 
-Patch-JsonMcpConfig $VSCodePath "servers"
-Patch-JsonMcpConfig $CopilotPath "mcpServers"
-Patch-CodexConfig $CodexPath
+Patch-JsonMcpConfig $VSCodePath "servers" $HasApiKey
+Patch-JsonMcpConfig $CopilotPath "mcpServers" $HasApiKey
+Patch-CodexConfig $CodexPath $HasAuthHeader
+
+if ($HasApiKey -and -not $EnvValues.ContainsKey("MEM0_AUTH_HEADER")) {
+    Write-Host "install-mcp-mem0: MEM0_API_KEY found; export MEM0_AUTH_HEADER='Token <key>' for Codex API-key auth."
+} elseif (-not $HasApiKey -and -not $EnvValues.ContainsKey("MEM0_AUTH_HEADER")) {
+    Write-Host "install-mcp-mem0: no API key found; configured URL-only Mem0 MCP for browser auth."
+}
 
 Write-Host "mem0 MCP configured"
 Write-Host "URL: $Mem0Url"

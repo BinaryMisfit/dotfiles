@@ -2,129 +2,165 @@
 set -eu
 
 MEM0_URL="https://mcp.mem0.ai/mcp"
-ENV_PATH="$HOME/.config/mcp/mcp-mem0.env"
-VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
-COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
-COPILOT_PATH="$COPILOT_BASE/mcp-config.json"
-CODEX_PATH="${CODEX_HOME:-$HOME/.codex}/config.toml"
+ENV_FILE="$HOME/.config/mcp/mcp-mem0.env"
+VSCODE_CONFIG_FILE="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
+COPILOT_BASE_DIR="${COPILOT_HOME:-$HOME/.copilot}"
+COPILOT_CONFIG_FILE="$COPILOT_BASE_DIR/mcp-config.json"
+CODEX_CONFIG_FILE="${CODEX_HOME:-$HOME/.codex}/config.toml"
 
-if [ ! -f "$ENV_PATH" ]; then
-  echo "install-mcp-mem0: env file missing at $ENV_PATH. Copy ~/.config/mcp/mcp-mem0.env.example and set MEM0_API_KEY." >&2
-  exit 1
-fi
+env \
+  MEM0_URL="$MEM0_URL" \
+  MEM0_ENV_FILE="$ENV_FILE" \
+  VSCODE_CONFIG_FILE="$VSCODE_CONFIG_FILE" \
+  COPILOT_CONFIG_FILE="$COPILOT_CONFIG_FILE" \
+  CODEX_CONFIG_FILE="$CODEX_CONFIG_FILE" \
+  /usr/bin/python3 <<'PY'
+import json
+import os
+import re
+import shutil
+from datetime import datetime
+from pathlib import Path
 
-set -a
-source "$ENV_PATH"
-set +a
 
-if [ -z "${MEM0_API_KEY:-}" ]; then
-  echo "install-mcp-mem0: MEM0_API_KEY is missing in $ENV_PATH." >&2
-  exit 1
-fi
+MEM0_URL = os.environ["MEM0_URL"]
+ENV_FILE = Path(os.environ["MEM0_ENV_FILE"]).expanduser()
+VSCODE_CONFIG_FILE = Path(os.environ["VSCODE_CONFIG_FILE"]).expanduser()
+COPILOT_CONFIG_FILE = Path(os.environ["COPILOT_CONFIG_FILE"]).expanduser()
+CODEX_CONFIG_FILE = Path(os.environ["CODEX_CONFIG_FILE"]).expanduser()
 
-patch_json_config() {
-  local path="$1"
-  local top="$2"
-  if ! env TARGET_PATH="$path" TOP="$top" MCP_URL="$MEM0_URL" /usr/bin/osascript -l JavaScript <<'EOF'
-ObjC.import('Foundation');
-const env = $.NSProcessInfo.processInfo.environment;
-const path = env.objectForKey('TARGET_PATH').js;
-const top = env.objectForKey('TOP').js;
-const url = env.objectForKey('MCP_URL').js;
-const fm = $.NSFileManager.defaultManager;
-let obj = {};
-let oldText = null;
-if (fm.fileExistsAtPath(path)) {
-  const data = $.NSData.dataWithContentsOfFile(path);
-  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
-  if (oldText.trim()) obj = JSON.parse(oldText);
-}
-obj[top] = obj[top] || {};
-obj[top].mem0 = {
-  type: 'http',
-  url,
-  headers: {
-    Authorization: 'Token ${MEM0_API_KEY}'
-  }
-};
-const out = JSON.stringify(obj, null, 2);
-if (oldText !== out) {
-  const dir = path.replace(/\/[^\/]+$/, '');
-  fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(dir, true, null, null);
-  if (oldText !== null) {
-    const d = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
-  }
-  $(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
-}
-EOF
-  then
-    echo "install-mcp-mem0: invalid JSON or write failure in '$path'. Fix the JSON or use a clean config path." >&2
-    exit 1
-  fi
-}
 
-patch_codex_config() {
-  local path="$1"
-  env TARGET_PATH="$path" MCP_URL="$MEM0_URL" /usr/bin/osascript -l JavaScript <<'EOF'
-ObjC.import('Foundation');
-const env = $.NSProcessInfo.processInfo.environment;
-const path = env.objectForKey('TARGET_PATH').js;
-const url = env.objectForKey('MCP_URL').js;
-const fm = $.NSFileManager.defaultManager;
-let oldText = null;
-let text = '';
-if (fm.fileExistsAtPath(path)) {
-  const data = $.NSData.dataWithContentsOfFile(path);
-  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
-  text = oldText;
-}
-const block = `[mcp_servers.mem0]
-url = "${url}"
-enabled = true
+def read_env_file(env_file):
+    values = {}
+    if not env_file.exists():
+        return values
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            values[key] = value
+    return values
 
-[mcp_servers.mem0.headers]
-Authorization = "Token \${MEM0_API_KEY}"
-`;
-const removeBlock = (input, header) => {
-  const lines = input.split(/\r?\n/);
-  const out = [];
-  let skipping = false;
-  for (const line of lines) {
-    if (/^\s*\[.*\]\s*$/.test(line)) {
-      skipping = line.trim() === header;
-      if (skipping) continue;
+
+def backup_file(target):
+    if not target.exists():
+        return
+    stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    backup = target.with_name(f"{target.name}.bak.{stamp}")
+    shutil.copy2(target, backup)
+
+
+def write_text_if_changed(target, text):
+    old = None
+    if target.exists():
+        old = target.read_text(encoding="utf-8")
+    if old == text:
+        return False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    backup_file(target)
+    target.write_text(text, encoding="utf-8")
+    return True
+
+
+def read_json(target):
+    if not target.exists():
+        return {}
+    raw = target.read_text(encoding="utf-8")
+    if not raw.strip():
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"install-mcp-mem0: invalid JSON in '{target}'. "
+            f"Fix the JSON or use a clean config path. {exc}"
+        )
+
+
+def write_json_if_changed(target, data):
+    new = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    return write_text_if_changed(target, new)
+
+
+def mem0_json_entry(has_api_key):
+    entry = {
+        "type": "http",
+        "url": MEM0_URL,
     }
-    if (!skipping) out.push(line);
-  }
-  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-};
-let next = removeBlock(text, '[mcp_servers.mem0]');
-next = removeBlock(next, '[mcp_servers.mem0.headers]');
-next = next ? `${next}\n\n${block}` : block;
-if (oldText !== next) {
-  const dir = path.replace(/\/[^\/]+$/, '');
-  fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(dir, true, null, null);
-  if (oldText !== null) {
-    const d = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
-  }
-  $(next).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
-}
-EOF
-}
+    if has_api_key:
+        entry["headers"] = {
+            "Authorization": "Token ${MEM0_API_KEY}",
+        }
+    return entry
 
-patch_json_config "$VSCODE_PATH" "servers"
-patch_json_config "$COPILOT_PATH" "mcpServers"
-patch_codex_config "$CODEX_PATH"
 
-echo "mem0 MCP configured"
-echo "URL: $MEM0_URL"
-echo "Env path: $ENV_PATH"
-echo "VS Code MCP config: $VSCODE_PATH"
-echo "Copilot MCP config: $COPILOT_PATH"
-echo "Codex config: $CODEX_PATH"
+def patch_json_config(target, top_key, has_api_key):
+    config = read_json(target)
+    if not isinstance(config, dict):
+        raise SystemExit(f"install-mcp-mem0: top-level JSON in '{target}' must be an object.")
+    if not isinstance(config.get(top_key), dict):
+        config[top_key] = {}
+    config[top_key]["mem0"] = mem0_json_entry(has_api_key)
+    write_json_if_changed(target, config)
+
+
+def remove_toml_table(text, header):
+    lines = text.splitlines()
+    out = []
+    skip = False
+    escaped = re.escape(header)
+    table_re = re.compile(r"^\s*\[[^\]]+\]\s*$")
+    target_re = re.compile(rf"^\s*{escaped}\s*$")
+    for line in lines:
+        if table_re.match(line):
+            skip = bool(target_re.match(line))
+            if skip:
+                continue
+        if not skip:
+            out.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
+
+
+def codex_block(has_auth_header):
+    block = f'''[mcp_servers.mem0]
+url = "{MEM0_URL}"
+enabled = true'''
+    if has_auth_header:
+        block += '''
+env_http_headers = { Authorization = "MEM0_AUTH_HEADER" }'''
+    return block + "\n"
+
+
+def patch_codex_config(target, has_auth_header):
+    old = target.read_text(encoding="utf-8") if target.exists() else ""
+    next_text = remove_toml_table(old, "[mcp_servers.mem0]")
+    next_text = remove_toml_table(next_text, "[mcp_servers.mem0.headers]")
+    block = codex_block(has_auth_header)
+    next_text = f"{next_text}\n\n{block}" if next_text else block
+    write_text_if_changed(target, next_text)
+
+
+env_values = read_env_file(ENV_FILE)
+has_api_key = bool(env_values.get("MEM0_API_KEY"))
+has_auth_header = bool(env_values.get("MEM0_AUTH_HEADER") or has_api_key)
+
+patch_json_config(VSCODE_CONFIG_FILE, "servers", has_api_key)
+patch_json_config(COPILOT_CONFIG_FILE, "mcpServers", has_api_key)
+patch_codex_config(CODEX_CONFIG_FILE, has_auth_header)
+
+if has_api_key and not env_values.get("MEM0_AUTH_HEADER"):
+    print("install-mcp-mem0: MEM0_API_KEY found; export MEM0_AUTH_HEADER='Token <key>' for Codex API-key auth.")
+elif not has_api_key and not env_values.get("MEM0_AUTH_HEADER"):
+    print("install-mcp-mem0: no API key found; configured URL-only Mem0 MCP for browser auth.")
+
+print("mem0 MCP configured")
+print(f"URL: {MEM0_URL}")
+print(f"Env path: {ENV_FILE}")
+print(f"VS Code MCP config: {VSCODE_CONFIG_FILE}")
+print(f"Copilot MCP config: {COPILOT_CONFIG_FILE}")
+print(f"Codex config: {CODEX_CONFIG_FILE}")
+PY
