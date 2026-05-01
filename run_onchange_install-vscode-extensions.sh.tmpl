@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -eu
+
+EXT_FILE="$HOME/.vscode/extensions.txt"
+
+[ -f "$EXT_FILE" ] || exit 0
+
+if ! command -v code >/dev/null 2>&1; then
+  echo "code CLI not found, skipping extensions"
+  exit 0
+fi
+
+while IFS= read -r ext || [ -n "$ext" ]; do
+  [ -z "$ext" ] && continue
+  code --install-extension "$ext" --force >/dev/null 2>&1 || true
+done < "$EXT_FILE"

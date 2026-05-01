@@ -8,6 +8,7 @@ setup-github-ssh.sh
 
 {{ $isWindows := eq .chezmoi.os "windows" }}
 {{ $isDarwin := eq .chezmoi.os "darwin" }}
+{{ $isLinux := eq .chezmoi.os "linux" }}
 {{ $user := lower (last (splitList "\\" .chezmoi.username)) }}
 {{ $isWorkWin := and $isWindows (eq $user "willier") }}
 {{ $useWorkPwsh := $isWorkWin }}
@@ -30,6 +31,12 @@ OneDrive - Powerfleet/
 {{ if $isWindows }}
 .config/shell/env.zsh
 .scripts/*.sh
+{{ end }}
+
+# Linux-only targets
+{{ if $isLinux }}
+.vscode/
+install-vscode-extensions.sh
 {{ end }}
 
 # PowerShell profile location
