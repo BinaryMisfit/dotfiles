@@ -51,7 +51,7 @@ install-vscode-extensions.ps1
 
 # PowerShell profile location
 {{ if $useWorkPwsh }}
-Documents/PowerShell/
+Documents/
 {{ end }}
 
 {{ if $useLocalPwsh }}
