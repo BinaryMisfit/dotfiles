@@ -43,11 +43,15 @@
   {{- if eq .chezmoi.os "windows" }}
   "terminal.integrated.fontSize": 16,
   {{- else if eq .chezmoi.os "darwin" }}
-  "terminal.integrated.fontSize": 13,
+  "terminal.integrated.fontSize": 14,
   {{- end}}
 
   // --- AI / Chat ---
-  "chat.editor.fontSize": 13,
+  {{- if eq .chezmoi.os "windows" }}
+  "chat.editor.fontSize": 16,
+  {{- else if eq .chezmoi.os "darwin" }}
+  "terminal.integrated.fontSize": 14,
+  {{- end}}
   "chat.progressBorder.enabled": true,
   "chat.persistentProgress.enabled": true,
   "chat.unifiedAgentsBar.enabled": true,

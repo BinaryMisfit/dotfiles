@@ -1,5 +1,15 @@
+{{- $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
+{{- $scoopVscodeExe := joinPath .chezmoi.homeDir "scoop" "apps" "vscode" "current" "Code.exe" -}}
+{{- $isScoopVscode := and (eq .chezmoi.os "windows") (stat $scoopVscodeData) (stat $scoopVscodeExe) -}}
+{{- $vscodeMode := "system" -}}
+{{- if $isScoopVscode -}}
+{{- $vscodeMode = "scoop" -}}
+{{- end -}}
 $ErrorActionPreference = "Stop"
 
+# extensions checksum: {{ include "dot_vscode/extensions.txt" | sha256sum }}
+
+$vscodeMode = "{{ $vscodeMode }}"
 $extFile = Join-Path $HOME ".vscode\extensions.txt"
 
 if (-not (Test-Path $extFile)) {
@@ -17,8 +27,9 @@ $scoopPortableData = Join-Path $HOME "scoop\persist\vscode\data"
 $scoopExtensionsDir = Join-Path $scoopPortableData "extensions"
 
 $codeArgs = @()
+Write-Host "VS Code mode: $vscodeMode"
 
-if (Test-Path $scoopPortableData) {
+if ($vscodeMode -eq "scoop") {
     New-Item -ItemType Directory -Force -Path $scoopExtensionsDir | Out-Null
     $codeArgs += @("--extensions-dir", $scoopExtensionsDir)
     Write-Host "Detected Scoop/portable VS Code extensions dir: $scoopExtensionsDir"

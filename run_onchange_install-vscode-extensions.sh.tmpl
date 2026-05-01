@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 
+# extensions checksum: {{ include "dot_vscode/extensions.txt" | sha256sum }}
+
 EXT_FILE="$HOME/.vscode/extensions.txt"
 
 [ -f "$EXT_FILE" ] || exit 0

@@ -7,20 +7,27 @@
 {{- $useLocalPwsh := and $isWindows (not $isWorkWin) -}}
 {{- $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
 {{- $scoopVscodeExe := joinPath .chezmoi.homeDir "scoop" "apps" "vscode" "current" "Code.exe" -}}
-{{- $hasScoopVscode := and $isWindows (stat $scoopVscodeData) (stat $scoopVscodeExe) -}}
+{{- $isScoopVscode := and (eq .chezmoi.os "windows") (stat $scoopVscodeData) (stat $scoopVscodeExe) -}}
+{{- $vscodeMode := "system" -}}
+{{- if $isScoopVscode -}}
+{{- $vscodeMode = "scoop" -}}
+{{- end -}}
+
+# Bootstrap / root-only files
 bootstrap.sh
 bootstrap.ps1
 README.md
-
-# Runtime MCP state must never be managed by chezmoi.
-.local/share/mcp/**
-AppData/Local/MCP/**
-
 install-core.ps1
 install-core.sh
 setup-github-ssh.ps1
 setup-github-ssh.sh
 
+# Runtime-only state
+# MCP runtime state must never be managed by chezmoi.
+.local/share/mcp/**
+AppData/Local/MCP/**
+
+# OS target gating
 # macOS-only targets
 {{ if not $isDarwin }}
 Library/
@@ -48,16 +55,17 @@ install-vscode-extensions.sh
 install-vscode-extensions.ps1
 {{ end }}
 
-# VS Code settings target selection on Windows
-{{ if and $isWindows $hasScoopVscode }}
+# VS Code target selection
+# Prefer Scoop portable VS Code data over AppData/Roaming/Code on Windows.
+{{ if and $isWindows (eq $vscodeMode "scoop") }}
 AppData/Roaming/Code/
 {{ end }}
 
-{{ if and $isWindows (not $hasScoopVscode) }}
+{{ if and $isWindows (eq $vscodeMode "system") }}
 scoop/
 {{ end }}
 
-# VS Code extension installer targets
+# VS Code installer selection
 {{ if $isWindows }}
 install-vscode-extensions.sh
 {{ end }}
