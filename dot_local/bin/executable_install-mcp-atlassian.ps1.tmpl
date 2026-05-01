@@ -1,0 +1,390 @@
+[CmdletBinding()]
+param(
+    [string]$McpVSCodeConfigPath
+)
+
+$ErrorActionPreference = "Stop"
+
+$IsWindowsPlatform = ($PSVersionTable.PSEdition -eq "Desktop") -or ($IsWindows -eq $true)
+if (-not $IsWindowsPlatform) {
+    Write-Error "install-mcp-atlassian: Windows installer only. macOS uses install-mcp-atlassian.sh; Linux is intentionally out of scope."
+}
+
+function Test-IsAdmin {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Get-CommandPath([string]$Name) {
+    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    return $null
+}
+
+function Install-Tool([string]$Name, [string]$ScoopPackage, [string]$WingetId) {
+    if (Get-CommandPath $Name) { return }
+
+    $scoop = Get-CommandPath "scoop"
+    if ($scoop) {
+        try {
+            & scoop install $ScoopPackage
+        } catch {
+            Write-Warning "scoop install $ScoopPackage failed; trying winget"
+        }
+    }
+
+    if (Get-CommandPath $Name) { return }
+
+    $winget = Get-CommandPath "winget"
+    if ($winget) {
+        & winget install -e --id $WingetId
+    }
+
+    if (-not (Get-CommandPath $Name)) {
+        Write-Error "Required command '$Name' was not found and could not be installed with scoop or winget."
+    }
+}
+
+function Read-JsonFile([string]$Path, [object]$Default) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $Default }
+    $raw = Get-Content -LiteralPath $Path -Raw
+    if ([string]::IsNullOrWhiteSpace($raw)) { return $Default }
+    try {
+        return $raw | ConvertFrom-Json -Depth 32
+    } catch {
+        Write-Error "Invalid JSON in '$Path'. Fix the JSON or pass a clean config path. $($_.Exception.Message)"
+    }
+}
+
+function Write-JsonFileIfChanged([string]$Path, [object]$Data, [switch]$Backup) {
+    $new = ($Data | ConvertTo-Json -Depth 32)
+    $old = $null
+    if (Test-Path -LiteralPath $Path) {
+        $old = Get-Content -LiteralPath $Path -Raw
+    }
+    if ($old -eq $new) { return $false }
+
+    $dir = Split-Path -Parent $Path
+    if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+
+    if ($Backup -and (Test-Path -LiteralPath $Path)) {
+        $stamp = Get-Date -Format "yyyyMMddHHmmss"
+        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
+    }
+
+    $new | Set-Content -LiteralPath $Path -Encoding UTF8
+    return $true
+}
+
+function Ensure-ObjectProperty([object]$Object, [string]$Name, [object]$Value) {
+    if ($Object.PSObject.Properties.Name -contains $Name) {
+        $Object.$Name = $Value
+    } else {
+        $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
+    }
+}
+
+function Test-PortOpen([int]$Port) {
+    $client = [Net.Sockets.TcpClient]::new()
+    try {
+        $async = $client.BeginConnect("127.0.0.1", $Port, $null, $null)
+        if (-not $async.AsyncWaitHandle.WaitOne(200)) { return $false }
+        $client.EndConnect($async)
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $client.Close()
+    }
+}
+
+function Test-ServiceExists([string]$Name) {
+    return [bool](Get-Service -Name $Name -ErrorAction SilentlyContinue)
+}
+
+function Select-McpPort([object]$Registry, [string]$ServiceName) {
+    $existing = $null
+    if ($Registry.servers -and $Registry.servers.'mcp-atlassian' -and $Registry.servers.'mcp-atlassian'.port) {
+        $existing = [int]$Registry.servers.'mcp-atlassian'.port
+    }
+
+    if ($existing) {
+        if (-not (Test-PortOpen $existing)) { return $existing }
+        $svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+        if ($svc -and $svc.Status -eq "Running") { return $existing }
+    }
+
+    if (-not (Test-PortOpen 9310)) { return 9310 }
+
+    foreach ($port in 9311..9399) {
+        if (-not (Test-PortOpen $port)) { return $port }
+    }
+
+    Write-Error "No available ports in deterministic range 9310-9399."
+}
+
+function Patch-VSCodeConfig([string]$Path, [string]$Url) {
+    $config = Read-JsonFile $Path ([pscustomobject]@{})
+    if (-not ($config.PSObject.Properties.Name -contains "servers") -or $null -eq $config.servers) {
+        Ensure-ObjectProperty $config "servers" ([pscustomobject]@{})
+    }
+    Ensure-ObjectProperty $config.servers "mcp-atlassian" ([pscustomobject]@{
+        type = "http"
+        url = $Url
+    })
+    Write-JsonFileIfChanged $Path $config -Backup | Out-Null
+}
+
+function Patch-CopilotConfig([string]$Path, [string]$Url) {
+    $config = Read-JsonFile $Path ([pscustomobject]@{})
+    if (-not ($config.PSObject.Properties.Name -contains "mcpServers") -or $null -eq $config.mcpServers) {
+        Ensure-ObjectProperty $config "mcpServers" ([pscustomobject]@{})
+    }
+    Ensure-ObjectProperty $config.mcpServers "mcp-atlassian" ([pscustomobject]@{
+        type = "http"
+        url = $Url
+        tools = @("*")
+    })
+    Write-JsonFileIfChanged $Path $config -Backup | Out-Null
+}
+
+if (-not (Test-IsAdmin)) {
+    Write-Error "Creating or updating the NSSM service requires elevation. Rerun PowerShell as Administrator; no service changes were made."
+}
+
+$BaseDir = Join-Path $env:LOCALAPPDATA "MCP"
+$ServerDir = Join-Path $BaseDir "atlassian"
+$LogDir = Join-Path $ServerDir "logs"
+$RegistryPath = Join-Path $BaseDir "registry.json"
+$PortPath = Join-Path $ServerDir "port"
+$EnvPath = Join-Path $ServerDir ".env"
+$ServiceName = "MCP-Atlassian"
+$EnvExamplePath = Join-Path $env:USERPROFILE ".config\mcp\mcp-atlassian.env.example"
+
+New-Item -ItemType Directory -Force -Path $BaseDir, $ServerDir, $LogDir | Out-Null
+
+Install-Tool "uvx" "uv" "astral-sh.uv"
+Install-Tool "nssm" "nssm" "NSSM.NSSM"
+
+if (-not (Test-Path -LiteralPath $EnvPath)) {
+    if (-not (Test-Path -LiteralPath $EnvExamplePath)) {
+        Write-Error "Env example not found at '$EnvExamplePath'. Run chezmoi apply or create $EnvPath manually."
+    }
+    Copy-Item -LiteralPath $EnvExamplePath -Destination $EnvPath
+}
+
+$registry = Read-JsonFile $RegistryPath ([pscustomobject]@{
+    range = [pscustomobject]@{ start = 9310; end = 9399 }
+    servers = [pscustomobject]@{}
+})
+Ensure-ObjectProperty $registry "range" ([pscustomobject]@{ start = 9310; end = 9399 })
+if (-not ($registry.PSObject.Properties.Name -contains "servers") -or $null -eq $registry.servers) {
+    Ensure-ObjectProperty $registry "servers" ([pscustomobject]@{})
+}
+
+$port = Select-McpPort $registry $ServiceName
+$url = "http://127.0.0.1:$port/mcp"
+Ensure-ObjectProperty $registry.servers "mcp-atlassian" ([pscustomobject]@{
+    port = $port
+    url = $url
+    transport = "streamable-http"
+})
+Write-JsonFileIfChanged $RegistryPath $registry | Out-Null
+$port.ToString() | Set-Content -LiteralPath $PortPath -NoNewline -Encoding ASCII
+
+$startPath = Join-Path $ServerDir "start.ps1"
+$stopPath = Join-Path $ServerDir "stop.ps1"
+$statusPath = Join-Path $ServerDir "status.ps1"
+$uninstallPath = Join-Path $ServerDir "uninstall.ps1"
+
+@'
+$ErrorActionPreference = "Stop"
+$ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$BaseDir = Split-Path -Parent $ServerDir
+$EnvPath = Join-Path $ServerDir ".env"
+$PortPath = Join-Path $ServerDir "port"
+$RegistryPath = Join-Path $BaseDir "registry.json"
+
+if (-not (Test-Path -LiteralPath $EnvPath)) {
+    Write-Error ".env is missing at $EnvPath"
+}
+
+foreach ($line in Get-Content -LiteralPath $EnvPath) {
+    $trimmed = $line.Trim()
+    if ($trimmed -eq "" -or $trimmed.StartsWith("#")) { continue }
+    $idx = $trimmed.IndexOf("=")
+    if ($idx -lt 1) { continue }
+    $key = $trimmed.Substring(0, $idx).Trim()
+    $value = $trimmed.Substring($idx + 1).Trim().Trim('"').Trim("'")
+    [Environment]::SetEnvironmentVariable($key, $value, "Process")
+}
+
+$required = @("JIRA_URL", "JIRA_USERNAME", "JIRA_API_TOKEN", "CONFLUENCE_URL", "CONFLUENCE_USERNAME", "CONFLUENCE_API_TOKEN")
+foreach ($key in $required) {
+    if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($key, "Process"))) {
+        Write-Error "Required environment variable '$key' is missing in $EnvPath"
+    }
+}
+
+if (Test-Path -LiteralPath $PortPath) {
+    $port = [int](Get-Content -LiteralPath $PortPath -Raw).Trim()
+} elseif (Test-Path -LiteralPath $RegistryPath) {
+    $registry = Get-Content -LiteralPath $RegistryPath -Raw | ConvertFrom-Json
+    $port = [int]$registry.servers.'mcp-atlassian'.port
+} else {
+    Write-Error "No port file or registry found."
+}
+
+& uvx mcp-atlassian --transport streamable-http --host 127.0.0.1 --port $port -vv
+exit $LASTEXITCODE
+'@ | Set-Content -LiteralPath $startPath -Encoding UTF8
+
+@'
+$ErrorActionPreference = "Stop"
+$ServiceName = "MCP-Atlassian"
+if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+    & nssm stop $ServiceName | Out-Host
+} else {
+    Write-Host "NSSM service $ServiceName is not installed. No tracked service to stop."
+}
+'@ | Set-Content -LiteralPath $stopPath -Encoding UTF8
+
+@'
+$ErrorActionPreference = "Stop"
+$ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$BaseDir = Split-Path -Parent $ServerDir
+$PortPath = Join-Path $ServerDir "port"
+$RegistryPath = Join-Path $BaseDir "registry.json"
+$ServiceName = "MCP-Atlassian"
+
+if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+    & nssm status $ServiceName | Out-Host
+} else {
+    Write-Host "Service: not installed"
+}
+
+if (Test-Path -LiteralPath $PortPath) {
+    $port = [int](Get-Content -LiteralPath $PortPath -Raw).Trim()
+} elseif (Test-Path -LiteralPath $RegistryPath) {
+    $registry = Get-Content -LiteralPath $RegistryPath -Raw | ConvertFrom-Json
+    $port = [int]$registry.servers.'mcp-atlassian'.port
+}
+
+if ($port) {
+    $url = "http://127.0.0.1:$port/mcp"
+    Write-Host "URL: $url"
+    $client = [Net.Sockets.TcpClient]::new()
+    try {
+        $async = $client.BeginConnect("127.0.0.1", $port, $null, $null)
+        $listening = $async.AsyncWaitHandle.WaitOne(300)
+        if ($listening) { $client.EndConnect($async) }
+        Write-Host "Port listening: $listening"
+    } catch {
+        Write-Host "Port listening: False"
+    } finally {
+        $client.Close()
+    }
+}
+'@ | Set-Content -LiteralPath $statusPath -Encoding UTF8
+
+@'
+[CmdletBinding()]
+param([switch]$RemoveLogs, [string]$McpVSCodeConfigPath)
+$ErrorActionPreference = "Stop"
+
+function Read-JsonFile([string]$Path, [object]$Default) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $Default }
+    $raw = Get-Content -LiteralPath $Path -Raw
+    if ([string]::IsNullOrWhiteSpace($raw)) { return $Default }
+    return $raw | ConvertFrom-Json -Depth 32
+}
+
+function Write-JsonFile([string]$Path, [object]$Data) {
+    $Data | ConvertTo-Json -Depth 32 | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
+function Remove-Property([object]$Object, [string]$Name) {
+    if ($Object -and ($Object.PSObject.Properties.Name -contains $Name)) {
+        $Object.PSObject.Properties.Remove($Name)
+    }
+}
+
+$ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$BaseDir = Split-Path -Parent $ServerDir
+$RegistryPath = Join-Path $BaseDir "registry.json"
+$EnvPath = Join-Path $ServerDir ".env"
+$ServiceName = "MCP-Atlassian"
+
+if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+    & nssm stop $ServiceName | Out-Host
+    & nssm remove $ServiceName confirm | Out-Host
+}
+
+$vscode = if ($McpVSCodeConfigPath) { $McpVSCodeConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
+$copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
+$copilot = Join-Path $copilotHome "mcp-config.json"
+
+if (Test-Path -LiteralPath $vscode) {
+    $cfg = Read-JsonFile $vscode ([pscustomobject]@{})
+    if ($cfg.servers) { Remove-Property $cfg.servers "mcp-atlassian" }
+    Write-JsonFile $vscode $cfg
+}
+
+if (Test-Path -LiteralPath $copilot) {
+    $cfg = Read-JsonFile $copilot ([pscustomobject]@{})
+    if ($cfg.mcpServers) { Remove-Property $cfg.mcpServers "mcp-atlassian" }
+    Write-JsonFile $copilot $cfg
+}
+
+if (Test-Path -LiteralPath $RegistryPath) {
+    $registry = Read-JsonFile $RegistryPath ([pscustomobject]@{})
+    if ($registry.servers) { Remove-Property $registry.servers "mcp-atlassian" }
+    Write-JsonFile $RegistryPath $registry
+}
+
+if (Test-Path -LiteralPath $EnvPath) {
+    Move-Item -LiteralPath $EnvPath -Destination (Join-Path $ServerDir ".env.backup") -Force
+}
+
+if ($RemoveLogs) {
+    Remove-Item -LiteralPath (Join-Path $ServerDir "logs") -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host "mcp-atlassian uninstalled. Logs retained unless -RemoveLogs was passed."
+'@ | Set-Content -LiteralPath $uninstallPath -Encoding UTF8
+
+$pwsh = Get-CommandPath "pwsh.exe"
+if (-not $pwsh) { $pwsh = Get-CommandPath "pwsh" }
+if (-not $pwsh) {
+    Write-Error "pwsh.exe was not found. Install PowerShell 7, then rerun as Administrator."
+}
+
+if (Test-ServiceExists $ServiceName) {
+    & nssm stop $ServiceName | Out-Null
+} else {
+    & nssm install $ServiceName $pwsh "-NoProfile -ExecutionPolicy Bypass -File `"$startPath`"" | Out-Null
+}
+
+& nssm set $ServiceName Application $pwsh | Out-Null
+& nssm set $ServiceName AppParameters "-NoProfile -ExecutionPolicy Bypass -File `"$startPath`"" | Out-Null
+& nssm set $ServiceName AppDirectory $ServerDir | Out-Null
+& nssm set $ServiceName Start SERVICE_DELAYED_AUTO_START | Out-Null
+& nssm set $ServiceName AppStdout (Join-Path $LogDir "stdout.log") | Out-Null
+& nssm set $ServiceName AppStderr (Join-Path $LogDir "stderr.log") | Out-Null
+& nssm set $ServiceName AppExit Default Restart | Out-Null
+
+$vscodePath = if ($McpVSCodeConfigPath) { $McpVSCodeConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
+$copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
+$copilotPath = Join-Path $copilotHome "mcp-config.json"
+
+Patch-VSCodeConfig $vscodePath $url
+Patch-CopilotConfig $copilotPath $url
+
+& nssm start $ServiceName | Out-Host
+
+Write-Host "mcp-atlassian URL: $url"
+Write-Host "Edit secrets in: $EnvPath"
+Write-Host "Status: $statusPath"
+Write-Host "VS Code MCP config: $vscodePath"
+Write-Host "Copilot MCP config: $copilotPath"

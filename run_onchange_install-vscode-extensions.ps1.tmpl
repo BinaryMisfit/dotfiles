@@ -13,6 +13,19 @@ if (-not $code) {
     exit 0
 }
 
+$scoopPortableData = Join-Path $HOME "scoop\persist\vscode\data"
+$scoopExtensionsDir = Join-Path $scoopPortableData "extensions"
+
+$codeArgs = @()
+
+if (Test-Path $scoopPortableData) {
+    New-Item -ItemType Directory -Force -Path $scoopExtensionsDir | Out-Null
+    $codeArgs += @("--extensions-dir", $scoopExtensionsDir)
+    Write-Host "Detected Scoop/portable VS Code extensions dir: $scoopExtensionsDir"
+} else {
+    Write-Host "Detected normal VS Code extension layout"
+}
+
 Get-Content $extFile | ForEach-Object {
     $ext = $_.Trim()
 
@@ -21,5 +34,5 @@ Get-Content $extFile | ForEach-Object {
     }
 
     Write-Host "Installing VS Code extension: $ext"
-    code --install-extension $ext --force | Out-Null
+    code @codeArgs --install-extension $ext --force | Out-Null
 }

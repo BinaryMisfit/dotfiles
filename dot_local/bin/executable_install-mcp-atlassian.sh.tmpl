@@ -1,0 +1,439 @@
+#!/usr/bin/env zsh
+set -eu
+
+VSCODE_MCP_CONFIG_PATH=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --vscode-mcp-config-path)
+      VSCODE_MCP_CONFIG_PATH="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "install-mcp-atlassian: unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "install-mcp-atlassian: macOS installer only. Windows uses install-mcp-atlassian.ps1; Linux is intentionally out of scope." >&2
+  exit 1
+fi
+
+BASE_DIR="$HOME/.local/share/mcp"
+SERVER_DIR="$BASE_DIR/atlassian"
+LOG_DIR="$SERVER_DIR/logs"
+REGISTRY_PATH="$BASE_DIR/registry.json"
+PORT_PATH="$SERVER_DIR/port"
+ENV_PATH="$SERVER_DIR/.env"
+ENV_EXAMPLE_PATH="$HOME/.config/mcp/mcp-atlassian.env.example"
+LABEL="dev.binarymisfit.mcp.atlassian"
+PLIST_PATH="$HOME/Library/LaunchAgents/$LABEL.plist"
+
+mkdir -p "$BASE_DIR" "$SERVER_DIR" "$LOG_DIR" "$HOME/Library/LaunchAgents"
+
+if ! command -v uvx >/dev/null 2>&1; then
+  if command -v brew >/dev/null 2>&1; then
+    brew install uv
+  else
+    echo "install-mcp-atlassian: uvx is missing and Homebrew is unavailable. Install uv, then rerun." >&2
+    exit 1
+  fi
+fi
+
+if ! command -v uvx >/dev/null 2>&1; then
+  echo "install-mcp-atlassian: uvx is still unavailable after dependency installation." >&2
+  exit 1
+fi
+
+if [ ! -f "$ENV_PATH" ]; then
+  if [ ! -f "$ENV_EXAMPLE_PATH" ]; then
+    echo "install-mcp-atlassian: env example not found at $ENV_EXAMPLE_PATH. Run chezmoi apply or create $ENV_PATH manually." >&2
+    exit 1
+  fi
+  cp "$ENV_EXAMPLE_PATH" "$ENV_PATH"
+  chmod 600 "$ENV_PATH" 2>/dev/null || true
+fi
+
+json_eval() {
+  /usr/bin/osascript -l JavaScript "$@"
+}
+
+read_existing_port() {
+  json_eval <<EOF
+ObjC.import('Foundation');
+const path = '$REGISTRY_PATH';
+const fm = $.NSFileManager.defaultManager;
+if (!fm.fileExistsAtPath(path)) {
+  '';
+} else {
+  const data = $.NSData.dataWithContentsOfFile(path);
+  const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  if (!text.trim()) {
+    '';
+  } else {
+    const obj = JSON.parse(text);
+    obj.servers && obj.servers['mcp-atlassian'] && obj.servers['mcp-atlassian'].port ? String(obj.servers['mcp-atlassian'].port) : '';
+  }
+}
+EOF
+}
+
+port_is_listening() {
+  nc -z 127.0.0.1 "$1" >/dev/null 2>&1
+}
+
+agent_is_loaded() {
+  launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1
+}
+
+select_port() {
+  local existing
+  existing="$(read_existing_port || true)"
+  if [ -n "$existing" ]; then
+    if ! port_is_listening "$existing"; then
+      echo "$existing"
+      return
+    fi
+    if agent_is_loaded; then
+      echo "$existing"
+      return
+    fi
+  fi
+
+  if ! port_is_listening 9310; then
+    echo "9310"
+    return
+  fi
+
+  local port
+  for port in $(seq 9311 9399); do
+    if ! port_is_listening "$port"; then
+      echo "$port"
+      return
+    fi
+  done
+
+  echo "install-mcp-atlassian: no available ports in deterministic range 9310-9399." >&2
+  exit 1
+}
+
+write_registry() {
+  local port="$1"
+  local url="http://127.0.0.1:$port/mcp"
+  env REGISTRY_PATH="$REGISTRY_PATH" PORT="$port" URL="$url" /usr/bin/osascript -l JavaScript <<'EOF'
+ObjC.import('Foundation');
+const path = $.NSProcessInfo.processInfo.environment.objectForKey('REGISTRY_PATH').js;
+const port = Number($.NSProcessInfo.processInfo.environment.objectForKey('PORT').js);
+const url = $.NSProcessInfo.processInfo.environment.objectForKey('URL').js;
+const fm = $.NSFileManager.defaultManager;
+let obj = { range: { start: 9310, end: 9399 }, servers: {} };
+if (fm.fileExistsAtPath(path)) {
+  const data = $.NSData.dataWithContentsOfFile(path);
+  const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  if (text.trim()) obj = JSON.parse(text);
+}
+obj.range = { start: 9310, end: 9399 };
+obj.servers = obj.servers || {};
+obj.servers['mcp-atlassian'] = { port, url, transport: 'streamable-http' };
+const out = JSON.stringify(obj, null, 2);
+$(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+EOF
+}
+
+patch_vscode_config() {
+  local path="$1"
+  local url="$2"
+  if ! env TARGET_PATH="$path" MCP_URL="$url" /usr/bin/osascript -l JavaScript <<'EOF'
+ObjC.import('Foundation');
+const env = $.NSProcessInfo.processInfo.environment;
+const path = env.objectForKey('TARGET_PATH').js;
+const url = env.objectForKey('MCP_URL').js;
+const fm = $.NSFileManager.defaultManager;
+let obj = {};
+let oldText = null;
+if (fm.fileExistsAtPath(path)) {
+  const data = $.NSData.dataWithContentsOfFile(path);
+  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  if (oldText.trim()) obj = JSON.parse(oldText);
+}
+obj.servers = obj.servers || {};
+obj.servers['mcp-atlassian'] = { type: 'http', url };
+const out = JSON.stringify(obj, null, 2);
+if (oldText !== out) {
+  const dir = path.replace(/\/[^\/]+$/, '');
+  fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(dir, true, null, null);
+  if (oldText !== null) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  }
+  $(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
+EOF
+  then
+    echo "install-mcp-atlassian: invalid JSON or write failure in '$path'. Fix the JSON or pass a clean config path." >&2
+    exit 1
+  fi
+}
+
+patch_copilot_config() {
+  local path="$1"
+  local url="$2"
+  if ! env TARGET_PATH="$path" MCP_URL="$url" /usr/bin/osascript -l JavaScript <<'EOF'
+ObjC.import('Foundation');
+const env = $.NSProcessInfo.processInfo.environment;
+const path = env.objectForKey('TARGET_PATH').js;
+const url = env.objectForKey('MCP_URL').js;
+const fm = $.NSFileManager.defaultManager;
+let obj = {};
+let oldText = null;
+if (fm.fileExistsAtPath(path)) {
+  const data = $.NSData.dataWithContentsOfFile(path);
+  oldText = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+  if (oldText.trim()) obj = JSON.parse(oldText);
+}
+obj.mcpServers = obj.mcpServers || {};
+obj.mcpServers['mcp-atlassian'] = { type: 'http', url, tools: ['*'] };
+const out = JSON.stringify(obj, null, 2);
+if (oldText !== out) {
+  const dir = path.replace(/\/[^\/]+$/, '');
+  fm.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(dir, true, null, null);
+  if (oldText !== null) {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    $(oldText).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  }
+  $(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
+EOF
+  then
+    echo "install-mcp-atlassian: invalid JSON or write failure in '$path'. Fix the JSON or pass a clean config path." >&2
+    exit 1
+  fi
+}
+
+PORT="$(select_port)"
+URL="http://127.0.0.1:$PORT/mcp"
+write_registry "$PORT"
+printf "%s" "$PORT" > "$PORT_PATH"
+
+cat > "$SERVER_DIR/start.sh" <<'EOF'
+#!/usr/bin/env zsh
+set -eu
+
+SERVER_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+BASE_DIR="$(dirname -- "$SERVER_DIR")"
+ENV_PATH="$SERVER_DIR/.env"
+PORT_PATH="$SERVER_DIR/port"
+REGISTRY_PATH="$BASE_DIR/registry.json"
+
+if [ ! -f "$ENV_PATH" ]; then
+  echo "start.sh: .env is missing at $ENV_PATH" >&2
+  exit 1
+fi
+
+set -a
+source "$ENV_PATH"
+set +a
+
+for key in JIRA_URL JIRA_USERNAME JIRA_API_TOKEN CONFLUENCE_URL CONFLUENCE_USERNAME CONFLUENCE_API_TOKEN; do
+  value="${(P)key:-}"
+  if [ -z "$value" ]; then
+    echo "start.sh: required environment variable '$key' is missing in $ENV_PATH" >&2
+    exit 1
+  fi
+done
+
+if [ -f "$PORT_PATH" ]; then
+  PORT="$(cat "$PORT_PATH")"
+elif [ -f "$REGISTRY_PATH" ]; then
+  PORT="$(/usr/bin/osascript -l JavaScript <<EOS
+ObjC.import('Foundation');
+const data = $.NSData.dataWithContentsOfFile('$REGISTRY_PATH');
+const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+const obj = JSON.parse(text);
+String(obj.servers['mcp-atlassian'].port);
+EOS
+)"
+else
+  echo "start.sh: no port file or registry found" >&2
+  exit 1
+fi
+
+exec uvx mcp-atlassian --transport streamable-http --host 127.0.0.1 --port "$PORT" -vv
+EOF
+
+cat > "$SERVER_DIR/stop.sh" <<EOF
+#!/usr/bin/env zsh
+set -eu
+LABEL="$LABEL"
+PLIST_PATH="$PLIST_PATH"
+if launchctl print "gui/\$(id -u)/\$LABEL" >/dev/null 2>&1; then
+  launchctl bootout "gui/\$(id -u)" "\$PLIST_PATH"
+else
+  echo "LaunchAgent \$LABEL is not loaded. No tracked service to stop."
+fi
+EOF
+
+cat > "$SERVER_DIR/status.sh" <<EOF
+#!/usr/bin/env zsh
+set -eu
+LABEL="$LABEL"
+SERVER_DIR="$SERVER_DIR"
+BASE_DIR="$BASE_DIR"
+PORT_PATH="\$SERVER_DIR/port"
+REGISTRY_PATH="\$BASE_DIR/registry.json"
+
+if launchctl print "gui/\$(id -u)/\$LABEL" >/dev/null 2>&1; then
+  launchctl print "gui/\$(id -u)/\$LABEL"
+else
+  echo "LaunchAgent: not loaded"
+fi
+
+if [ -f "\$PORT_PATH" ]; then
+  PORT="\$(cat "\$PORT_PATH")"
+elif [ -f "\$REGISTRY_PATH" ]; then
+  PORT="\$(/usr/bin/osascript -l JavaScript <<EOS
+ObjC.import('Foundation');
+const data = $.NSData.dataWithContentsOfFile('\$REGISTRY_PATH');
+const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+const obj = JSON.parse(text);
+String(obj.servers['mcp-atlassian'].port);
+EOS
+)"
+else
+  PORT=""
+fi
+
+if [ -n "\$PORT" ]; then
+  echo "URL: http://127.0.0.1:\$PORT/mcp"
+  if nc -z 127.0.0.1 "\$PORT" >/dev/null 2>&1; then
+    echo "Port listening: true"
+  else
+    echo "Port listening: false"
+  fi
+fi
+EOF
+
+cat > "$SERVER_DIR/uninstall.sh" <<'EOF'
+#!/usr/bin/env zsh
+set -eu
+
+REMOVE_LOGS=0
+VSCODE_MCP_CONFIG_PATH=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --remove-logs)
+      REMOVE_LOGS=1
+      shift
+      ;;
+    --vscode-mcp-config-path)
+      VSCODE_MCP_CONFIG_PATH="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "uninstall.sh: unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+LABEL="dev.binarymisfit.mcp.atlassian"
+SERVER_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+BASE_DIR="$(dirname -- "$SERVER_DIR")"
+REGISTRY_PATH="$BASE_DIR/registry.json"
+ENV_PATH="$SERVER_DIR/.env"
+PLIST_PATH="$HOME/Library/LaunchAgents/$LABEL.plist"
+VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
+COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
+COPILOT_PATH="$COPILOT_BASE/mcp-config.json"
+
+if launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
+  launchctl bootout "gui/$(id -u)" "$PLIST_PATH"
+fi
+rm -f "$PLIST_PATH"
+
+remove_json_entry() {
+  local path="$1"
+  local top="$2"
+  [ -f "$path" ] || return 0
+  TARGET_PATH="$path" TOP="$top" /usr/bin/osascript -l JavaScript <<'EOS'
+ObjC.import('Foundation');
+const env = $.NSProcessInfo.processInfo.environment;
+const path = env.objectForKey('TARGET_PATH').js;
+const top = env.objectForKey('TOP').js;
+const data = $.NSData.dataWithContentsOfFile(path);
+const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+const obj = text.trim() ? JSON.parse(text) : {};
+if (obj[top]) delete obj[top]['mcp-atlassian'];
+$(JSON.stringify(obj, null, 2)).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+EOS
+}
+
+remove_json_entry "$VSCODE_PATH" "servers"
+remove_json_entry "$COPILOT_PATH" "mcpServers"
+remove_json_entry "$REGISTRY_PATH" "servers"
+
+if [ -f "$ENV_PATH" ]; then
+  mv -f "$ENV_PATH" "$SERVER_DIR/.env.backup"
+fi
+
+if [ "$REMOVE_LOGS" -eq 1 ]; then
+  rm -rf "$SERVER_DIR/logs"
+fi
+
+echo "mcp-atlassian uninstalled. Logs retained unless --remove-logs was passed."
+EOF
+
+cat > "$PLIST_PATH" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>$SERVER_DIR/start.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>$SERVER_DIR</string>
+  <key>StandardOutPath</key>
+  <string>$LOG_DIR/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>$LOG_DIR/stderr.log</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+</dict>
+</plist>
+EOF
+
+cp "$PLIST_PATH" "$SERVER_DIR/$LABEL.plist"
+chmod +x "$SERVER_DIR/start.sh" "$SERVER_DIR/stop.sh" "$SERVER_DIR/status.sh" "$SERVER_DIR/uninstall.sh"
+
+if agent_is_loaded; then
+  launchctl bootout "gui/$(id -u)" "$PLIST_PATH"
+fi
+launchctl bootstrap "gui/$(id -u)" "$PLIST_PATH"
+launchctl kickstart -k "gui/$(id -u)/$LABEL"
+
+VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
+COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
+COPILOT_PATH="$COPILOT_BASE/mcp-config.json"
+
+patch_vscode_config "$VSCODE_PATH" "$URL"
+patch_copilot_config "$COPILOT_PATH" "$URL"
+
+echo "mcp-atlassian URL: $URL"
+echo "Edit secrets in: $ENV_PATH"
+echo "Status: $SERVER_DIR/status.sh"
+echo "VS Code MCP config: $VSCODE_PATH"
+echo "Copilot MCP config: $COPILOT_PATH"

@@ -1,18 +1,26 @@
 bootstrap.sh
 bootstrap.ps1
 README.md
+
+# Runtime MCP state must never be managed by chezmoi.
+.local/share/mcp/**
+AppData/Local/MCP/**
+
 install-core.ps1
 install-core.sh
 setup-github-ssh.ps1
 setup-github-ssh.sh
 
-{{ $isWindows := eq .chezmoi.os "windows" }}
-{{ $isDarwin := eq .chezmoi.os "darwin" }}
-{{ $isLinux := eq .chezmoi.os "linux" }}
-{{ $user := lower (last (splitList "\\" .chezmoi.username)) }}
-{{ $isWorkWin := and $isWindows (eq $user "willier") }}
-{{ $useWorkPwsh := $isWorkWin }}
-{{ $useLocalPwsh := and $isWindows (not $isWorkWin) }}
+{{- $isWindows := eq .chezmoi.os "windows" -}}
+{{- $isDarwin := eq .chezmoi.os "darwin" -}}
+{{- $isLinux := eq .chezmoi.os "linux" -}}
+{{- $user := lower (last (splitList "\\" .chezmoi.username)) -}}
+{{- $isWorkWin := and $isWindows (eq $user "willier") -}}
+{{- $useWorkPwsh := $isWorkWin -}}
+{{- $useLocalPwsh := and $isWindows (not $isWorkWin) -}}
+
+{{- $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
+{{- $hasScoopVscode := and $isWindows (stat $scoopVscodeData) -}}
 
 # macOS-only targets
 {{ if not $isDarwin }}
@@ -22,6 +30,7 @@ Library/
 # Windows-only targets
 {{ if not $isWindows }}
 AppData/
+scoop/
 Documents/
 OneDrive - Powerfleet/
 .scripts/*.ps1
@@ -38,6 +47,15 @@ OneDrive - Powerfleet/
 .vscode/
 install-vscode-extensions.sh
 install-vscode-extensions.ps1
+{{ end }}
+
+# VS Code settings target selection on Windows
+{{ if and $isWindows $hasScoopVscode }}
+AppData/Roaming/Code/User/
+{{ end }}
+
+{{ if and $isWindows (not $hasScoopVscode) }}
+scoop/
 {{ end }}
 
 # VS Code extension installer targets
