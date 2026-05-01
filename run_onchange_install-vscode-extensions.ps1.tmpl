@@ -1,0 +1,25 @@
+$ErrorActionPreference = "Stop"
+
+$extFile = Join-Path $HOME ".vscode\extensions.txt"
+
+if (-not (Test-Path $extFile)) {
+    exit 0
+}
+
+$code = Get-Command code -ErrorAction SilentlyContinue
+
+if (-not $code) {
+    Write-Host "code CLI not found, skipping extensions"
+    exit 0
+}
+
+Get-Content $extFile | ForEach-Object {
+    $ext = $_.Trim()
+
+    if (-not $ext -or $ext.StartsWith("#")) {
+        return
+    }
+
+    Write-Host "Installing VS Code extension: $ext"
+    code --install-extension $ext --force | Out-Null
+}

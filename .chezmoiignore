@@ -36,7 +36,17 @@ OneDrive - Powerfleet/
 # Linux-only targets
 {{ if $isLinux }}
 .vscode/
-install-vscode-extensions.sh
+run_onchange_install-vscode-extensions.sh
+run_onchange_install-vscode-extensions.ps1.tmpl
+{{ end }}
+
+# VS Code extension installer targets
+{{ if $isWindows }}
+run_onchange_install-vscode-extensions.sh
+{{ end }}
+
+{{ if and (not $isWindows) (not $isLinux) }}
+run_onchange_install-vscode-extensions.ps1.tmpl
 {{ end }}
 
 # PowerShell profile location
