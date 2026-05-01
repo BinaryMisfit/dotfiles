@@ -38,12 +38,17 @@ function Write-Utf8File {
         [Parameter(Mandatory = $true)]
         [string]$Path,
 
-        [Parameter(Mandatory = $true)]
-        [string[]]$Content
+        [AllowEmptyCollection()]
+        [string[]]$Content = @()
     )
 
+    $Lines = @($Content)
+    if ($Lines.Count -eq 0) {
+        Die "refusing to write empty file: $Path"
+    }
+
     $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllLines($Path, $Content, $Utf8NoBom)
+    [System.IO.File]::WriteAllLines($Path, $Lines, $Utf8NoBom)
 }
 
 function Ensure-ChezmoiUpdateApplyFalse {
@@ -52,7 +57,24 @@ function Ensure-ChezmoiUpdateApplyFalse {
     }
 
     try {
-        $Lines = Get-Content -Path $ChezmoiConfig
+        $Lines = @(Get-Content -Path $ChezmoiConfig -ErrorAction SilentlyContinue)
+        $HasConfigContent = $false
+
+        foreach ($Line in $Lines) {
+            if ($Line.Trim().Length -gt 0) {
+                $HasConfigContent = $true
+                break
+            }
+        }
+
+        if (-not $HasConfigContent) {
+            Write-Utf8File -Path $ChezmoiConfig -Content @(
+                "update:",
+                "  apply: false"
+            )
+            return
+        }
+
         $Output = New-Object System.Collections.Generic.List[string]
 
         $InUpdate = $false
@@ -101,8 +123,7 @@ function Ensure-ChezmoiUpdateApplyFalse {
     }
 
     if ($Output.Count -eq 0) {
-        Write-Warning "chezmoi config parse produced empty output, skipping write to avoid data loss"
-        return
+        Die "refusing to write empty chezmoi config after update.apply enforcement"
     }
 
     Write-Utf8File -Path $ChezmoiConfig -Content $Output.ToArray()
