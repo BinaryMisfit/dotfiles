@@ -23,6 +23,7 @@ OneDrive - Powerfleet/
 {{ end }}
 
 {{ if ne .chezmoi.os "windows" }}
+AppData/
 Documents/
 Documents/PowerShell/
 OneDrive - Powerfleet/

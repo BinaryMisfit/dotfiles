@@ -1,8 +1,8 @@
 {
   // --- Core ---
-  {{- if eq .chezmoi.os "darwin" }}
-  "window.restoreFullscreen": true,
-  "window.newWindowDimensions": "fullscreen",
+  {{- if eq .chezmoi.os "windows" }}
+  "window.restoreFullscreen": false,
+  "window.newWindowDimensions": "inherit",
   {{- end }}
   "workbench.startupEditor": "none",
   "security.workspace.trust.untrustedFiles": "prompt",
