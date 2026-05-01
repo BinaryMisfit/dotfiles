@@ -11,6 +11,10 @@ setup-github-ssh.sh
 {{- $user := lower (last (splitList "\\" $rawUser)) -}}
 {{- $isMixWork := and $isWindows (eq $user "willier") -}}
 
+{{ if ne .chezmoi.os "darwin" }}
+Library/Application Support/Code/User/settings.json.tmpl
+{{ end }}
+
 {{ if $isWindows }}
 Documents/
 OneDrive - Powerfleet/
