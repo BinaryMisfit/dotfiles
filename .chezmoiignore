@@ -1,3 +1,13 @@
+{{- $isWindows := eq .chezmoi.os "windows" -}}
+{{- $isDarwin := eq .chezmoi.os "darwin" -}}
+{{- $isLinux := eq .chezmoi.os "linux" -}}
+{{- $user := lower (last (splitList "\\" .chezmoi.username)) -}}
+{{- $isWorkWin := and $isWindows (eq $user "willier") -}}
+{{- $useWorkPwsh := $isWorkWin -}}
+{{- $useLocalPwsh := and $isWindows (not $isWorkWin) -}}
+{{- $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
+{{- $scoopVscodeExe := joinPath .chezmoi.homeDir "scoop" "apps" "vscode" "current" "Code.exe" -}}
+{{- $hasScoopVscode := and $isWindows (stat $scoopVscodeData) (stat $scoopVscodeExe) -}}
 bootstrap.sh
 bootstrap.ps1
 README.md
@@ -10,17 +20,6 @@ install-core.ps1
 install-core.sh
 setup-github-ssh.ps1
 setup-github-ssh.sh
-
-{{- $isWindows := eq .chezmoi.os "windows" -}}
-{{- $isDarwin := eq .chezmoi.os "darwin" -}}
-{{- $isLinux := eq .chezmoi.os "linux" -}}
-{{- $user := lower (last (splitList "\\" .chezmoi.username)) -}}
-{{- $isWorkWin := and $isWindows (eq $user "willier") -}}
-{{- $useWorkPwsh := $isWorkWin -}}
-{{- $useLocalPwsh := and $isWindows (not $isWorkWin) -}}
-
-{{- $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
-{{- $hasScoopVscode := and $isWindows (stat $scoopVscodeData) -}}
 
 # macOS-only targets
 {{ if not $isDarwin }}
