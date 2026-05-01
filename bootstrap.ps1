@@ -51,48 +51,58 @@ function Ensure-ChezmoiUpdateApplyFalse {
         return
     }
 
-    $Lines = Get-Content -Path $ChezmoiConfig
-    $Output = New-Object System.Collections.Generic.List[string]
+    try {
+        $Lines = Get-Content -Path $ChezmoiConfig
+        $Output = New-Object System.Collections.Generic.List[string]
 
-    $InUpdate = $false
-    $SawApply = $false
-    $SawUpdate = $false
+        $InUpdate = $false
+        $SawApply = $false
+        $SawUpdate = $false
 
-    foreach ($Line in $Lines) {
-        if ($Line -match '^\S[^:]*:\s*$') {
-            if ($InUpdate -and -not $SawApply) {
-                $Output.Add("  apply: false")
+        foreach ($Line in $Lines) {
+            if ($Line -match '^\S[^:]*:\s*$') {
+                if ($InUpdate -and -not $SawApply) {
+                    $Output.Add("  apply: false")
+                }
+
+                $InUpdate = $false
+                $SawApply = $false
             }
 
-            $InUpdate = $false
-            $SawApply = $false
-        }
+            if ($Line -match '^\s*update:\s*$') {
+                $SawUpdate = $true
+                $InUpdate = $true
+                $SawApply = $false
+                $Output.Add($Line)
+                continue
+            }
 
-        if ($Line -match '^\s*update:\s*$') {
-            $SawUpdate = $true
-            $InUpdate = $true
-            $SawApply = $false
+            if ($InUpdate -and $Line -match '^\s*apply:\s*') {
+                $Output.Add("  apply: false")
+                $SawApply = $true
+                continue
+            }
+
             $Output.Add($Line)
-            continue
         }
 
-        if ($InUpdate -and $Line -match '^\s*apply:\s*') {
+        if ($InUpdate -and -not $SawApply) {
             $Output.Add("  apply: false")
-            $SawApply = $true
-            continue
         }
 
-        $Output.Add($Line)
+        if (-not $SawUpdate) {
+            $Output.Add("")
+            $Output.Add("update:")
+            $Output.Add("  apply: false")
+        }
+    } catch {
+        Write-Warning "chezmoi config update.apply enforcement skipped due to parse failure"
+        return
     }
 
-    if ($InUpdate -and -not $SawApply) {
-        $Output.Add("  apply: false")
-    }
-
-    if (-not $SawUpdate) {
-        $Output.Add("")
-        $Output.Add("update:")
-        $Output.Add("  apply: false")
+    if ($Output.Count -eq 0) {
+        Write-Warning "chezmoi config parse produced empty output, skipping write to avoid data loss"
+        return
     }
 
     Write-Utf8File -Path $ChezmoiConfig -Content $Output.ToArray()
