@@ -14,6 +14,17 @@ if (Get-Command mise -ErrorAction SilentlyContinue) {
     mise activate pwsh | Out-String | Invoke-Expression
 }
 
+# User-local bin
+$UserLocalBin = Join-Path $HOME ".local\bin"
+
+if (Test-Path $UserLocalBin) {
+    $PathParts = $env:Path -split [IO.Path]::PathSeparator
+
+    if ($PathParts -notcontains $UserLocalBin) {
+        $env:Path = ($PathParts + $UserLocalBin) -join [IO.Path]::PathSeparator
+    }
+}
+
 # basic aliases
 Set-Alias ll Get-ChildItem
 Set-Alias g git
