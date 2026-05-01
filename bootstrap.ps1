@@ -33,12 +33,25 @@ function Die {
     throw "ERROR: $Message"
 }
 
+function Write-Utf8File {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Content
+    )
+
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllLines($Path, $Content, $Utf8NoBom)
+}
+
 function Ensure-ChezmoiUpdateApplyFalse {
     if (-not (Test-Path $ChezmoiConfig)) {
         return
     }
 
-    $Lines = Get-Content $ChezmoiConfig
+    $Lines = Get-Content -Path $ChezmoiConfig
     $Output = New-Object System.Collections.Generic.List[string]
 
     $InUpdate = $false
@@ -82,7 +95,7 @@ function Ensure-ChezmoiUpdateApplyFalse {
         $Output.Add("  apply: false")
     }
 
-    $Output | Set-Content $ChezmoiConfig
+    Write-Utf8File -Path $ChezmoiConfig -Content $Output.ToArray()
 }
 
 Section "bootstrap"
@@ -141,19 +154,20 @@ if (-not $AgeRecipient) {
 Section "chezmoi config"
 
 if (-not (Test-Path $ChezmoiConfig)) {
-@"
-encryption: age
+    $InitialConfig = @(
+        "encryption: age",
+        "",
+        "age:",
+        "  identities:",
+        "    - $AgeKey",
+        "  recipients:",
+        "    - $AgeRecipient",
+        "",
+        "update:",
+        "  apply: false"
+    )
 
-age:
-  identities:
-    - $AgeKey
-  recipients:
-    - $AgeRecipient
-
-update:
-  apply: false
-"@ | Set-Content $ChezmoiConfig
-
+    Write-Utf8File -Path $ChezmoiConfig -Content $InitialConfig
     Info "created: $ChezmoiConfig"
 } else {
     Info "config already exists, enforcing update.apply=false"
@@ -245,7 +259,7 @@ Write-Host "Verify:"
 Write-Host "  ssh -T git@github.com"
 Write-Host '  git -C "$HOME\.local\share\chezmoi" remote -v'
 Write-Host "  mise doctor"
-Write-Host "  chezmoi data | Select-String update"
+Write-Host '  Select-String -Path "$HOME\.config\chezmoi\chezmoi.yaml" -Pattern "^update:","^\s+apply:"'
 Write-Host ""
 
 Write-Host "bootstrap: complete"
