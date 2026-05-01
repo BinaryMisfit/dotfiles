@@ -1,3 +1,5 @@
+{{- $layout := get (index . "vscode" | default dict) "layout" | default "large" -}}
+{{- $small := eq $layout "small" -}}
 {
   // --- Core ---
   {{- if eq .chezmoi.os "windows" }}
@@ -30,14 +32,14 @@
   // --- Layout / Focus ---
   "workbench.editor.enablePreview": false,
   "workbench.editor.showTabs": "multiple",
-  "workbench.activityBar.location": "top",
+  "workbench.activityBar.location": {{ if $small }}"left"{{ else }}"top"{{ end }},
   "workbench.panel.defaultLocation": "bottom",
 
   // --- Terminal ---
   "terminal.integrated.defaultProfile.osx": "zsh",
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "terminal.integrated.tabs.enabled": true,
-  "terminal.integrated.defaultLocation": "editor",
+  "terminal.integrated.defaultLocation": {{ if $small }}"editor"{{ else }}"panel"{{ end }},
   "terminal.integrated.tabs.hideCondition": "singleTerminal",
   "terminal.integrated.fontFamily": "MesloLGS Nerd Font",
   {{- if eq .chezmoi.os "windows" }}

@@ -23,7 +23,7 @@ if (-not $code) {
     exit 0
 }
 
-$scoopPortableData = Join-Path $HOME "scoop\persist\vscode\data"
+$scoopPortableData = "{{ $scoopVscodeData }}"
 $scoopExtensionsDir = Join-Path $scoopPortableData "extensions"
 
 $codeArgs = @()
