@@ -113,7 +113,7 @@ if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
 
 Section "core tools"
 
-$Tools = @("git", "chezmoi", "age", "mise", "oh-my-posh", "openssh", "mingw")
+$Tools = @("git", "chezmoi", "age", "mise", "openssh")
 
 foreach ($Tool in $Tools) {
     Info "ensuring $Tool"

@@ -1,0 +1,12 @@
+{{ if eq .chezmoi.os "windows" -}}
+$ErrorActionPreference = "Stop"
+
+# mise config hash: {{ includeTemplate "private_dot_config/mise/config.toml.tmpl" . | sha256sum }}
+
+if (-not (Get-Command mise -ErrorAction SilentlyContinue)) {
+    Write-Error "install-mise: mise not found; run bootstrap.ps1 first"
+}
+
+mise install
+mise reshim
+{{ end -}}

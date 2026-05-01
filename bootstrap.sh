@@ -87,11 +87,11 @@ info "repo: $REPO"
 # base deps
 # --------------------------------------------------
 if command -v apt-get >/dev/null 2>&1; then
-  if ! command -v git >/dev/null 2>&1; then
+  if ! command -v git >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
     section "base deps"
-    info "installing git"
+    info "installing git/curl"
     sudo apt-get update -y
-    sudo apt-get install -y git
+    sudo apt-get install -y git curl ca-certificates
   fi
 fi
 
@@ -126,9 +126,8 @@ section "core tools"
 
 "$MISE" use -g age@latest
 "$MISE" use -g chezmoi@latest
-"$MISE" use -g node@20
 
-"$MISE" install age@latest chezmoi@latest node@20
+"$MISE" install age@latest chezmoi@latest
 "$MISE" reshim || true
 
 export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
@@ -143,66 +142,6 @@ SSH_KEYGEN="$(command -v ssh-keygen || true)"
 
 info "chezmoi: $CHEZMOI"
 info "age-keygen: $AGE_KEYGEN"
-
-# --------------------------------------------------
-# codex sandbox
-# --------------------------------------------------
-section "codex sandbox"
-
-if [ "$(uname -s)" = "Darwin" ]; then
-  info "macOS detected, skipping bubblewrap"
-elif command -v bwrap >/dev/null 2>&1; then
-  info "bubblewrap already installed"
-elif command -v apt-get >/dev/null 2>&1; then
-  info "installing bubblewrap via apt"
-  sudo apt-get update
-  sudo apt-get install -y bubblewrap
-else
-  info "no supported package manager found for bubblewrap"
-fi
-
-# --------------------------------------------------
-# shell
-# --------------------------------------------------
-section "shell"
-
-if ! command -v zsh >/dev/null 2>&1; then
-  if command -v apt-get >/dev/null 2>&1; then
-    info "installing zsh via apt"
-    sudo apt-get update
-    sudo apt-get install -y zsh
-  elif command -v brew >/dev/null 2>&1; then
-    info "installing zsh via brew"
-    brew install zsh
-  else
-    info "no supported package manager found for zsh"
-  fi
-else
-  info "zsh already installed"
-fi
-
-if [ "$(uname -s)" != "Darwin" ] && command -v zsh >/dev/null 2>&1; then
-  CURRENT_SHELL="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 || echo "")"
-  ZSH_PATH="$(command -v zsh)"
-
-  if [ "$CURRENT_SHELL" != "$ZSH_PATH" ]; then
-    info "switching default shell to zsh"
-    chsh -s "$ZSH_PATH" "$USER" || true
-    info "note: logout/login required"
-  else
-    info "zsh already default shell"
-  fi
-fi
-
-if command -v zsh >/dev/null 2>&1; then
-  if [ ! -f "$HOME/.iterm2_shell_integration.zsh" ]; then
-    info "installing iTerm2 shell integration"
-    curl -fsSL https://iterm2.com/shell_integration/zsh \
-      -o "$HOME/.iterm2_shell_integration.zsh" || true
-  else
-    info "iTerm2 shell integration already exists"
-  fi
-fi
 
 # --------------------------------------------------
 # age identity
