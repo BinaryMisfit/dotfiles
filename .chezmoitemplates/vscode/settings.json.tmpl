@@ -41,13 +41,12 @@
   "terminal.integrated.tabs.hideCondition": "singleTerminal",
   "terminal.integrated.fontFamily": "MesloLGS Nerd Font",
   {{- if eq .chezmoi.os "windows" }}
-  "terminal.integrated.fontSize": 15,
+  "terminal.integrated.fontSize": 16,
   {{- else if eq .chezmoi.os "darwin" }}
   "terminal.integrated.fontSize": 13,
   {{- end}}
 
   // --- AI / Chat ---
-  "chat.openOnStartup": false,
   "chat.editor.fontSize": 13,
   "chat.progressBorder.enabled": true,
   "chat.persistentProgress.enabled": true,
@@ -61,7 +60,7 @@
   "vim.smartRelativeLine": true,
   "vim.incsearch": true,
   "vim.ignorecase": true,
-  "vim.smartcase": true
+  "vim.smartcase": true,
 
   // --- Remote ---
   "remote.SSH.remotePlatform": {
