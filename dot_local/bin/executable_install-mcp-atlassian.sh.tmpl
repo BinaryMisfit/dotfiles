@@ -33,7 +33,8 @@ PLIST_PATH="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 mkdir -p "$BASE_DIR" "$SERVER_DIR" "$LOG_DIR" "$HOME/Library/LaunchAgents"
 
-if ! command -v uvx >/dev/null 2>&1; then
+UVX_PATH="$(command -v uvx || true)"
+if [ -z "$UVX_PATH" ]; then
   echo "install-mcp-atlassian: uvx is missing. Install uv manually, then rerun; this installer does not auto-install dependencies." >&2
   exit 1
 fi
@@ -271,9 +272,13 @@ URL="http://127.0.0.1:$PORT/mcp"
 write_registry "$PORT"
 printf "%s" "$PORT" > "$PORT_PATH"
 
-cat > "$SERVER_DIR/start.sh" <<'EOF'
+cat > "$SERVER_DIR/start.sh" <<EOF
 #!/usr/bin/env zsh
 set -eu
+UVX_PATH="$UVX_PATH"
+EOF
+
+cat >> "$SERVER_DIR/start.sh" <<'EOF'
 
 SERVER_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 BASE_DIR="$(dirname -- "$SERVER_DIR")"
@@ -314,7 +319,7 @@ else
   exit 1
 fi
 
-exec uvx mcp-atlassian --transport streamable-http --host 127.0.0.1 --port "$PORT" -v
+exec "$UVX_PATH" mcp-atlassian --transport streamable-http --host 127.0.0.1 --port "$PORT" -v
 EOF
 
 cat > "$SERVER_DIR/stop.sh" <<EOF
@@ -374,11 +379,16 @@ cat > "$SERVER_DIR/uninstall.sh" <<'EOF'
 set -eu
 
 REMOVE_LOGS=0
+REMOVE_RUNTIME=0
 VSCODE_MCP_CONFIG_PATH=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --remove-logs)
       REMOVE_LOGS=1
+      shift
+      ;;
+    --remove-runtime)
+      REMOVE_RUNTIME=1
       shift
       ;;
     --vscode-mcp-config-path)
@@ -397,6 +407,7 @@ SERVER_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 BASE_DIR="$(dirname -- "$SERVER_DIR")"
 REGISTRY_PATH="$BASE_DIR/registry.json"
 ENV_PATH="$SERVER_DIR/.env"
+LOG_DIR="$SERVER_DIR/logs"
 PLIST_PATH="$HOME/Library/LaunchAgents/$LABEL.plist"
 VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
 COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
@@ -464,14 +475,22 @@ EOS
 fi
 
 if [ -f "$ENV_PATH" ]; then
-  mv -f "$ENV_PATH" "$SERVER_DIR/.env.backup"
+  backup="$SERVER_DIR/.env.backup"
+  if [ -e "$backup" ]; then
+    backup="$SERVER_DIR/.env.backup.$(date +%Y%m%d%H%M%S)"
+  fi
+  mv "$ENV_PATH" "$backup"
 fi
 
 if [ "$REMOVE_LOGS" -eq 1 ]; then
-  rm -rf "$SERVER_DIR/logs"
+  rm -rf "$LOG_DIR"
 fi
 
-echo "mcp-atlassian uninstalled. Logs retained unless --remove-logs was passed."
+if [ "$REMOVE_RUNTIME" -eq 1 ]; then
+  rm -rf "$SERVER_DIR"
+fi
+
+echo "mcp-atlassian uninstalled. .env preserved as backup when present. Logs retained unless --remove-logs was passed."
 EOF
 
 cat > "$PLIST_PATH" <<EOF
@@ -490,9 +509,9 @@ cat > "$PLIST_PATH" <<EOF
   <key>WorkingDirectory</key>
   <string>$SERVER_DIR</string>
   <key>StandardOutPath</key>
-  <string>$LOG_DIR/stdout.log</string>
+  <string>$LOG_DIR/mcp-atlassian.log</string>
   <key>StandardErrorPath</key>
-  <string>$LOG_DIR/stderr.log</string>
+  <string>$LOG_DIR/mcp-atlassian.log</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

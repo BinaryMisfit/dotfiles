@@ -318,7 +318,7 @@ if ($port) {
 
 @'
 [CmdletBinding()]
-param([switch]$RemoveLogs, [string]$McpVSCodeConfigPath)
+param([switch]$RemoveLogs, [switch]$RemoveRuntime, [string]$McpVSCodeConfigPath)
 $ErrorActionPreference = "Stop"
 
 function Read-JsonFile([string]$Path, [object]$Default) {
@@ -381,6 +381,7 @@ $ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BaseDir = Split-Path -Parent $ServerDir
 $RegistryPath = Join-Path $BaseDir "registry.json"
 $EnvPath = Join-Path $ServerDir ".env"
+$LogDir = Join-Path $ServerDir "logs"
 $ServiceName = "MCP-Atlassian"
 
 if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
@@ -418,14 +419,23 @@ if (Test-Path -LiteralPath $RegistryPath) {
 }
 
 if (Test-Path -LiteralPath $EnvPath) {
-    Move-Item -LiteralPath $EnvPath -Destination (Join-Path $ServerDir ".env.backup") -Force
+    $envBackup = Join-Path $ServerDir ".env.backup"
+    if (Test-Path -LiteralPath $envBackup) {
+        $stamp = Get-Date -Format "yyyyMMddHHmmss"
+        $envBackup = Join-Path $ServerDir ".env.backup.$stamp"
+    }
+    Move-Item -LiteralPath $EnvPath -Destination $envBackup
 }
 
 if ($RemoveLogs) {
-    Remove-Item -LiteralPath (Join-Path $ServerDir "logs") -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $LogDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host "mcp-atlassian uninstalled. Logs retained unless -RemoveLogs was passed."
+if ($RemoveRuntime) {
+    Remove-Item -LiteralPath $ServerDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host "mcp-atlassian uninstalled. .env preserved as backup when present. Logs retained unless -RemoveLogs was passed."
 '@ | Set-Content -LiteralPath $uninstallPath -Encoding UTF8
 
 $pwsh = Get-CommandPath "pwsh.exe"

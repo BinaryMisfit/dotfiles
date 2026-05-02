@@ -57,6 +57,35 @@ function Remove-JsonEntry([string]$Path, [string]$Top, [string]$Name) {
     }
 }
 
+function Remove-TomlBlock([string]$Text, [string]$Header) {
+    $lines = $Text -split "`r?`n"
+    $out = New-Object System.Collections.Generic.List[string]
+    $skipping = $false
+    foreach ($line in $lines) {
+        if ($line -match '^\s*\[.*\]\s*$') {
+            $skipping = ($line.Trim() -eq $Header)
+            if ($skipping) { continue }
+        }
+        if (-not $skipping) { $out.Add($line) }
+    }
+    return (($out -join "`n") -replace "`n{3,}", "`n`n").Trim()
+}
+
+function Write-TextFileIfChanged([string]$Path, [string]$Text, [string]$OldText) {
+    if ($OldText -eq $Text) { return $false }
+    $stamp = Get-Date -Format "yyyyMMddHHmmss"
+    Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
+    $Text | Set-Content -LiteralPath $Path -Encoding UTF8
+    return $true
+}
+
+function Remove-CodexConfig([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    $old = Get-Content -LiteralPath $Path -Raw
+    $next = Remove-TomlBlock $old "[mcp_servers.atlassian]"
+    Write-TextFileIfChanged $Path $next $old | Out-Null
+}
+
 function Move-EnvBackup([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return }
     $dir = Split-Path -Parent $Path
@@ -88,10 +117,13 @@ if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
 $vscodePath = if ($VscodeMcpConfigPath) { $VscodeMcpConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
 $copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
 $copilotPath = Join-Path $copilotHome "mcp-config.json"
+$codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
+$codexPath = Join-Path $codexHome "config.toml"
 
 Remove-JsonEntry $vscodePath "servers" "mcp-atlassian"
 Remove-JsonEntry $copilotPath "mcpServers" "mcp-atlassian"
 Remove-JsonEntry $RegistryPath "servers" "mcp-atlassian"
+Remove-CodexConfig $codexPath
 
 Move-EnvBackup $EnvPath
 

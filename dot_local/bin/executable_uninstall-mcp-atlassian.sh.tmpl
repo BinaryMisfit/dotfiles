@@ -41,6 +41,7 @@ PLIST_PATH="$HOME/Library/LaunchAgents/$LABEL.plist"
 VSCODE_PATH="${VSCODE_MCP_CONFIG_PATH:-$HOME/Library/Application Support/Code/User/mcp.json}"
 COPILOT_BASE="${COPILOT_HOME:-$HOME/.copilot}"
 COPILOT_PATH="$COPILOT_BASE/mcp-config.json"
+CODEX_PATH="${CODEX_HOME:-$HOME/.codex}/config.toml"
 
 if ! launchctl bootout "gui/$(id -u)" "$PLIST_PATH" >/dev/null 2>&1; then
   echo "uninstall-mcp-atlassian: LaunchAgent was not loaded or could not be booted out; continuing." >&2
@@ -95,9 +96,39 @@ backup_env() {
   mv "$ENV_PATH" "$backup"
 }
 
+remove_codex_config() {
+  local path="$1"
+  [ -f "$path" ] || return 0
+  TARGET_PATH="$path" /usr/bin/osascript -l JavaScript <<'EOF'
+ObjC.import('Foundation');
+const path = $.NSProcessInfo.processInfo.environment.objectForKey('TARGET_PATH').js;
+const data = $.NSData.dataWithContentsOfFile(path);
+const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+const lines = text.split(/\r?\n/);
+const out = [];
+let skipping = false;
+for (const line of lines) {
+  if (/^\s*\[.*\]\s*$/.test(line)) {
+    skipping = line.trim() === '[mcp_servers.atlassian]';
+    if (skipping) continue;
+  }
+  if (!skipping) out.push(line);
+}
+const next = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+if (next !== text) {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  $(text).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
+  $(next).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
+}
+EOF
+}
+
 remove_json_entry "$VSCODE_PATH" "servers"
 remove_json_entry "$COPILOT_PATH" "mcpServers"
 remove_json_entry "$REGISTRY_PATH" "servers"
+remove_codex_config "$CODEX_PATH"
 
 backup_env
 
