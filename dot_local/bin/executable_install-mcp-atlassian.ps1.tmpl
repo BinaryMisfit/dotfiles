@@ -22,6 +22,18 @@ function Get-CommandPath([string]$Name) {
     return $null
 }
 
+function Resolve-VSCodeMcpConfigPath([string]$McpVSCodeConfigPath) {
+    if ($McpVSCodeConfigPath) { return $McpVSCodeConfigPath }
+
+    $scoopData = Join-Path $env:USERPROFILE "scoop\persist\vscode\data\user-data\User"
+    $scoopExe = Join-Path $env:USERPROFILE "scoop\apps\vscode\current\Code.exe"
+    if ((Test-Path -LiteralPath $scoopData) -and (Test-Path -LiteralPath $scoopExe)) {
+        return (Join-Path $scoopData "mcp.json")
+    }
+
+    return (Join-Path $env:APPDATA "Code\User\mcp.json")
+}
+
 function Read-JsonFile([string]$Path, [object]$Default) {
     if (-not (Test-Path -LiteralPath $Path)) { return $Default }
     $raw = Get-Content -LiteralPath $Path -Raw
@@ -33,24 +45,41 @@ function Read-JsonFile([string]$Path, [object]$Default) {
     }
 }
 
-function Write-JsonFileIfChanged([string]$Path, [object]$Data, [switch]$Backup) {
-    $new = ($Data | ConvertTo-Json -Depth 32)
-    $old = $null
-    if (Test-Path -LiteralPath $Path) {
-        $old = Get-Content -LiteralPath $Path -Raw
+function Prune-Backups([string]$Path, [int]$Keep = 5) {
+    try {
+        $dir = Split-Path -Parent $Path
+        if (-not $dir -or -not (Test-Path -LiteralPath $dir)) { return }
+        $leaf = Split-Path -Leaf $Path
+        Get-ChildItem -LiteralPath $dir -File -Filter "$leaf.bak.*" |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -Skip $Keep |
+            Remove-Item -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Failed to prune backups for '$Path'. $($_.Exception.Message)"
     }
-    if ($old -eq $new) { return $false }
+}
 
+function Backup-FileIfChanging([string]$Path, [string]$NewContent) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $false }
+    $old = Get-Content -LiteralPath $Path -Raw
+    if ($old -eq $NewContent) { return $false }
+    $stamp = Get-Date -Format "yyyyMMddHHmmss"
+    Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
+    return $true
+}
+
+function Write-FileIfChanged([string]$Path, [string]$Text, [System.Text.Encoding]$Encoding = [System.Text.UTF8Encoding]::new($false)) {
+    if ((Test-Path -LiteralPath $Path) -and ((Get-Content -LiteralPath $Path -Raw) -eq $Text)) { return $false }
     $dir = Split-Path -Parent $Path
     if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-
-    if ($Backup -and (Test-Path -LiteralPath $Path)) {
-        $stamp = Get-Date -Format "yyyyMMddHHmmss"
-        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
-    }
-
-    $new | Set-Content -LiteralPath $Path -Encoding UTF8
+    $backedUp = Backup-FileIfChanging $Path $Text
+    [System.IO.File]::WriteAllText($Path, $Text, $Encoding)
+    if ($backedUp) { Prune-Backups $Path }
     return $true
+}
+
+function Write-JsonFileIfChanged([string]$Path, [object]$Data) {
+    Write-FileIfChanged $Path ($Data | ConvertTo-Json -Depth 32)
 }
 
 function Ensure-ObjectProperty([object]$Object, [string]$Name, [object]$Value) {
@@ -109,7 +138,7 @@ function Patch-VSCodeConfig([string]$Path, [string]$Url) {
         type = "http"
         url = $Url
     })
-    Write-JsonFileIfChanged $Path $config -Backup | Out-Null
+    Write-JsonFileIfChanged $Path $config | Out-Null
 }
 
 function Patch-CopilotConfig([string]$Path, [string]$Url) {
@@ -122,7 +151,7 @@ function Patch-CopilotConfig([string]$Path, [string]$Url) {
         url = $Url
         tools = @("*")
     })
-    Write-JsonFileIfChanged $Path $config -Backup | Out-Null
+    Write-JsonFileIfChanged $Path $config | Out-Null
 }
 
 function Remove-TomlBlock([string]$Text, [string]$Header) {
@@ -139,22 +168,6 @@ function Remove-TomlBlock([string]$Text, [string]$Header) {
     return (($out -join "`n") -replace "`n{3,}", "`n`n").Trim()
 }
 
-function Write-TextFileIfChanged([string]$Path, [string]$Text, [switch]$Backup) {
-    $old = $null
-    if (Test-Path -LiteralPath $Path) {
-        $old = Get-Content -LiteralPath $Path -Raw
-    }
-    if ($old -eq $Text) { return $false }
-    $dir = Split-Path -Parent $Path
-    if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-    if ($Backup -and (Test-Path -LiteralPath $Path)) {
-        $stamp = Get-Date -Format "yyyyMMddHHmmss"
-        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
-    }
-    $Text | Set-Content -LiteralPath $Path -Encoding UTF8
-    return $true
-}
-
 function Patch-CodexConfig([string]$Path, [string]$Url) {
     $text = ""
     if (Test-Path -LiteralPath $Path) {
@@ -168,7 +181,7 @@ enabled = true
 tool_timeout_sec = 120
 "@
     if ($next) { $next = "$next`n`n$block" } else { $next = $block }
-    Write-TextFileIfChanged $Path $next -Backup | Out-Null
+    Write-FileIfChanged $Path $next | Out-Null
 }
 
 if (-not (Test-IsAdmin)) {
@@ -217,7 +230,7 @@ Ensure-ObjectProperty $registry.servers "mcp-atlassian" ([pscustomobject]@{
     url = $url
     transport = "streamable-http"
 })
-Write-JsonFileIfChanged $RegistryPath $registry -Backup | Out-Null
+Write-JsonFileIfChanged $RegistryPath $registry | Out-Null
 $port.ToString() | Set-Content -LiteralPath $PortPath -NoNewline -Encoding ASCII
 
 $startPath = Join-Path $ServerDir "start.ps1"
@@ -328,19 +341,41 @@ function Read-JsonFile([string]$Path, [object]$Default) {
     return $raw | ConvertFrom-Json -Depth 32
 }
 
-function Write-JsonFileIfChanged([string]$Path, [object]$Data, [switch]$Backup) {
-    $new = ($Data | ConvertTo-Json -Depth 32)
-    $old = $null
-    if (Test-Path -LiteralPath $Path) {
-        $old = Get-Content -LiteralPath $Path -Raw
+function Prune-Backups([string]$Path, [int]$Keep = 5) {
+    try {
+        $dir = Split-Path -Parent $Path
+        if (-not $dir -or -not (Test-Path -LiteralPath $dir)) { return }
+        $leaf = Split-Path -Leaf $Path
+        Get-ChildItem -LiteralPath $dir -File -Filter "$leaf.bak.*" |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -Skip $Keep |
+            Remove-Item -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Failed to prune backups for '$Path'. $($_.Exception.Message)"
     }
-    if ($old -eq $new) { return $false }
-    if ($Backup -and (Test-Path -LiteralPath $Path)) {
-        $stamp = Get-Date -Format "yyyyMMddHHmmss"
-        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
-    }
-    $new | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
+function Backup-FileIfChanging([string]$Path, [string]$NewContent) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $false }
+    $old = Get-Content -LiteralPath $Path -Raw
+    if ($old -eq $NewContent) { return $false }
+    $stamp = Get-Date -Format "yyyyMMddHHmmss"
+    Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
     return $true
+}
+
+function Write-FileIfChanged([string]$Path, [string]$Text, [System.Text.Encoding]$Encoding = [System.Text.UTF8Encoding]::new($false)) {
+    if ((Test-Path -LiteralPath $Path) -and ((Get-Content -LiteralPath $Path -Raw) -eq $Text)) { return $false }
+    $dir = Split-Path -Parent $Path
+    if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    $backedUp = Backup-FileIfChanging $Path $Text
+    [System.IO.File]::WriteAllText($Path, $Text, $Encoding)
+    if ($backedUp) { Prune-Backups $Path }
+    return $true
+}
+
+function Write-JsonFileIfChanged([string]$Path, [object]$Data) {
+    Write-FileIfChanged $Path ($Data | ConvertTo-Json -Depth 32)
 }
 
 function Remove-TomlBlock([string]$Text, [string]$Header) {
@@ -357,24 +392,22 @@ function Remove-TomlBlock([string]$Text, [string]$Header) {
     return (($out -join "`n") -replace "`n{3,}", "`n`n").Trim()
 }
 
-function Write-TextFileIfChanged([string]$Path, [string]$Text, [switch]$Backup) {
-    $old = $null
-    if (Test-Path -LiteralPath $Path) {
-        $old = Get-Content -LiteralPath $Path -Raw
-    }
-    if ($old -eq $Text) { return $false }
-    if ($Backup -and (Test-Path -LiteralPath $Path)) {
-        $stamp = Get-Date -Format "yyyyMMddHHmmss"
-        Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
-    }
-    $Text | Set-Content -LiteralPath $Path -Encoding UTF8
-    return $true
-}
-
 function Remove-Property([object]$Object, [string]$Name) {
     if ($Object -and ($Object.PSObject.Properties.Name -contains $Name)) {
         $Object.PSObject.Properties.Remove($Name)
     }
+}
+
+function Resolve-VSCodeMcpConfigPath([string]$McpVSCodeConfigPath) {
+    if ($McpVSCodeConfigPath) { return $McpVSCodeConfigPath }
+
+    $scoopData = Join-Path $env:USERPROFILE "scoop\persist\vscode\data\user-data\User"
+    $scoopExe = Join-Path $env:USERPROFILE "scoop\apps\vscode\current\Code.exe"
+    if ((Test-Path -LiteralPath $scoopData) -and (Test-Path -LiteralPath $scoopExe)) {
+        return (Join-Path $scoopData "mcp.json")
+    }
+
+    return (Join-Path $env:APPDATA "Code\User\mcp.json")
 }
 
 $ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -389,7 +422,7 @@ if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
     & nssm remove $ServiceName confirm | Out-Host
 }
 
-$vscode = if ($McpVSCodeConfigPath) { $McpVSCodeConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
+$vscode = Resolve-VSCodeMcpConfigPath $McpVSCodeConfigPath
 $copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
 $copilot = Join-Path $copilotHome "mcp-config.json"
 $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
@@ -398,24 +431,24 @@ $codex = Join-Path $codexHome "config.toml"
 if (Test-Path -LiteralPath $vscode) {
     $cfg = Read-JsonFile $vscode ([pscustomobject]@{})
     if ($cfg.servers) { Remove-Property $cfg.servers "mcp-atlassian" }
-    Write-JsonFileIfChanged $vscode $cfg -Backup | Out-Null
+    Write-JsonFileIfChanged $vscode $cfg | Out-Null
 }
 
 if (Test-Path -LiteralPath $copilot) {
     $cfg = Read-JsonFile $copilot ([pscustomobject]@{})
     if ($cfg.mcpServers) { Remove-Property $cfg.mcpServers "mcp-atlassian" }
-    Write-JsonFileIfChanged $copilot $cfg -Backup | Out-Null
+    Write-JsonFileIfChanged $copilot $cfg | Out-Null
 }
 
 if (Test-Path -LiteralPath $codex) {
     $text = Get-Content -LiteralPath $codex -Raw
-    Write-TextFileIfChanged $codex (Remove-TomlBlock $text "[mcp_servers.atlassian]") -Backup | Out-Null
+    Write-FileIfChanged $codex (Remove-TomlBlock $text "[mcp_servers.atlassian]") | Out-Null
 }
 
 if (Test-Path -LiteralPath $RegistryPath) {
     $registry = Read-JsonFile $RegistryPath ([pscustomobject]@{})
     if ($registry.servers) { Remove-Property $registry.servers "mcp-atlassian" }
-    Write-JsonFileIfChanged $RegistryPath $registry -Backup | Out-Null
+    Write-JsonFileIfChanged $RegistryPath $registry | Out-Null
 }
 
 if (Test-Path -LiteralPath $EnvPath) {
@@ -462,7 +495,7 @@ $serviceLogPath = Join-Path $LogDir "mcp-atlassian.log"
 & nssm set $ServiceName AppRotateBytes 10485760 | Out-Null
 & nssm set $ServiceName AppExit Default Restart | Out-Null
 
-$vscodePath = if ($McpVSCodeConfigPath) { $McpVSCodeConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
+$vscodePath = Resolve-VSCodeMcpConfigPath $McpVSCodeConfigPath
 $copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
 $copilotPath = Join-Path $copilotHome "mcp-config.json"
 $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }

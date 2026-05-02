@@ -90,7 +90,10 @@ Windows:
 - Registry: `%LOCALAPPDATA%\MCP\registry.json`
 - Server dir: `%LOCALAPPDATA%\MCP\atlassian`
 - Logs: `%LOCALAPPDATA%\MCP\atlassian\logs\mcp-atlassian.log`
-- VS Code default: `%APPDATA%\Code\User\mcp.json`
+- VS Code MCP config detection:
+  1. `-McpVSCodeConfigPath`, when passed
+  2. Scoop VS Code, when both `%USERPROFILE%\scoop\persist\vscode\data\user-data\User` and `%USERPROFILE%\scoop\apps\vscode\current\Code.exe` exist: `%USERPROFILE%\scoop\persist\vscode\data\user-data\User\mcp.json`
+  3. Default VS Code: `%APPDATA%\Code\User\mcp.json`
 - Copilot CLI default: `%USERPROFILE%\.copilot\mcp-config.json`
 - Codex default: `%USERPROFILE%\.codex\config.toml`
 
@@ -190,7 +193,7 @@ uninstall-mcp-atlassian.ps1 -RemoveRuntime
 If VS Code uses a custom user data directory, pass:
 
 ```powershell
-uninstall-mcp-atlassian.ps1 -VscodeMcpConfigPath "C:\path\to\mcp.json"
+uninstall-mcp-atlassian.ps1 -McpVSCodeConfigPath "C:\path\to\mcp.json"
 ```
 
 macOS:
@@ -221,7 +224,9 @@ Uninstall removes only the `mcp-atlassian` entries from VS Code, Copilot CLI, an
 
 ## Backups and rollback
 
-Before VS Code, Copilot CLI, or Codex config files are changed, the installer writes a timestamped backup next to the original file. Backups are skipped if the target file would not change.
+Before VS Code, Copilot CLI, Codex, registry, or other generated config files are changed, the scripts write a timestamped backup next to the original file only when the target already exists and the new content differs. The newest five backups are retained per file; older backups are pruned after a successful write. Backup cleanup warnings do not fail install or uninstall.
+
+Logs and generated runtime start, stop, and status scripts are not backed up. `.env` is separate: install never overwrites an existing `.env`; uninstall renames it to `.env.backup`, or `.env.backup.YYYYMMDDHHMMSS` if that already exists.
 
 On JSON parse errors, the installer does not overwrite the file. Fix the JSON or rerun with a clean config path override.
 

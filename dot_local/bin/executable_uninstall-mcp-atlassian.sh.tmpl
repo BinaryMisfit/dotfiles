@@ -49,11 +49,53 @@ fi
 
 rm -f "$PLIST_PATH"
 
+prune_backups() {
+  local path="$1"
+  local keep="${2:-5}"
+  local dir="${path:h}"
+  local leaf="${path:t}"
+  local -a backups
+  [ -d "$dir" ] || return 0
+  backups=("${(@f)$(find "$dir" -maxdepth 1 -type f -name "$leaf.bak.*" -print 2>/dev/null | sort -r)}")
+  local count="${#backups[@]}"
+  [ "$count" -le "$keep" ] && return 0
+  local idx
+  for idx in $(seq $((keep + 1)) "$count"); do
+    rm -f "$backups[$idx]" 2>/dev/null || echo "uninstall-mcp-atlassian: warning: failed to prune backup '$backups[$idx]'." >&2
+  done
+}
+
+backup_file_if_changing() {
+  local path="$1"
+  local new_text="$2"
+  [ -f "$path" ] || return 1
+  [ "$(cat "$path")" = "$new_text" ] && return 1
+  cp "$path" "$path.bak.$(date +%Y%m%d%H%M%S)"
+}
+
+write_file_if_changed() {
+  local path="$1"
+  local new_text="$2"
+  if [ -f "$path" ] && [ "$(cat "$path")" = "$new_text" ]; then
+    return 1
+  fi
+  mkdir -p "${path:h}"
+  local backed_up=0
+  if backup_file_if_changing "$path" "$new_text"; then
+    backed_up=1
+  fi
+  printf "%s" "$new_text" > "$path"
+  if [ "$backed_up" -eq 1 ]; then
+    prune_backups "$path"
+  fi
+}
+
 remove_json_entry() {
   local path="$1"
   local top="$2"
   [ -f "$path" ] || return 0
-  if ! TARGET_PATH="$path" TOP="$top" /usr/bin/osascript -l JavaScript <<'EOF'
+  local next
+  if ! next="$(TARGET_PATH="$path" TOP="$top" /usr/bin/osascript -l JavaScript <<'EOF'
 ObjC.import('Foundation');
 const env = $.NSProcessInfo.processInfo.environment;
 const path = env.objectForKey('TARGET_PATH').js;
@@ -73,18 +115,16 @@ if (obj[top] && Object.prototype.hasOwnProperty.call(obj[top], 'mcp-atlassian'))
   changed = true;
 }
 const out = JSON.stringify(obj, null, 2);
-if (changed && out !== text) {
-  const d = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-  $(text).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
-  $(out).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
-}
+changed ? `__MCP_CHANGED__${out}` : '';
 EOF
+)"
   then
     echo "uninstall-mcp-atlassian: invalid JSON or write failure in '$path'. Fix the JSON or pass a clean config path." >&2
     exit 1
   fi
+  [[ "$next" == __MCP_CHANGED__* ]] || return 0
+  next="${next#__MCP_CHANGED__}"
+  write_file_if_changed "$path" "$next" || true
 }
 
 backup_env() {
@@ -99,7 +139,8 @@ backup_env() {
 remove_codex_config() {
   local path="$1"
   [ -f "$path" ] || return 0
-  TARGET_PATH="$path" /usr/bin/osascript -l JavaScript <<'EOF'
+  local next
+  next="$(TARGET_PATH="$path" /usr/bin/osascript -l JavaScript <<'EOF'
 ObjC.import('Foundation');
 const path = $.NSProcessInfo.processInfo.environment.objectForKey('TARGET_PATH').js;
 const data = $.NSData.dataWithContentsOfFile(path);
@@ -115,14 +156,12 @@ for (const line of lines) {
   if (!skipping) out.push(line);
 }
 const next = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-if (next !== text) {
-  const d = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-  $(text).writeToFileAtomicallyEncodingError(`${path}.bak.${stamp}`, true, $.NSUTF8StringEncoding, null);
-  $(next).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null);
-}
+next !== text ? `__MCP_CHANGED__${next}` : '';
 EOF
+)"
+  [[ "$next" == __MCP_CHANGED__* ]] || return 0
+  next="${next#__MCP_CHANGED__}"
+  write_file_if_changed "$path" "$next" || true
 }
 
 remove_json_entry "$VSCODE_PATH" "servers"

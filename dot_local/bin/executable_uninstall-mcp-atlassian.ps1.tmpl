@@ -19,6 +19,18 @@ function Get-CommandPath([string]$Name) {
     return $null
 }
 
+function Resolve-VSCodeMcpConfigPath([string]$McpVSCodeConfigPath) {
+    if ($McpVSCodeConfigPath) { return $McpVSCodeConfigPath }
+
+    $scoopData = Join-Path $env:USERPROFILE "scoop\persist\vscode\data\user-data\User"
+    $scoopExe = Join-Path $env:USERPROFILE "scoop\apps\vscode\current\Code.exe"
+    if ((Test-Path -LiteralPath $scoopData) -and (Test-Path -LiteralPath $scoopExe)) {
+        return (Join-Path $scoopData "mcp.json")
+    }
+
+    return (Join-Path $env:APPDATA "Code\User\mcp.json")
+}
+
 function Read-JsonFile([string]$Path) {
     $raw = Get-Content -LiteralPath $Path -Raw
     if ([string]::IsNullOrWhiteSpace($raw)) { return [pscustomobject]@{} }
@@ -29,13 +41,41 @@ function Read-JsonFile([string]$Path) {
     }
 }
 
-function Write-JsonFileIfChanged([string]$Path, [object]$Data, [string]$OldText) {
-    $new = ($Data | ConvertTo-Json -Depth 32)
-    if ($OldText -eq $new) { return $false }
+function Prune-Backups([string]$Path, [int]$Keep = 5) {
+    try {
+        $dir = Split-Path -Parent $Path
+        if (-not $dir -or -not (Test-Path -LiteralPath $dir)) { return }
+        $leaf = Split-Path -Leaf $Path
+        Get-ChildItem -LiteralPath $dir -File -Filter "$leaf.bak.*" |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -Skip $Keep |
+            Remove-Item -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Failed to prune backups for '$Path'. $($_.Exception.Message)"
+    }
+}
+
+function Backup-FileIfChanging([string]$Path, [string]$NewContent) {
+    if (-not (Test-Path -LiteralPath $Path)) { return $false }
+    $old = Get-Content -LiteralPath $Path -Raw
+    if ($old -eq $NewContent) { return $false }
     $stamp = Get-Date -Format "yyyyMMddHHmmss"
     Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
-    $new | Set-Content -LiteralPath $Path -Encoding UTF8
     return $true
+}
+
+function Write-FileIfChanged([string]$Path, [string]$Text, [System.Text.Encoding]$Encoding = [System.Text.UTF8Encoding]::new($false)) {
+    if ((Test-Path -LiteralPath $Path) -and ((Get-Content -LiteralPath $Path -Raw) -eq $Text)) { return $false }
+    $dir = Split-Path -Parent $Path
+    if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    $backedUp = Backup-FileIfChanging $Path $Text
+    [System.IO.File]::WriteAllText($Path, $Text, $Encoding)
+    if ($backedUp) { Prune-Backups $Path }
+    return $true
+}
+
+function Write-JsonFileIfChanged([string]$Path, [object]$Data) {
+    Write-FileIfChanged $Path ($Data | ConvertTo-Json -Depth 32)
 }
 
 function Remove-Property([object]$Object, [string]$Name) {
@@ -52,7 +92,7 @@ function Remove-JsonEntry([string]$Path, [string]$Top, [string]$Name) {
     $cfg = Read-JsonFile $Path
     if ($cfg.PSObject.Properties.Name -contains $Top) {
         if (Remove-Property $cfg.$Top $Name) {
-            Write-JsonFileIfChanged $Path $cfg $old | Out-Null
+            Write-JsonFileIfChanged $Path $cfg | Out-Null
         }
     }
 }
@@ -71,19 +111,11 @@ function Remove-TomlBlock([string]$Text, [string]$Header) {
     return (($out -join "`n") -replace "`n{3,}", "`n`n").Trim()
 }
 
-function Write-TextFileIfChanged([string]$Path, [string]$Text, [string]$OldText) {
-    if ($OldText -eq $Text) { return $false }
-    $stamp = Get-Date -Format "yyyyMMddHHmmss"
-    Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
-    $Text | Set-Content -LiteralPath $Path -Encoding UTF8
-    return $true
-}
-
 function Remove-CodexConfig([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return }
     $old = Get-Content -LiteralPath $Path -Raw
     $next = Remove-TomlBlock $old "[mcp_servers.atlassian]"
-    Write-TextFileIfChanged $Path $next $old | Out-Null
+    Write-FileIfChanged $Path $next | Out-Null
 }
 
 function Move-EnvBackup([string]$Path) {
@@ -114,7 +146,7 @@ if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
     }
 }
 
-$vscodePath = if ($VscodeMcpConfigPath) { $VscodeMcpConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
+$vscodePath = Resolve-VSCodeMcpConfigPath $VscodeMcpConfigPath
 $copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
 $copilotPath = Join-Path $copilotHome "mcp-config.json"
 $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
