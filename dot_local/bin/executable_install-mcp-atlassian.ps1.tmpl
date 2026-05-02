@@ -108,6 +108,42 @@ function Test-ServiceExists([string]$Name) {
     return [bool](Get-Service -Name $Name -ErrorAction SilentlyContinue)
 }
 
+function Stop-McpAtlassianService([string]$ServiceName) {
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if (-not $service) { return }
+
+    $stop = Start-Process -FilePath "nssm" -ArgumentList @("stop", $ServiceName) -PassThru
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline) {
+        $service.Refresh()
+        if ($service.Status -eq [System.ServiceProcess.ServiceControllerStatus]::Stopped) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not $stop.HasExited) {
+        Stop-Process -Id $stop.Id -Force -ErrorAction SilentlyContinue
+    }
+    $service.Refresh()
+
+    if ($service.Status -ne [System.ServiceProcess.ServiceControllerStatus]::Stopped) {
+        Write-Warning "$ServiceName did not stop within 10 seconds. Killing only tracked mcp-atlassian process matches."
+        Get-CimInstance Win32_Process |
+            Where-Object {
+                $_.ProcessId -ne $PID -and $_.CommandLine -and (
+                    $_.CommandLine -like "*mcp-atlassian*" -or
+                    $_.CommandLine -like "*MCP\atlassian\start.ps1*"
+                )
+            } |
+            ForEach-Object {
+                try {
+                    Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
+                } catch {
+                    Write-Warning "Failed to stop PID $($_.ProcessId): $($_.Exception.Message)"
+                }
+            }
+        $service.Refresh()
+    }
+}
+
 function Select-McpPort([object]$Registry, [string]$ServiceName) {
     $existing = $null
     if ($Registry.servers -and $Registry.servers.'mcp-atlassian' -and $Registry.servers.'mcp-atlassian'.port) {
@@ -284,8 +320,48 @@ exit $LASTEXITCODE
 @'
 $ErrorActionPreference = "Stop"
 $ServiceName = "MCP-Atlassian"
+
+function Stop-McpAtlassianService([string]$ServiceName) {
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if (-not $service) {
+        Write-Host "NSSM service $ServiceName is not installed. No tracked service to stop."
+        return
+    }
+
+    $stop = Start-Process -FilePath "nssm" -ArgumentList @("stop", $ServiceName) -PassThru
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline) {
+        $service.Refresh()
+        if ($service.Status -eq [System.ServiceProcess.ServiceControllerStatus]::Stopped) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not $stop.HasExited) {
+        Stop-Process -Id $stop.Id -Force -ErrorAction SilentlyContinue
+    }
+    $service.Refresh()
+
+    if ($service.Status -ne [System.ServiceProcess.ServiceControllerStatus]::Stopped) {
+        Write-Warning "$ServiceName did not stop within 10 seconds. Killing only tracked mcp-atlassian process matches."
+        Get-CimInstance Win32_Process |
+            Where-Object {
+                $_.ProcessId -ne $PID -and $_.CommandLine -and (
+                    $_.CommandLine -like "*mcp-atlassian*" -or
+                    $_.CommandLine -like "*MCP\atlassian\start.ps1*"
+                )
+            } |
+            ForEach-Object {
+                try {
+                    Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
+                } catch {
+                    Write-Warning "Failed to stop PID $($_.ProcessId): $($_.Exception.Message)"
+                }
+            }
+        $service.Refresh()
+    }
+}
+
 if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
-    & nssm stop $ServiceName | Out-Host
+    Stop-McpAtlassianService $ServiceName
 } else {
     Write-Host "NSSM service $ServiceName is not installed. No tracked service to stop."
 }
@@ -410,6 +486,42 @@ function Resolve-VSCodeMcpConfigPath([string]$McpVSCodeConfigPath) {
     return (Join-Path $env:APPDATA "Code\User\mcp.json")
 }
 
+function Stop-McpAtlassianService([string]$ServiceName) {
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if (-not $service) { return }
+
+    $stop = Start-Process -FilePath "nssm" -ArgumentList @("stop", $ServiceName) -PassThru
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline) {
+        $service.Refresh()
+        if ($service.Status -eq [System.ServiceProcess.ServiceControllerStatus]::Stopped) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not $stop.HasExited) {
+        Stop-Process -Id $stop.Id -Force -ErrorAction SilentlyContinue
+    }
+    $service.Refresh()
+
+    if ($service.Status -ne [System.ServiceProcess.ServiceControllerStatus]::Stopped) {
+        Write-Warning "$ServiceName did not stop within 10 seconds. Killing only tracked mcp-atlassian process matches."
+        Get-CimInstance Win32_Process |
+            Where-Object {
+                $_.ProcessId -ne $PID -and $_.CommandLine -and (
+                    $_.CommandLine -like "*mcp-atlassian*" -or
+                    $_.CommandLine -like "*MCP\atlassian\start.ps1*"
+                )
+            } |
+            ForEach-Object {
+                try {
+                    Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
+                } catch {
+                    Write-Warning "Failed to stop PID $($_.ProcessId): $($_.Exception.Message)"
+                }
+            }
+        $service.Refresh()
+    }
+}
+
 $ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BaseDir = Split-Path -Parent $ServerDir
 $RegistryPath = Join-Path $BaseDir "registry.json"
@@ -418,7 +530,7 @@ $LogDir = Join-Path $ServerDir "logs"
 $ServiceName = "MCP-Atlassian"
 
 if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
-    & nssm stop $ServiceName | Out-Host
+    Stop-McpAtlassianService $ServiceName
     & nssm remove $ServiceName confirm | Out-Host
 }
 
@@ -478,7 +590,7 @@ if (-not $pwsh) {
 }
 
 if (Test-ServiceExists $ServiceName) {
-    & nssm stop $ServiceName | Out-Null
+    Stop-McpAtlassianService $ServiceName
 } else {
     & nssm install $ServiceName $pwsh "-NoProfile -ExecutionPolicy Bypass -File `"$startPath`"" | Out-Null
 }
@@ -494,6 +606,10 @@ $serviceLogPath = Join-Path $LogDir "mcp-atlassian.log"
 & nssm set $ServiceName AppRotateOnline 1 | Out-Null
 & nssm set $ServiceName AppRotateBytes 10485760 | Out-Null
 & nssm set $ServiceName AppExit Default Restart | Out-Null
+& nssm set $ServiceName AppStopMethodConsole 1500 | Out-Null
+& nssm set $ServiceName AppStopMethodWindow 1500 | Out-Null
+& nssm set $ServiceName AppStopMethodThreads 1500 | Out-Null
+& nssm set $ServiceName AppKillProcessTree 1 | Out-Null
 
 $vscodePath = Resolve-VSCodeMcpConfigPath $McpVSCodeConfigPath
 $copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }

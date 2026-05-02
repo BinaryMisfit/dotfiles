@@ -129,6 +129,46 @@ function Move-EnvBackup([string]$Path) {
     Move-Item -LiteralPath $Path -Destination $backup
 }
 
+function Stop-McpAtlassianService([string]$ServiceName, [string]$NssmPath) {
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if (-not $service) { return }
+    if (-not $NssmPath) {
+        Write-Warning "nssm was not found. Skipping service stop/removal for $ServiceName."
+        return
+    }
+
+    $stop = Start-Process -FilePath $NssmPath -ArgumentList @("stop", $ServiceName) -PassThru
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline) {
+        $service.Refresh()
+        if ($service.Status -eq [System.ServiceProcess.ServiceControllerStatus]::Stopped) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if (-not $stop.HasExited) {
+        Stop-Process -Id $stop.Id -Force -ErrorAction SilentlyContinue
+    }
+    $service.Refresh()
+
+    if ($service.Status -ne [System.ServiceProcess.ServiceControllerStatus]::Stopped) {
+        Write-Warning "$ServiceName did not stop within 10 seconds. Killing only tracked mcp-atlassian process matches."
+        Get-CimInstance Win32_Process |
+            Where-Object {
+                $_.ProcessId -ne $PID -and $_.CommandLine -and (
+                    $_.CommandLine -like "*mcp-atlassian*" -or
+                    $_.CommandLine -like "*MCP\atlassian\start.ps1*"
+                )
+            } |
+            ForEach-Object {
+                try {
+                    Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
+                } catch {
+                    Write-Warning "Failed to stop PID $($_.ProcessId): $($_.Exception.Message)"
+                }
+            }
+        $service.Refresh()
+    }
+}
+
 $BaseDir = Join-Path $env:LOCALAPPDATA "MCP"
 $ServerDir = Join-Path $BaseDir "atlassian"
 $RegistryPath = Join-Path $BaseDir "registry.json"
@@ -139,7 +179,7 @@ $ServiceName = "MCP-Atlassian"
 $nssm = Get-CommandPath "nssm"
 if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
     if ($nssm) {
-        & $nssm stop $ServiceName | Out-Host
+        Stop-McpAtlassianService $ServiceName $nssm
         & $nssm remove $ServiceName confirm | Out-Host
     } else {
         Write-Warning "nssm was not found. Skipping service stop/removal for $ServiceName."
