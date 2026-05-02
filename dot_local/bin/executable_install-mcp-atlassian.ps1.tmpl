@@ -444,8 +444,12 @@ if (Test-ServiceExists $ServiceName) {
 & nssm set $ServiceName AppParameters "-NoProfile -ExecutionPolicy Bypass -File `"$startPath`"" | Out-Null
 & nssm set $ServiceName AppDirectory $ServerDir | Out-Null
 & nssm set $ServiceName Start SERVICE_DELAYED_AUTO_START | Out-Null
-& nssm set $ServiceName AppStdout (Join-Path $LogDir "stdout.log") | Out-Null
-& nssm set $ServiceName AppStderr (Join-Path $LogDir "stderr.log") | Out-Null
+$serviceLogPath = Join-Path $LogDir "mcp-atlassian.log"
+& nssm set $ServiceName AppStdout $serviceLogPath | Out-Null
+& nssm set $ServiceName AppStderr $serviceLogPath | Out-Null
+& nssm set $ServiceName AppRotateFiles 1 | Out-Null
+& nssm set $ServiceName AppRotateOnline 1 | Out-Null
+& nssm set $ServiceName AppRotateBytes 10485760 | Out-Null
 & nssm set $ServiceName AppExit Default Restart | Out-Null
 
 $vscodePath = if ($McpVSCodeConfigPath) { $McpVSCodeConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }

@@ -89,7 +89,7 @@ Windows:
 - Env example: `%USERPROFILE%\.config\mcp\mcp-atlassian.env.example`
 - Registry: `%LOCALAPPDATA%\MCP\registry.json`
 - Server dir: `%LOCALAPPDATA%\MCP\atlassian`
-- Logs: `%LOCALAPPDATA%\MCP\atlassian\logs`
+- Logs: `%LOCALAPPDATA%\MCP\atlassian\logs\mcp-atlassian.log`
 - VS Code default: `%APPDATA%\Code\User\mcp.json`
 - Copilot CLI default: `%USERPROFILE%\.copilot\mcp-config.json`
 - Codex default: `%USERPROFILE%\.codex\config.toml`
@@ -164,6 +164,8 @@ macOS:
 ```
 
 The status scripts check service state, configured URL, and whether the local port is listening. MCP health does not require `GET /mcp` to return success.
+
+On Windows, NSSM writes both stdout and stderr to `mcp-atlassian.log` with rotation enabled. `mcp-atlassian` emits normal server logs on stderr, so stderr output is not automatically an error.
 
 ## Uninstall
 
