@@ -1,0 +1,106 @@
+[CmdletBinding()]
+param(
+    [Alias("McpVSCodeConfigPath")]
+    [string]$VscodeMcpConfigPath,
+    [switch]$RemoveLogs,
+    [switch]$RemoveRuntime
+)
+
+$ErrorActionPreference = "Stop"
+
+$IsWindowsPlatform = ($PSVersionTable.PSEdition -eq "Desktop") -or ($IsWindows -eq $true)
+if (-not $IsWindowsPlatform) {
+    Write-Error "uninstall-mcp-atlassian: Windows uninstaller only. macOS uses uninstall-mcp-atlassian.sh; Linux is intentionally out of scope."
+}
+
+function Get-CommandPath([string]$Name) {
+    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    return $null
+}
+
+function Read-JsonFile([string]$Path) {
+    $raw = Get-Content -LiteralPath $Path -Raw
+    if ([string]::IsNullOrWhiteSpace($raw)) { return [pscustomobject]@{} }
+    try {
+        return $raw | ConvertFrom-Json -Depth 32
+    } catch {
+        Write-Error "Invalid JSON in '$Path'. No changes were written. $($_.Exception.Message)"
+    }
+}
+
+function Write-JsonFileIfChanged([string]$Path, [object]$Data, [string]$OldText) {
+    $new = ($Data | ConvertTo-Json -Depth 32)
+    if ($OldText -eq $new) { return $false }
+    $stamp = Get-Date -Format "yyyyMMddHHmmss"
+    Copy-Item -LiteralPath $Path -Destination "$Path.bak.$stamp" -Force
+    $new | Set-Content -LiteralPath $Path -Encoding UTF8
+    return $true
+}
+
+function Remove-Property([object]$Object, [string]$Name) {
+    if ($Object -and ($Object.PSObject.Properties.Name -contains $Name)) {
+        $Object.PSObject.Properties.Remove($Name)
+        return $true
+    }
+    return $false
+}
+
+function Remove-JsonEntry([string]$Path, [string]$Top, [string]$Name) {
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    $old = Get-Content -LiteralPath $Path -Raw
+    $cfg = Read-JsonFile $Path
+    if ($cfg.PSObject.Properties.Name -contains $Top) {
+        if (Remove-Property $cfg.$Top $Name) {
+            Write-JsonFileIfChanged $Path $cfg $old | Out-Null
+        }
+    }
+}
+
+function Move-EnvBackup([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    $dir = Split-Path -Parent $Path
+    $backup = Join-Path $dir ".env.backup"
+    if (Test-Path -LiteralPath $backup) {
+        $stamp = Get-Date -Format "yyyyMMddHHmmss"
+        $backup = Join-Path $dir ".env.backup.$stamp"
+    }
+    Move-Item -LiteralPath $Path -Destination $backup
+}
+
+$BaseDir = Join-Path $env:LOCALAPPDATA "MCP"
+$ServerDir = Join-Path $BaseDir "atlassian"
+$RegistryPath = Join-Path $BaseDir "registry.json"
+$EnvPath = Join-Path $ServerDir ".env"
+$LogDir = Join-Path $ServerDir "logs"
+$ServiceName = "MCP-Atlassian"
+
+$nssm = Get-CommandPath "nssm"
+if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+    if ($nssm) {
+        & $nssm stop $ServiceName | Out-Host
+        & $nssm remove $ServiceName confirm | Out-Host
+    } else {
+        Write-Warning "nssm was not found. Skipping service stop/removal for $ServiceName."
+    }
+}
+
+$vscodePath = if ($VscodeMcpConfigPath) { $VscodeMcpConfigPath } else { Join-Path $env:APPDATA "Code\User\mcp.json" }
+$copilotHome = if ($env:COPILOT_HOME) { $env:COPILOT_HOME } else { Join-Path $env:USERPROFILE ".copilot" }
+$copilotPath = Join-Path $copilotHome "mcp-config.json"
+
+Remove-JsonEntry $vscodePath "servers" "mcp-atlassian"
+Remove-JsonEntry $copilotPath "mcpServers" "mcp-atlassian"
+Remove-JsonEntry $RegistryPath "servers" "mcp-atlassian"
+
+Move-EnvBackup $EnvPath
+
+if ($RemoveLogs) {
+    Remove-Item -LiteralPath $LogDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+if ($RemoveRuntime) {
+    Remove-Item -LiteralPath $ServerDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host "mcp-atlassian uninstalled. .env preserved as backup when present. Logs retained unless -RemoveLogs was passed."

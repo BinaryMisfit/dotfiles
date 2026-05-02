@@ -40,12 +40,14 @@ scoop/
 Documents/
 OneDrive - Powerfleet/
 .scripts/*.ps1
+.local/bin/*.ps1
 {{ end }}
 
 # POSIX-only targets
 {{ if $isWindows }}
 .config/shell/env.zsh
 .scripts/*.sh
+.local/bin/*.sh
 {{ end }}
 
 # Linux-only targets

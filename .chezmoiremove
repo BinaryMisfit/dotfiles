@@ -6,3 +6,13 @@
 .copilot/skills/gitflow-guard
 .copilot/rules
 mise.toml
+
+{{- $isWindows := eq .chezmoi.os "windows" -}}
+
+{{ if $isWindows }}
+.local/bin/install-mcp-*.sh
+.local/bin/uninstall-mcp-*.sh
+{{ else }}
+.local/bin/install-mcp-*.ps1
+.local/bin/uninstall-mcp-*.ps1
+{{ end }}

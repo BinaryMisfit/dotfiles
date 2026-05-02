@@ -170,28 +170,52 @@ The status scripts check service state, configured URL, and whether the local po
 Windows:
 
 ```powershell
-& "$env:LOCALAPPDATA\MCP\atlassian\uninstall.ps1"
+uninstall-mcp-atlassian.ps1
 ```
 
 Remove logs too:
 
 ```powershell
-& "$env:LOCALAPPDATA\MCP\atlassian\uninstall.ps1" -RemoveLogs
+uninstall-mcp-atlassian.ps1 -RemoveLogs
+```
+
+Remove the `atlassian` runtime directory too:
+
+```powershell
+uninstall-mcp-atlassian.ps1 -RemoveRuntime
+```
+
+If VS Code uses a custom user data directory, pass:
+
+```powershell
+uninstall-mcp-atlassian.ps1 -VscodeMcpConfigPath "C:\path\to\mcp.json"
 ```
 
 macOS:
 
 ```sh
-~/.local/share/mcp/atlassian/uninstall.sh
+uninstall-mcp-atlassian.sh
 ```
 
 Remove logs too:
 
 ```sh
-~/.local/share/mcp/atlassian/uninstall.sh --remove-logs
+uninstall-mcp-atlassian.sh --remove-logs
 ```
 
-Uninstall removes only the `mcp-atlassian` entries from VS Code, Copilot CLI, Codex, and the MCP registry. It renames `.env` to `.env.backup` and leaves unrelated registry entries alone.
+Remove the `atlassian` runtime directory too:
+
+```sh
+uninstall-mcp-atlassian.sh --remove-runtime
+```
+
+If VS Code uses a custom user data directory, pass:
+
+```sh
+uninstall-mcp-atlassian.sh --vscode-mcp-config-path "/path/to/mcp.json"
+```
+
+Uninstall removes only the `mcp-atlassian` entries from VS Code, Copilot CLI, and the MCP registry. It preserves unrelated entries, renames `.env` to `.env.backup` by default, and leaves logs and the runtime directory unless the cleanup flags are passed.
 
 ## Backups and rollback
 
