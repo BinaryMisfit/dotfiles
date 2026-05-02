@@ -120,9 +120,9 @@ if command -v atuin >/dev/null 2>&1; then
 fi
 
 # Neovim
-export EDITOR=nvim
-export VISUAL=nvim
-export SUDO_EDITOR=nvim
+export EDITOR=$(which nvim)
+export VISUAL=$(which nvim)
+export SUDO_EDITOR=$(which nvim)
 
 # Aliases
 [[ -r "$HOME/.config/shell/aliases.zsh" ]] && source "$HOME/.config/shell/aliases.zsh"
