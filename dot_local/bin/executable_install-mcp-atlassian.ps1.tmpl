@@ -264,7 +264,7 @@ if (Test-Path -LiteralPath $PortPath) {
     Write-Error "No port file or registry found."
 }
 
-& $UvxPath mcp-atlassian --transport streamable-http --host 127.0.0.1 --port $port -vv
+& $UvxPath mcp-atlassian --transport streamable-http --host 127.0.0.1 --port $port -v
 exit $LASTEXITCODE
 '@.Replace('__UVX_PATH__', $uvxPath.Replace("'", "''")) | Set-Content -LiteralPath $startPath -Encoding UTF8
 

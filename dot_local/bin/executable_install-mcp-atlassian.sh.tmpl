@@ -314,7 +314,7 @@ else
   exit 1
 fi
 
-exec uvx mcp-atlassian --transport streamable-http --host 127.0.0.1 --port "$PORT" -vv
+exec uvx mcp-atlassian --transport streamable-http --host 127.0.0.1 --port "$PORT" -v
 EOF
 
 cat > "$SERVER_DIR/stop.sh" <<EOF
