@@ -186,8 +186,9 @@ $EnvExamplePath = Join-Path $env:USERPROFILE ".config\mcp\mcp-atlassian.env.exam
 
 New-Item -ItemType Directory -Force -Path $BaseDir, $ServerDir, $LogDir | Out-Null
 
-if (-not (Get-CommandPath "uvx")) {
-    Write-Error "Required command 'uvx' was not found. Install uv manually, then rerun; this installer does not auto-install dependencies."
+$uvxPath = Get-CommandPath "uvx"
+if (-not $uvxPath) {
+    Write-Error "uvx was not found after installing uv. Check Scoop/Winget install."
 }
 if (-not (Get-CommandPath "nssm")) {
     Write-Error "Required command 'nssm' was not found. Install NSSM manually, then rerun; this installer does not auto-install dependencies."
@@ -226,6 +227,7 @@ $uninstallPath = Join-Path $ServerDir "uninstall.ps1"
 
 @'
 $ErrorActionPreference = "Stop"
+$UvxPath = '__UVX_PATH__'
 $ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BaseDir = Split-Path -Parent $ServerDir
 $EnvPath = Join-Path $ServerDir ".env"
@@ -262,9 +264,9 @@ if (Test-Path -LiteralPath $PortPath) {
     Write-Error "No port file or registry found."
 }
 
-& uvx mcp-atlassian --transport streamable-http --host 127.0.0.1 --port $port -vv
+& $UvxPath mcp-atlassian --transport streamable-http --host 127.0.0.1 --port $port -vv
 exit $LASTEXITCODE
-'@ | Set-Content -LiteralPath $startPath -Encoding UTF8
+'@.Replace('__UVX_PATH__', $uvxPath.Replace("'", "''")) | Set-Content -LiteralPath $startPath -Encoding UTF8
 
 @'
 $ErrorActionPreference = "Stop"
