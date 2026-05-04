@@ -7,7 +7,7 @@ path_prepend() {
 }
 
 clip() {
-  local data b64 max_bytes=100000 seq
+  local data b64 max_bytes=100000 seq out
 
   if [[ -t 0 ]]; then
     data="$*"
@@ -25,9 +25,18 @@ clip() {
   b64="$(printf '%s' "$data" | base64 | tr -d '\n')"
   seq="$(printf '\033]52;c;%s\007' "$b64")"
 
+  # Print the data to stdout before emitting OSC52
+  printf '%s\n' "$data"
+
   if [[ -n "${TMUX:-}" ]]; then
-    printf '\033Ptmux;\033%s\033\\' "$seq"
+    out="$(printf '\033Ptmux;\033%s\033\\' "$seq")"
   else
-    printf '%s' "$seq"
+    out="$seq"
+  fi
+
+  if [[ -w /dev/tty ]]; then
+    printf '%s' "$out" > /dev/tty
+  else
+    printf '%s' "$out"
   fi
 }
