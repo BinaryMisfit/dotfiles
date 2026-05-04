@@ -2,6 +2,7 @@ alias vi='nvim'
 alias vim='nvim'
 alias svi='sudoedit'
 alias svim='sudoedit'
+alias t="tmux new -As main"
 
 if command -v eza >/dev/null 2>&1; then
   alias ls='eza'
