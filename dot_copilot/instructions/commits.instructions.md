@@ -16,3 +16,25 @@
 **If uncertain:** Ask user before committing.
 
 **Tie-breaker:** Ask user. If no response, apply most restrictive criterion.
+
+---
+
+## Commit Message Format
+
+Use this format for all commit messages:
+
+```
+[JIRATICKET] - Message
+- Change 1
+- Change 2
+- Change 3
+```
+
+**Rules:**
+- `JIRATICKET` must be uppercase and match the active ticket (e.g. `UATD-8055`).
+- First line must be a concise summary — never generic ("fix stuff", "updates").
+- Body must be multiline bullet points describing key implementation details.
+- Never commit without the exact first-line pattern: `[JIRATICKET] - Message`.
+- Never use empty or placeholder bullet lines in the body.
+- Minimum body: at least 2 concrete bullets describing what changed.
+- If tests were run, include one bullet with the test command and result.
