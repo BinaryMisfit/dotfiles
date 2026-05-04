@@ -8,6 +8,7 @@
 .copilot/skills/gitflow-guard
 .copilot/instructions/gitflow.instructions.md
 .copilot/instructions/tooling.instructions.md
+.copilot/skills/**/test*
 mise.toml
 
 {{- $isWindows := eq .chezmoi.os "windows" -}}
