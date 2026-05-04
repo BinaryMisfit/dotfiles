@@ -2,6 +2,7 @@
 .copilot/extensions/llm_client
 .copilot/extensions/policy-config
 .copilot/extensions/token-cache
+.copilot/extensions/continuation-context-pack
 .copilot/hooks
 .copilot/rules
 .copilot/skills/gitflow-guard
