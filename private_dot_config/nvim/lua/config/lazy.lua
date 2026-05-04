@@ -73,6 +73,15 @@ require("lazy").setup({
 	},
 
 	{
+		"zbirenbaum/copilot.lua",
+		event = "InsertEnter",
+		cmd = "Copilot",
+		opts = function()
+			return require("plugins.copilot")
+		end,
+	},
+
+	{
 		"stevearc/conform.nvim",
 		event = { "BufWritePre", "BufNewFile" },
 		config = function()
