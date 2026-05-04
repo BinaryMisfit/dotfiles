@@ -16,5 +16,11 @@
     autoSetupRemote = true
 
 [credential]
+{{- if eq .chezmoi.os "windows" }}
     helper = manager-core
+{{- else if eq .chezmoi.os "darwin" }}
+    helper = osxkeychain
+{{- else }}
+    helper = store
+{{- end }}
     useHttpPath = true
