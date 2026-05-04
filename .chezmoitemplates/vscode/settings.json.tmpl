@@ -1,5 +1,7 @@
 {{- $layout := get (index . "vscode" | default dict) "layout" | default "large" -}}
 {{- $small := eq $layout "small" -}}
+{{- $vscode := get . "vscode" | default dict -}}
+{{- $extra := get $vscode "extraSettings" | default dict -}}
 {
   // --- Core ---
   {{- if eq .chezmoi.os "windows" }}
@@ -48,20 +50,23 @@
   "terminal.integrated.fontSize": 16,
   {{- else if eq .chezmoi.os "darwin" }}
   "terminal.integrated.fontSize": 14,
-  {{- end}}
+  {{- end }}
 
   // --- AI / Chat ---
   {{- if eq .chezmoi.os "windows" }}
   "chat.editor.fontSize": 16,
   {{- else if eq .chezmoi.os "darwin" }}
   "chat.editor.fontSize": 14,
-  {{- end}}
+  {{- end }}
   "chat.progressBorder.enabled": true,
   "chat.persistentProgress.enabled": true,
   "chat.unifiedAgentsBar.enabled": true,
   "chat.viewProgressBadge.enabled": true,
   "chat.viewSessions.orientation": "stacked",
   "chat.mcp.gallery.enabled": true,
+  "chat.tools.terminal.autoApprove": {
+    "git checkout": true
+  },
 
   // --- Vim ---
   "vim.useSystemClipboard": true,
@@ -75,4 +80,8 @@
   "remote.SSH.remotePlatform": {
     "netctrl": "linux"
   }
+
+  {{- range $key, $value := $extra }},
+  {{ $key | quote }}: {{ $value | toJson }}
+  {{- end }}
 }
