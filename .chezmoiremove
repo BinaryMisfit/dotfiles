@@ -5,8 +5,8 @@
 .copilot/hooks
 .copilot/rules
 .copilot/skills/gitflow-guard
-.copilot\instructions\gitflow.instructions.md
-.copilot\instructions\tooling.instructions.md
+.copilot/instructions/gitflow.instructions.md
+.copilot/instructions/tooling.instructions.md
 mise.toml
 
 {{- $isWindows := eq .chezmoi.os "windows" -}}
