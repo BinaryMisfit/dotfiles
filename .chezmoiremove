@@ -4,6 +4,7 @@
 .copilot/extensions/token-cache
 .copilot/extensions/continuation-context-pack
 .copilot/extensions/jira-context-router
+.copilot/extensions/ado-repo-browser
 .copilot/hooks
 .copilot/rules
 .copilot/skills/gitflow-guard
