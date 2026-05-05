@@ -7,12 +7,13 @@
   {{- if eq .chezmoi.os "windows" }}
   "window.restoreFullscreen": false,
   "window.newWindowDimensions": "inherit",
+  "window.restoreWindows": "none",
   {{- else if eq .chezmoi.os "darwin" }}
   "window.restoreFullscreen": true,
   "window.newWindowDimensions": "fullscreen",
   {{- end }}
-  "workbench.startupEditor": "none",
   "security.workspace.trust.untrustedFiles": "prompt",
+  "files.hotExit": "off",
 
   // --- Theme ---
   "workbench.colorTheme": "Atom One Dark",
@@ -38,6 +39,7 @@
   "workbench.sideBar.location": "left",
   "workbench.secondarySideBar.defaultVisibility": "visible",
   "workbench.panel.defaultLocation": "bottom",
+  "workbench.startupEditor": "none",
 
   // --- Terminal ---
   "terminal.integrated.defaultProfile.osx": "zsh",
@@ -58,6 +60,7 @@
   {{- else if eq .chezmoi.os "darwin" }}
   "chat.editor.fontSize": 14,
   {{- end }}
+  "chat.agent.thinkingStyle": "collapsed",
   "chat.progressBorder.enabled": true,
   "chat.persistentProgress.enabled": true,
   "chat.unifiedAgentsBar.enabled": true,
@@ -65,18 +68,35 @@
   "chat.viewSessions.orientation": "stacked",
   "chat.mcp.gallery.enabled": true,
   "chat.tools.terminal.autoApprove": {
-    "ConvertFrom-Json": true,
-    "Fetches": true,
-    "ForEach-Object": true,
-    "If": true,
-    "adb.exe": true,
-    "ansible": true
-    "git checkout": true,
-    "git -C": true,
-    "gradlew.bat": true,
-    "or": true,
-    "skill": true,
-  },
+    "/^(Get-ChildItem|Get-Content|Select-String|Where-Object|ForEach-Object|ConvertFrom-Json|Write-Output|echo)(\\s|$)/i": true,
+    "/^(if|foreach|where|select)(\\s|$)/i": true,
+
+    "/^rg(\\s|$)/i": true,
+
+    "/^git\\s+(-C\\s+\\S+\\s+)?(status|diff|log|show|branch|remote|rev-parse|ls-files)(\\s|$)/i": true,
+
+    "/^ansible-inventory(\\s|$)/i": true,
+    "/^ansible(-playbook)?\\s+.*(--check|--syntax-check|--list-hosts|--list-tasks|--list-tags|--diff)(\\s|$)/i": true,
+
+    "/^adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server)(\\s|$)/i": true,
+    "/^adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*(\\s*;\\s*adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*)?$/i": true,
+    "/^adb(\\.exe)?\\s+shell\\s+pm\\s+list\\s+packages(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)?$/i": true,
+
+    "/^\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble|lint|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+\"[^\"]+\")?(\\s+--[\\w.-]+(=[\\w.-]+)?)*\\s*$/i": true,
+
+    "/^pwsh\\s+-c\\s+\"(adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server|logcat.*|shell\\s+pm\\s+list\\s+packages.*)|\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble|lint|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+['\\\"]?[^'\\\"]+['\\\"]?)?(\\s+--[\\w.-]+(=[\\w.-]+)?)*\\s*)\"$/i": true,
+
+    "/^pwsh(\\s|$)/i": false,
+
+    "/^git\\s+(-C\\s+\\S+\\s+)?(checkout|switch|reset|clean|restore|merge|rebase|pull|push|commit|add|rm|mv)(\\s|$)/i": false,
+    "/^ansible-playbook(?!.*(--check|--syntax-check|--list-hosts|--list-tasks|--list-tags))(\\s|$)/i": false,
+    "/^adb(\\.exe)?\\s+(install|uninstall|push|pull|shell\\s+(?!pm\\s+list\\s+packages).*)/i": false,
+
+    "/\\b(rm|del|Remove-Item|rmdir|Remove-Variable|Set-Content|Add-Content|Out-File|New-Item|Move-Item|Copy-Item|Rename-Item)\\b/i": false,
+    "/\\b(curl|Invoke-WebRequest|iwr|wget)\\b.*\\|\\s*(sh|bash|pwsh|powershell)/i": false,
+    "/\\b(chmod|chown|sudo|su|scp|rsync|ssh)\\b/i": false,
+    "/\\b(docker|docker-compose|podman)\\s+(run|exec|compose|up|down|rm|rmi|volume|network|system|restart|stop|kill|pull|push|build)\\b/i": false
+  }
 
   // --- Vim ---
   "vim.useSystemClipboard": true,

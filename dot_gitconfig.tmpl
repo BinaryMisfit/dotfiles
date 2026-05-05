@@ -17,7 +17,7 @@
 
 [credential]
 {{- if eq .chezmoi.os "windows" }}
-    helper = manager-core
+    helper = manager
 {{- else if eq .chezmoi.os "darwin" }}
     helper = osxkeychain
 {{- else }}
