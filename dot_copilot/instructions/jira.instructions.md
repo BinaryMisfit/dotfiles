@@ -39,20 +39,42 @@ After a PR is created, generate the following **previews** (do not post without 
 
 **1. JIRA Comment — PR Notification**
 - Short, non-technical, human-readable summary.
-- State that a fix has been implemented and a PR raised.
-- Do not include root cause, stack traces, or technical detail.
-- Example tone: "A fix has been implemented for this issue and is currently in code review (PR #XXXXX)."
+- Include what user-visible behavior was fixed.
+- Do not include root cause, stack traces, internal identifiers, or technical terms.
+- Do not include PR links unless the user explicitly asks for them.
+- Required format:
+	- `Fix Update`
+	- `- Issue behavior addressed: <plain-language description>`
+	- `- Current state: <code review / ready for QA / etc.>`
 
 **2. JIRA Comment — Test Plan**
-- Brief test plan covering: happy path, regression risk, and specific scenarios to verify.
-- Highlight regression risk level (Low / Medium / High) with justification.
-- List specific test cases or areas QA should focus on.
-- Keep concise — bullet points preferred.
+- QA-formatted test plan is required.
+- Include these headings in order:
+	- `QA Test Plan`
+	- `Scope`
+	- `Test Data / Preconditions`
+	- `Test Cases`
+	- `Regression Risk`
+	- `Pass Criteria`
+- `Test Cases` must include numbered scenarios with explicit expected results.
+- `Regression Risk` must include level (Low/Medium/High) and one-line justification.
 
 **3. Status Transition**
 - Move ticket to **"In Code Review"**.
 
-**Confirmation gate:** Preview all three items above. Requires `"Proceed"` before posting. Post in order: Comment 1 → Comment 2 → Status transition.
+**Confirmation gate:**
+- Comment 1 (PR Notification): preview then requires `"Proceed"` to post.
+- Comment 2 (Test Plan): preview then requires a second `"Proceed"` to post.
+- Status transition (In Code Review): preview then requires a third `"Proceed"` to perform.
+- Execute in order: Comment 1 → Comment 2 → Status transition.
+
+**Execution checklist (mandatory):**
+- Complete and verify each step before moving to the next.
+- If any step fails or is skipped, stop and report before continuing.
+- Before status transition, confirm both comments exist on the ticket.
+
+**Missed-step recovery:**
+- If PR completion flow starts and required PR-creation comments are missing, run the missing comment steps first with their own `"Proceed"` gates.
 
 ---
 
