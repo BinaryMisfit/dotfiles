@@ -57,8 +57,10 @@
   // --- AI / Chat ---
   {{- if eq .chezmoi.os "windows" }}
   "chat.editor.fontSize": 16,
+  "chat.fontSize": 16,
   {{- else if eq .chezmoi.os "darwin" }}
   "chat.editor.fontSize": 14,
+  "chat.fontSize": 14,
   {{- end }}
   "chat.agent.thinkingStyle": "collapsed",
   "chat.progressBorder.enabled": true,
@@ -70,13 +72,22 @@
   "chat.tools.terminal.autoApprove": {
     "/^(Get-ChildItem|Get-Content|Select-String|Where-Object|ForEach-Object|ConvertFrom-Json|Write-Output|echo)(\\s|$)/i": true,
     "/^(if|foreach|where|select)(\\s|$)/i": true,
-
     "/^rg(\\s|$)/i": true,
 
-    "/^git\\s+(-C\\s+\\S+\\s+)?(status|diff|log|show|branch|remote|rev-parse|ls-files)(\\s|$)/i": true,
+    "/^git\\s+(-C\\s+(\"[^\"]+\"|\\S+)\\s+)?(status|diff|log|show|branch|remote|rev-parse|ls-files)(\\s|$)/i": true,
 
     "/^ansible-inventory(\\s|$)/i": true,
     "/^ansible(-playbook)?\\s+.*(--check|--syntax-check|--list-hosts|--list-tasks|--list-tags|--diff)(\\s|$)/i": true,
+
+    "/^az\\s+(--version|version)\\s*$/i": true,
+    "/^az\\s+account\\s+(show|list)(\\s+--output\\s+(json|table|tsv|yaml|none))?\\s*$/i": true,
+    "/^az\\s+devops\\s+project\\s+(list|show)(\\s+.*)?$/i": true,
+    "/^az\\s+repos\\s+(list|show)(\\s+.*)?$/i": true,
+    "/^az\\s+repos\\s+pr\\s+(list|show)(\\s+.*)?$/i": true,
+    "/^az\\s+repos\\s+pr\\s+policy\\s+list(\\s+.*)?$/i": true,
+    "/^az\\s+repos\\s+policy\\s+(list|show)(\\s+.*)?$/i": true,
+    "/^az\\s+pipelines\\s+(list|show)(\\s+.*)?$/i": true,
+    "/^az\\s+pipelines\\s+runs\\s+(list|show)(\\s+.*)?$/i": true,
 
     "/^adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server)(\\s|$)/i": true,
     "/^adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*(\\s*;\\s*adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*)?$/i": true,
@@ -88,9 +99,13 @@
 
     "/^pwsh(\\s|$)/i": false,
 
-    "/^git\\s+(-C\\s+\\S+\\s+)?(checkout|switch|reset|clean|restore|merge|rebase|pull|push|commit|add|rm|mv)(\\s|$)/i": false,
+    "/^git\\s+(-C\\s+(\"[^\"]+\"|\\S+)\\s+)?(checkout|switch|reset|clean|restore|merge|rebase|pull|push|commit|add|rm|mv)(\\s|$)/i": false,
     "/^ansible-playbook(?!.*(--check|--syntax-check|--list-hosts|--list-tasks|--list-tags))(\\s|$)/i": false,
     "/^adb(\\.exe)?\\s+(install|uninstall|push|pull|shell\\s+(?!pm\\s+list\\s+packages).*)/i": false,
+
+    "/^az\\s+.*\\b(create|delete|remove|update|edit|set|add|assign|approve|complete|abandon|merge|queue|run|cancel|rerun|start|stop|restart|deploy|publish|upload|import)\\b/i": false,
+    "/^az\\s+(login|logout|configure|extension\\s+add|extension\\s+remove)(\\s|$)/i": false,
+    "/^az\\s+keyvault\\s+secret\\s+(show|list|download)(\\s|$)/i": false,
 
     "/\\b(rm|del|Remove-Item|rmdir|Remove-Variable|Set-Content|Add-Content|Out-File|New-Item|Move-Item|Copy-Item|Rename-Item)\\b/i": false,
     "/\\b(curl|Invoke-WebRequest|iwr|wget)\\b.*\\|\\s*(sh|bash|pwsh|powershell)/i": false,
