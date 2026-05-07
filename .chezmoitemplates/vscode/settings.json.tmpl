@@ -2,6 +2,8 @@
 {{- $small := eq $layout "small" -}}
 {{- $vscode := get . "vscode" | default dict -}}
 {{- $extra := get $vscode "extraSettings" | default dict -}}
+{{- $profile := get $vscode "profile" | default "home" -}}
+{{- $builtinAiEnabled := get (get $vscode "ai" | default dict) "builtinEnabled" | default (ne $profile "home") -}}
 {
   // --- Core ---
   {{- if eq .chezmoi.os "windows" }}
@@ -55,6 +57,12 @@
   {{- end }}
 
   // --- AI / Chat ---
+  "chat.disableAIFeatures": {{ not $builtinAiEnabled }},
+  {{- if not $builtinAiEnabled }}
+  "github.copilot.enable": {
+    "*": false
+  },
+  {{- end }} 
   {{- if eq .chezmoi.os "windows" }}
   "chat.editor.fontSize": 16,
   "chat.fontSize": 16,
