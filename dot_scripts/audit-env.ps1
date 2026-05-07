@@ -1,3 +1,4 @@
+#!powershell
 $ErrorActionPreference = "Continue"
 
 $tools = @(

@@ -1,4 +1,5 @@
-{{- $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
+#!powershell
+{{ $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
 {{- $scoopVscodeExe := joinPath .chezmoi.homeDir "scoop" "apps" "vscode" "current" "Code.exe" -}}
 {{- $isScoopVscode := and (eq .chezmoi.os "windows") (stat $scoopVscodeData) (stat $scoopVscodeExe) -}}
 {{- $vscodeMode := "system" -}}

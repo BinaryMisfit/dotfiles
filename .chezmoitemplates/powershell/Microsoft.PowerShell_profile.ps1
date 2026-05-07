@@ -25,6 +25,39 @@ if (Test-Path $UserLocalBin) {
     }
 }
 
+# Clipboard helper
+function clip {
+    param(
+        [Parameter(ValueFromPipeline = $true)]
+        [object] $InputObject,
+
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]] $Text
+    )
+
+    begin {
+        $items = New-Object System.Collections.Generic.List[string]
+    }
+
+    process {
+        if ($null -ne $InputObject) {
+            $line = [string]$InputObject
+            $items.Add($line)
+            Write-Output $line
+        }
+    }
+
+    end {
+        if ($Text.Count -gt 0) {
+            $joined = $Text -join " "
+            $items.Add($joined)
+            Write-Output $joined
+        }
+
+        $items -join [Environment]::NewLine | Set-Clipboard
+    }
+}
+
 # basic aliases
 Set-Alias ll Get-ChildItem
 Set-Alias g git

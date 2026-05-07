@@ -1,3 +1,4 @@
+#!powershell
 param(
     [Parameter(Mandatory = $true)]
     [string]$Text

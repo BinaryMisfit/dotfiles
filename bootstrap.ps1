@@ -1,3 +1,4 @@
+#!powershell
 $ErrorActionPreference = "Stop"
 
 $Repo = $env:CHEZMOI_REPO
