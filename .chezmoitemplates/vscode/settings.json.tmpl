@@ -1,17 +1,24 @@
 {{- $layout := get (index . "vscode" | default dict) "layout" | default "large" -}}
 {{- $small := eq $layout "small" -}}
+
 {{- $vscode := get . "vscode" | default dict -}}
 {{- $extra := get $vscode "extraSettings" | default dict -}}
+
+{{- $ai := get $vscode "ai" | default dict -}}
 {{- $profile := get $vscode "profile" | default "home" -}}
-{{- $builtinAiEnabled := get (get $vscode "ai" | default dict) "builtinEnabled" | default (ne $profile "home") -}}
+
+{{- $builtinAiEnabled := ne $profile "home" -}}
+{{- if hasKey $ai "builtinEnabled" -}}
+{{- $builtinAiEnabled = get $ai "builtinEnabled" -}}
+{{- end -}}
 {
   // --- Core ---
-  {{- if eq .chezmoi.os "windows" }}
-  "window.restoreFullscreen": false,
-  "window.newWindowDimensions": "inherit",
-  {{- else if eq .chezmoi.os "darwin" }}
+  {{- if $small }}
   "window.restoreFullscreen": true,
   "window.newWindowDimensions": "fullscreen",
+  {{- else }}
+  "window.restoreFullscreen": false,
+  "window.newWindowDimensions": "inherit",
   {{- end }}
   "window.restoreWindows": "none",
   "security.workspace.trust.untrustedFiles": "prompt",
@@ -23,10 +30,10 @@
 
   // --- Editor ---
   "editor.fontFamily": "FiraCode Nerd Font, Monaco, 'Courier New', monospace",
-  {{- if eq .chezmoi.os "windows" }}
-  "editor.fontSize": 16,
-  {{- else if eq .chezmoi.os "darwin" }}
+  {{- if $small }}
   "editor.fontSize": 14,
+  {{- else }}
+  "editor.fontSize": 16,
   {{- end }}
   "editor.fontLigatures": true,
   "editor.minimap.enabled": false,
@@ -50,10 +57,10 @@
   "terminal.integrated.defaultLocation": {{ if $small }}"editor"{{ else }}"view"{{ end }},
   "terminal.integrated.tabs.hideCondition": "singleTerminal",
   "terminal.integrated.fontFamily": "MesloLGS Nerd Font",
-  {{- if eq .chezmoi.os "windows" }}
-  "terminal.integrated.fontSize": 16,
-  {{- else if eq .chezmoi.os "darwin" }}
+  {{- if $small }}
   "terminal.integrated.fontSize": 14,
+  {{- else }}
+  "terminal.integrated.fontSize": 16,
   {{- end }}
 
   // --- AI / Chat ---
@@ -63,12 +70,12 @@
     "*": false
   },
   {{- end }} 
-  {{- if eq .chezmoi.os "windows" }}
-  "chat.editor.fontSize": 16,
-  "chat.fontSize": 16,
-  {{- else if eq .chezmoi.os "darwin" }}
+  {{- if $small }}
   "chat.editor.fontSize": 14,
   "chat.fontSize": 14,
+  {{- else }}
+  "chat.editor.fontSize": 16,
+  "chat.fontSize": 16,
   {{- end }}
   "chat.agent.thinkingStyle": "collapsed",
   "chat.progressBorder.enabled": true,
