@@ -99,9 +99,9 @@
     "/^adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*(\\s*;\\s*adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*)?$/i": true,
     "/^adb(\\.exe)?\\s+shell\\s+pm\\s+list\\s+packages(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)?$/i": true,
 
-    "/^\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+\"[^\"]+\")?(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\4\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*$/i": true,
+    "/^\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble(Debug|Release)?|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+\"[^\"]+\")?(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\4\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*$/i": true,
 
-    "/^pwsh\\s+-c\\s+\"(adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server|logcat.*|shell\\s+pm\\s+list\\s+packages.*)|\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+['\\\"]?[^'\\\"]+['\\\"]?)?(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\8\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*)\"$/i": true,
+    "/^pwsh\\s+-c\\s+\"(adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server|logcat.*|shell\\s+pm\\s+list\\s+packages.*)|\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble(Debug|Release)?|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+['\\\"]?[^'\\\"]+['\\\"]?)?(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\8\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*)\"$/i": true,
 
     "/^pwsh(\\s|$)/i": false,
 
@@ -118,7 +118,6 @@
     "/\\b(chmod|chown|sudo|su|scp|rsync|ssh)\\b/i": false,
     "/\\b(docker|docker-compose|podman)\\s+(run|exec|compose|up|down|rm|rmi|volume|network|system|restart|stop|kill|pull|push|build)\\b/i": false
   },
-
   "chat.tools.urls.autoApprove": {
     "https://code.visualstudio.com": true,
     "https://github.com": true,
