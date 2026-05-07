@@ -69,15 +69,16 @@
   "chat.viewProgressBadge.enabled": true,
   "chat.viewSessions.orientation": "stacked",
   "chat.mcp.gallery.enabled": true,
-  "chat.tools.terminal.autoApprove": {
+   "chat.tools.terminal.autoApprove": {
     "/^(Get-ChildItem|Get-Content|Select-String|Where-Object|ForEach-Object|ConvertFrom-Json|Write-Output|echo)(\\s|$)/i": true,
     "/^(if|foreach|where|select)(\\s|$)/i": true,
+    "/^Get-Item\\s+[\\w.-]+[\\\\/][\\w.\\\\/-]+\\.log\\s*\\|\\s*Select-Object\\s+FullName,Length,LastWriteTime\\s*$/i": true,
 
     "/^rg(\\s|$)/i": true,
     "/^curl\\s+(--version|-V)\\s*$/i": true,
 
     "/^which\\s+\\w+(\\s*\\|\\|\\s*which\\s+\\w+)*(\\s*\\|\\|\\s*true)?\\s*$/i": true,
-    "/^zsh\\s+-c\\s+\"which\\s+\\w+(\\s*\\|\\|\\s*which\\s+\\w+)*(\\s*\\|\\|\\s*true)?\\s*\"$/i": true,
+    "/^zsh\\s+-c\\s+\"which\\s+\\w+(\\s*\\|\\|\\s*which\\s+\\w+)*(\\s*\\|\\|\\s*true)?\"$/i": true,
 
     "/^git\\s+(-C\\s+(\"[^\"]+\"|\\S+)\\s+)?(status|diff|log|show|branch|remote|rev-parse|rev-list|ls-files)(\\s|$)/i": true,
 
@@ -96,12 +97,13 @@
     "/^az\\s+pipelines\\s+runs\\s+(list|show)(\\s+.*)?$/i": true,
 
     "/^adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server)(\\s|$)/i": true,
-    "/^adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*(\\s*;\\s*adb(\\.exe)?\\s+logcat(\\s+[^;&|]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)*)?$/i": true,
+    "/^adb(\\.exe)?\\s+logcat(\\s+[^;&|>]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|>]+)*(\\s*;\\s*adb(\\.exe)?\\s+logcat(\\s+[^;&|>]+)*(\\s*\\|\\s*(findstr|grep)\\s+[^;&|>]+)*)?$/i": true,
+    "/^adb(\\.exe)?\\s+logcat\\s+-c\\s*;\\s*adb(\\.exe)?\\s+logcat(\\s+[^;&|>]+)*\\s*>\\s*[\\w.-]+[\\\\/][\\w.\\\\/-]+\\.log\\s*$/i": true,
     "/^adb(\\.exe)?\\s+shell\\s+pm\\s+list\\s+packages(\\s*\\|\\s*(findstr|grep)\\s+[^;&|]+)?$/i": true,
 
-    "/^\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble(Debug|Release)?|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+\"[^\"]+\")?(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\4\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*$/i": true,
+    "/^\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble(Debug|Release)?|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+\"[^\"]+\")*(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\4\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*$/i": true,
 
-    "/^pwsh\\s+-c\\s+\"(adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server|logcat.*|shell\\s+pm\\s+list\\s+packages.*)|\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble(Debug|Release)?|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+['\\\"]?[^'\\\"]+['\\\"]?)?(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\8\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*)\"$/i": true,
+    "/^pwsh\\s+-c\\s+\"(adb(\\.exe)?\\s+(version|devices(\\s+-l)?|start-server|logcat.*|shell\\s+pm\\s+list\\s+packages.*)|\\.\\\\gradlew\\.bat\\s+(?::[\\w-]+:)*(test|build|check|assemble(Debug|Release)?|lint|compile(Debug|Release)(Java|Kotlin)|test(Debug|Release)UnitTest|install(Debug|Release)|tasks|help|properties|dependencies)(\\s+--tests\\s+['\\\"]?[^'\\\"]+['\\\"]?)*(\\s+-x\\s+[\\w-]+)*(\\s+--[\\w.-]+(=[\\w.-]+)?)*(\\s+2>&1\\s*\\|\\s*(tail\\s+(-n\\s+)?\\d+|grep\\s+-A\\s+\\d+\\s+(['\\\"])[^'\\\"]+\\8\\s*\\|\\s*head\\s+-\\d+|Select-Object\\s+-Last\\s+\\d+))?\\s*)\"$/i": true,
 
     "/^pwsh(\\s|$)/i": false,
 
