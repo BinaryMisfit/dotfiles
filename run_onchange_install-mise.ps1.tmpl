@@ -1,5 +1,5 @@
-#!powershell
 {{ if eq .chezmoi.os "windows" -}}
+#!powershell
 $ErrorActionPreference = "Stop"
 
 # mise config hash: {{ includeTemplate "private_dot_config/mise/config.toml.tmpl" . | sha256sum }}

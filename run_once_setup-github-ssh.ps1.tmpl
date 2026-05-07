@@ -1,5 +1,5 @@
-#!powershell
 {{ if eq .chezmoi.os "windows" -}}
+#!powershell
 $ErrorActionPreference = "Stop"
 
 $keyPath = Join-Path $HOME ".ssh\id_ed25519_github"
