@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-# extensions checksum: {{ include "dot_vscode/extensions.txt" | sha256sum }}
+# extensions checksum: {{ include ".chezmoitemplates/vscode/extensions.txt.tmpl" | sha256sum }}-{{ get (get . "vscode" | default dict) "profile" | default "home" }}
 
 EXT_FILE="$HOME/.vscode/extensions.txt"
 
@@ -12,7 +12,28 @@ if ! command -v code >/dev/null 2>&1; then
   exit 0
 fi
 
+STATE_FILE="$HOME/.vscode/extensions.managed.txt"
+
+if [ ! -f "$STATE_FILE" ]; then
+  installed=$(code --list-extensions 2>/dev/null || true)
+  if [ -n "$installed" ]; then
+    echo "$installed" > "$STATE_FILE"
+  fi
+fi
+
+if [ -f "$STATE_FILE" ]; then
+  while IFS= read -r ext || [ -n "$ext" ]; do
+    [ -z "$ext" ] && continue
+    if ! grep -qxF "$ext" "$EXT_FILE"; then
+      echo "Uninstalling VS Code extension: $ext"
+      code --uninstall-extension "$ext" --force >/dev/null 2>&1 || true
+    fi
+  done < "$STATE_FILE"
+fi
+
 while IFS= read -r ext || [ -n "$ext" ]; do
   [ -z "$ext" ] && continue
   code --install-extension "$ext" --force >/dev/null 2>&1 || true
 done < "$EXT_FILE"
+
+grep -v '^#' "$EXT_FILE" | grep -v '^[[:space:]]*$' > "$STATE_FILE" || true

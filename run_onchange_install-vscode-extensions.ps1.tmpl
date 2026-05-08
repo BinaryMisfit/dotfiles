@@ -8,7 +8,7 @@
 {{- end -}}
 $ErrorActionPreference = "Stop"
 
-# extensions checksum: {{ include "dot_vscode/extensions.txt" | sha256sum }}
+# extensions checksum: {{ include ".chezmoitemplates/vscode/extensions.txt.tmpl" | sha256sum }}-{{ get (get . "vscode" | default dict) "profile" | default "home" }}
 
 $vscodeMode = "{{ $vscodeMode }}"
 $extFile = Join-Path $HOME ".vscode\extensions.txt"
@@ -38,6 +38,26 @@ if ($vscodeMode -eq "scoop") {
     Write-Host "Detected normal VS Code extension layout"
 }
 
+$stateFile = Join-Path $HOME ".vscode\extensions.managed.txt"
+
+if (-not (Test-Path $stateFile)) {
+    $installed = code @codeArgs --list-extensions 2>$null
+    if ($installed) {
+        $installed | Out-File -FilePath $stateFile -Encoding UTF8
+    }
+}
+
+if (Test-Path $stateFile) {
+    $desired = Get-Content $extFile | Where-Object { $_ -and -not $_.StartsWith("#") } | ForEach-Object { $_.Trim() }
+    Get-Content $stateFile | Where-Object { $_ } | ForEach-Object {
+        $ext = $_.Trim()
+        if ($ext -and $ext -notin $desired) {
+            Write-Host "Uninstalling VS Code extension: $ext"
+            code @codeArgs --uninstall-extension $ext | Out-Null
+        }
+    }
+}
+
 Get-Content $extFile | ForEach-Object {
     $ext = $_.Trim()
 
@@ -48,3 +68,5 @@ Get-Content $extFile | ForEach-Object {
     Write-Host "Installing VS Code extension: $ext"
     code @codeArgs --install-extension $ext --force | Out-Null
 }
+
+Get-Content $extFile | Where-Object { $_ -and -not $_.StartsWith("#") } | ForEach-Object { $_.Trim() } | Out-File -FilePath $stateFile -Encoding UTF8
