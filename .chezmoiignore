@@ -18,6 +18,7 @@
 bootstrap.sh
 bootstrap.ps1
 README.md
+CLAUDE.md
 install-core.ps1
 install-core.sh
 setup-github-ssh.ps1
