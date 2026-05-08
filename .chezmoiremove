@@ -14,6 +14,8 @@
 mise.toml
 
 {{- $isWindows := eq .chezmoi.os "windows" -}}
+{{- $copilot := get . "copilot" | default dict -}}
+{{- $copilotProfile := get $copilot "profile" | default "home" -}}
 
 {{ if $isWindows }}
 .local/bin/install-mcp-*.sh
@@ -21,4 +23,20 @@ mise.toml
 {{ else }}
 .local/bin/install-mcp-*.ps1
 .local/bin/uninstall-mcp-*.ps1
+{{ end }}
+
+# Copilot profile cleanup
+# Removes work-only files when profile is home (or unset).
+# Prevents stale work instructions/skills persisting after a profile switch.
+{{ if ne $copilotProfile "work" }}
+.copilot/instructions/external-services.instructions.md
+.copilot/instructions/pull-requests.instructions.md
+.copilot/instructions/branches.instructions.md
+.copilot/instructions/jira.instructions.md
+.copilot/instructions/commits.instructions.md
+.copilot/skills/feature-workflow
+.copilot/skills/defect-workflow
+.copilot/skills/jira-transition-status
+.copilot/skills/jira-post-fix-update-comment
+.copilot/skills/jira-post-qa-test-plan
 {{ end }}

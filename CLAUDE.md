@@ -46,8 +46,9 @@ Template variables come from the local `~/.config/chezmoi/chezmoi.yaml` (not in 
 |---|---|
 | `.chezmoi.os` | `windows`, `darwin`, `linux` |
 | `.chezmoi.username` | Current user |
-| `.vscode.profile` | `work` or `home` — gates extensions |
+| `.vscode.profile` | `work` or `home` — gates VS Code extensions |
 | `.vscode.layout` | `large` or `small` |
+| `.copilot.profile` | `work` or `home` — gates copilot instructions and skills |
 | `.node.version` | Defaults to `"lts"` |
 | `.git.name` / `.git.email` | Git identity |
 
