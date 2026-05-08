@@ -109,3 +109,24 @@ OneDrive - Powerfleet/
 {{ if eq $profile "work" }}
 .codex/**
 {{ end }}
+
+# Claude profile gating
+# work: all rules and skills deployed
+# home (default): only k1ra and continuation-context-pack deployed
+{{ if ne $profile "work" }}
+.claude/rules/branches.instructions.md
+.claude/rules/commits.instructions.md
+.claude/rules/external-services.instructions.md
+.claude/rules/jira.instructions.md
+.claude/rules/pull-requests.instructions.md
+.claude/skills/branch-start-work/
+.claude/skills/commit-ready-check/
+.claude/skills/defect-workflow/
+.claude/skills/feature-workflow/
+.claude/skills/jira-post-fix-update-comment/
+.claude/skills/jira-post-qa-test-plan/
+.claude/skills/jira-transition-status/
+.claude/skills/jira-unassign-ticket/
+.claude/skills/post-pr-cleanup/
+.claude/skills/pr-prep-and-submit/
+{{ end }}
