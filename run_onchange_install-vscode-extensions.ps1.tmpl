@@ -8,7 +8,7 @@
 {{- end -}}
 $ErrorActionPreference = "Stop"
 
-# extensions checksum: {{ include ".chezmoitemplates/vscode/extensions.txt.tmpl" | sha256sum }}-{{ get (get . "vscode" | default dict) "profile" | default "home" }}
+# extensions checksum: {{ include ".chezmoitemplates/vscode/extensions.txt.tmpl" | sha256sum }}-{{ get . "profile" | default "home" }}
 
 $vscodeMode = "{{ $vscodeMode }}"
 $extFile = Join-Path $HOME ".vscode\extensions.txt"

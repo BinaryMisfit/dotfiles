@@ -12,8 +12,7 @@
 {{- if $isScoopVscode -}}
 {{- $vscodeMode = "scoop" -}}
 {{- end -}}
-{{- $copilot := get . "copilot" | default dict -}}
-{{- $copilotProfile := get $copilot "profile" | default "home" -}}
+{{- $profile := get . "profile" | default "home" -}}
 
 # Bootstrap / root-only files
 bootstrap.sh
@@ -90,7 +89,7 @@ OneDrive - Powerfleet/
 # Copilot profile gating
 # work: all instructions and skills deployed
 # home (default): only k1ra personality and settings deployed
-{{ if ne $copilotProfile "work" }}
+{{ if ne $profile "work" }}
 dot_copilot/instructions/external-services.instructions.md
 dot_copilot/instructions/pull-requests.instructions.md
 dot_copilot/instructions/branches.instructions.md

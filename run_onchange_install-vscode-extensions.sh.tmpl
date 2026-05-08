@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-# extensions checksum: {{ include ".chezmoitemplates/vscode/extensions.txt.tmpl" | sha256sum }}-{{ get (get . "vscode" | default dict) "profile" | default "home" }}
+# extensions checksum: {{ include ".chezmoitemplates/vscode/extensions.txt.tmpl" | sha256sum }}-{{ get . "profile" | default "home" }}
 
 EXT_FILE="$HOME/.vscode/extensions.txt"
 

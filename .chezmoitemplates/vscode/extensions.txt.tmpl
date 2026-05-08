@@ -1,5 +1,4 @@
-{{- $vscode := get . "vscode" | default dict -}}
-{{- $profile := get $vscode "profile" | default "home" -}}
+{{- $profile := get . "profile" | default "home" -}}
 Anthropic.claude-code
 akamud.vscode-theme-onedark
 avidAnson.vscode-markdownlint
