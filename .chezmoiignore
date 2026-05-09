@@ -91,18 +91,9 @@ OneDrive - Powerfleet/
 
 # Copilot profile gating
 # work: all instructions and skills deployed
-# home (default): only k1ra personality and settings deployed
+# home (default): entire .copilot directory ignored
 {{ if ne $profile "work" }}
-.copilot/instructions/external-services.instructions.md
-.copilot/instructions/pull-requests.instructions.md
-.copilot/instructions/branches.instructions.md
-.copilot/instructions/jira.instructions.md
-.copilot/instructions/commits.instructions.md
-.copilot/skills/feature-workflow/
-.copilot/skills/defect-workflow/
-.copilot/skills/jira-transition-status/
-.copilot/skills/jira-post-fix-update-comment/
-.copilot/skills/jira-post-qa-test-plan/
+.copilot/**
 {{ end }}
 
 # Codex profile gating
