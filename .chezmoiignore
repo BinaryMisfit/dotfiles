@@ -28,6 +28,8 @@ setup-github-ssh.sh
 # MCP runtime state must never be managed by chezmoi.
 .local/share/mcp/**
 AppData/Local/MCP/**
+# Claude Code accumulates local permissions here; never manage it.
+.claude/settings.local.json
 
 # OS target gating
 # macOS-only targets
