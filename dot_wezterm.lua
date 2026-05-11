@@ -27,7 +27,7 @@ config.window_padding = {
 	bottom = 2,
 }
 
-config.color_scheme = "OneHalfDark"
+config.color_scheme = "OneDark (base16)"
 
 config.default_cursor_style = "SteadyBlock"
 config.cursor_blink_rate = 0
