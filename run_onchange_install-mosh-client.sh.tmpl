@@ -1,0 +1,20 @@
+{{ if eq .chezmoi.os "darwin" -}}
+#!/usr/bin/env sh
+set -eu
+
+# mosh client installer hash: v1
+
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+if ! command -v brew >/dev/null 2>&1; then
+  echo "install-mosh-client: Homebrew not found; skipping"
+  exit 0
+fi
+
+if command -v mosh >/dev/null 2>&1; then
+  echo "install-mosh-client: mosh already installed"
+  exit 0
+fi
+
+brew install mosh
+{{ end -}}

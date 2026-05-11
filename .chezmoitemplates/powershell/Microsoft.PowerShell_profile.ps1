@@ -67,6 +67,12 @@ if (Get-Command nvim -ErrorAction SilentlyContinue) {
     Set-Alias vi nvim
 }
 
+function netctrl-tmux {
+    ssh -t netctrl "tmux new -A -s ops"
+}
+
+Set-Alias nt netctrl-tmux
+
 # Keymaps
 Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
 Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward

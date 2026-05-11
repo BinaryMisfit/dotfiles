@@ -10,3 +10,9 @@ if command -v eza >/dev/null 2>&1; then
   alias la='eza -lah --git --icons=auto'
   alias lt='eza --tree --level=2 --icons=auto'
 fi
+
+alias netctrl-tmux='ssh -t netctrl "tmux new -A -s ops"'
+
+if command -v mosh >/dev/null 2>&1; then
+  alias mnetctrl='mosh netctrl -- tmux new -A -s ops'
+fi
