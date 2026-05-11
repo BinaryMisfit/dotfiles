@@ -47,7 +47,7 @@ Stop and report if any requirement is not met.
 ## Release Branch Rules
 
 - Format: `Release/[version]` (e.g., `Release/26.10`)
-- Create locally only; do NOT push without explicit user confirmation (`Proceed`).
+- Create locally only; do NOT push without explicit user confirmation (`Approve`).
 - Once pushed, treated as protected; all further changes require PR.
 
 ---
@@ -60,7 +60,7 @@ Stop and report if any requirement is not met.
 4. Check that branch name does not already exist. Stop if it does.
 5. Create branch locally from current HEAD.
 6. Switch to new branch.
-7. For Release branches: note that push requires explicit `Proceed` confirmation.
+7. For Release branches: note that push requires explicit `Approve` confirmation.
 8. Return created branch name and current checkout state.
 
 ---
@@ -81,7 +81,7 @@ Return:
 - branch_type
 - created_successfully (true/false)
 - current_branch_after_creation
-- next_action_note (e.g., "Ready to commit" or "Push requires 'Proceed' confirmation")
+- next_action_note (e.g., "Ready to commit" or "Push requires 'Approve' confirmation")
 
 ---
 

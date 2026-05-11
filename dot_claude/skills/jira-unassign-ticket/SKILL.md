@@ -22,7 +22,7 @@ Optional:
 
 ## Integration & Authentication
 
-**Try MCP first:** Use available Jira MCP tools (e.g. `mcp_com_atlassian_getJiraIssue`, `transitionJiraIssue`).
+**Try MCP first:** Use available Jira MCP tools (e.g. `getJiraIssue`, `editJiraIssue`).
 
 **Fallback to REST API** with basic auth. Required env vars: `JIRA_URL`, `JIRA_USERNAME`, `JIRA_API_TOKEN`.
 

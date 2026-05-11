@@ -108,7 +108,7 @@ Return:
 - If tests fail, block commit and return test output.
 - If diff size exceeds limit, report size and block.
 - If >5 files changed, report file list and block.
-- If protected files found, stop and require explicit user approval with `Proceed`.
+- If protected files found, stop and require explicit user approval with `Approve`.
 - If TODOs found, block and list line numbers.
 - If coverage <80% for new lines, block and report coverage percentage.
 - If commit message format is invalid, block and show required format.
