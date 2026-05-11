@@ -1,0 +1,6 @@
+[otel]
+environment = "home"
+log_user_prompt = false
+metrics_exporter = "none"
+trace_exporter = "none"
+exporter = { otlp-http = { endpoint = "http://192.168.50.30:14320/v1/logs", protocol = "binary" } }
