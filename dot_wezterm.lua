@@ -7,9 +7,9 @@ local config = wezterm.config_builder()
 config.term = "xterm-256color"
 
 config.font = wezterm.font_with_fallback({
-  "MesloLGS Nerd Font Mono",
-  "Symbols Nerd Font Mono",
-  "Noto Color Emoji",
+	"MesloLGS Nerd Font Mono",
+	"Symbols Nerd Font Mono",
+	"Noto Color Emoji",
 })
 config.font_size = 14.0
 
@@ -21,13 +21,13 @@ config.scrollback_lines = 100000
 config.window_background_opacity = 1.0
 config.macos_window_background_blur = 0
 config.window_padding = {
-  left = 6,
-  right = 6,
-  top = 4,
-  bottom = 2,
+	left = 6,
+	right = 6,
+	top = 4,
+	bottom = 2,
 }
 
-config.color_scheme = "Atom"
+config.color_scheme = "OneHalfDark"
 
 config.default_cursor_style = "SteadyBlock"
 config.cursor_blink_rate = 0
@@ -46,12 +46,11 @@ config.adjust_window_size_when_changing_font_size = false
 config.check_for_updates = false
 config.window_close_confirmation = "AlwaysPrompt"
 
-
 if wezterm.target_triple:find("darwin") then
-  wezterm.on("gui-startup", function(cmd)
-    local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
-    window:gui_window():toggle_fullscreen()
-  end)
+	wezterm.on("gui-startup", function(cmd)
+		local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
+		window:gui_window():toggle_fullscreen()
+	end)
 end
 
 return config
