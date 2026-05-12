@@ -60,4 +60,11 @@ if wezterm.target_triple:find("darwin") then
 	end)
 end
 
+config.keys = config.keys or {}
+
+table.insert(config.keys, {
+key = "Enter",
+mods = "SHIFT",
+action = wezterm.action.SendString("\x0a"),
+})
 return config
