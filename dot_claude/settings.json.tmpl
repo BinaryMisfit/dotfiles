@@ -19,7 +19,11 @@
   "worktreeBaseRef": "fresh",
   "statusLine": {
     "type": "command",
+    {{- if eq $profile "home" }}
+    "command": "python3 {{ .chezmoi.homeDir }}/.claude/rate-limit-statusline-bridge.py"
+    {{- else }}
     "command": "bash {{ .chezmoi.homeDir }}/.claude/statusline-command.sh"
+    {{- end }}
   },
   "effortLevel": "medium",
   "theme": "dark",

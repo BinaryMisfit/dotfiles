@@ -1,0 +1,91 @@
+{{- $profile := get . "profile" | default "" -}}
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import socket
+import sys
+import urllib.error
+import urllib.request
+
+ENDPOINT = os.environ.get("AI_USAGE_PROVIDER_LIMITS_ENDPOINT", "https://ai-usage.fairview.zone/provider-limits")
+TIMEOUT_SECONDS = 1.5
+
+
+def _number(value):
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, str):
+        try:
+            return float(value) if "." in value else int(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _limit(raw):
+    if not isinstance(raw, dict):
+        return None
+    used_percentage = _number(raw.get("used_percentage"))
+    resets_at = _number(raw.get("resets_at"))
+    if used_percentage is None or resets_at is None:
+        return None
+    return {"used_percentage": used_percentage, "resets_at": int(resets_at)}
+
+
+def _sanitized_payload(raw):
+    if not isinstance(raw, dict):
+        return None
+    rate_limits = raw.get("rate_limits")
+    if not isinstance(rate_limits, dict):
+        return None
+    limits = {}
+    for window in ("five_hour", "seven_day"):
+        value = _limit(rate_limits.get(window))
+        if value is not None:
+            limits[window] = value
+    if not limits:
+        return None
+    return {"tool": "claude", "source": "claude-statusline", "limits": limits}
+
+
+def _post(payload):
+    data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    request = urllib.request.Request(
+        ENDPOINT,
+        data=data,
+        method="POST",
+        headers={"content-type": "application/json"},
+    )
+    try:
+        urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS).close()
+    except (OSError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+        pass
+
+
+def _status_text():
+    user = os.environ.get("USER") or "user"
+    host = socket.gethostname().split(".", 1)[0] or "host"
+    directory = os.path.basename(os.getcwd()) or os.getcwd()
+    return f"{user}@{host} {directory}"
+
+
+def main() -> int:
+    try:
+        raw = json.loads(sys.stdin.read() or "{}")
+    except json.JSONDecodeError:
+        raw = {}
+    payload = _sanitized_payload(raw)
+    {{- if eq $profile "home" }}
+    if payload is not None:
+        _post(payload)
+    {{- end }}
+    print(_status_text(), end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
