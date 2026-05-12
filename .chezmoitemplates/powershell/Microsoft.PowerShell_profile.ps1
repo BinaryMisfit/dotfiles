@@ -1,4 +1,4 @@
-[Console]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
+onsole]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
 $profileDir = Split-Path -Parent $PROFILE
 
@@ -12,6 +12,11 @@ if ((Get-Command oh-my-posh -ErrorAction SilentlyContinue) -and (Test-Path $ompT
 # mise
 if (Get-Command mise -ErrorAction SilentlyContinue) {
     mise activate pwsh | Out-String | Invoke-Expression
+}
+
+# zoxide
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    zoxide init powershell | Out-String | Invoke-Expression
 }
 
 # User-local bin
@@ -59,8 +64,18 @@ function clip {
 }
 
 # basic aliases
-Set-Alias ll Get-ChildItem
 Set-Alias g git
+
+if (-not (Get-Command eza -ErrorAction SilentlyContinue)) {
+    Set-Alias ll Get-ChildItem
+}
+
+if (Get-Command eza -ErrorAction SilentlyContinue) {
+    function l  { eza --group-directories-first @args }
+    function ll { eza -la --group-directories-first --git @args }
+    function la { eza -la --group-directories-first @args }
+    function lt { eza --tree --level=2 --group-directories-first @args }
+}
 
 if (Get-Command nvim -ErrorAction SilentlyContinue) {
     Set-Alias vim nvim
@@ -73,8 +88,18 @@ function netctrl-tmux {
 
 Set-Alias nt netctrl-tmux
 
-# Keymaps
-Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
-Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+# PSReadLine defaults
 Set-PSReadLineOption -BellStyle None
 Set-PSReadLineOption -PredictionSource History
+
+# Fallback history keys only when Atuin is unavailable.
+if (-not (Get-Command atuin -ErrorAction SilentlyContinue)) {
+    Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
+    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+}
+
+# Atuin owns history keybinds when available.
+# Keep this last so it wins over PSReadLine bindings. Tiny keyboard coup.
+if (Get-Command atuin -ErrorAction SilentlyContinue) {
+    atuin init powershell | Out-String | Invoke-Expression
+}
