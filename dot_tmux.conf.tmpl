@@ -1,7 +1,9 @@
-unbind C-b
-set -g prefix "C-\\"
-bind-key "C-\\" send-prefix
+# Prefix
+# Keep the tmux default. Boring survives cross-platform nonsense.
+set -g prefix C-b
+bind C-b send-prefix
 
+# Core behavior
 set -g mouse on
 set -g escape-time 0
 set -g history-limit 50000
@@ -10,10 +12,17 @@ setw -g pane-base-index 1
 setw -g mode-keys vi
 set -g renumber-windows on
 set -g focus-events on
+
+# Terminal / color handling
 set -g default-terminal "tmux-256color"
-set -as terminal-overrides ",*:RGB"
+{{- if ne .chezmoi.os "windows" }}
+set -as terminal-overrides ",xterm-256color:smcup@:rmcup@,*:RGB"
+{{- end }}
+
+# Clipboard / passthrough
 set -g set-clipboard on
 set -g allow-passthrough on
+
 {{- if eq .chezmoi.os "windows" }}
 # psmux / native Windows
 set -g default-shell pwsh
@@ -21,6 +30,7 @@ set -g mouse-selection off
 set -g paste-detection off
 {{- end }}
 
+# Status bar
 set -g status on
 set -g status-position bottom
 set -g status-interval 5
@@ -36,13 +46,18 @@ setw -g window-status-format "#[fg=colour245] #I:#W "
 setw -g window-status-current-format "#[fg=colour39,bold] #I:#W "
 setw -g window-status-separator ""
 
+# Reload
 bind r source-file ~/.tmux.conf \; display "reloaded"
+
+# Splits
 bind | split-window -h -c "#{pane_current_path}"
 bind - split-window -v -c "#{pane_current_path}"
 
+# Window navigation
 bind -n C-h previous-window
 bind -n C-l next-window
 
+# Pane navigation
 bind h select-pane -L
 bind j select-pane -D
 bind k select-pane -U
