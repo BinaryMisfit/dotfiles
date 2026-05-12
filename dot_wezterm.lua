@@ -46,9 +46,16 @@ config.adjust_window_size_when_changing_font_size = false
 config.check_for_updates = false
 config.window_close_confirmation = "AlwaysPrompt"
 
+if wezterm.target_triple:find("windows") then
+	config.font_size = 12.0
+	config.default_prog = { "pwsh.exe", "-NoLogo" }
+	config.initial_cols = 280
+	config.initial_rows = 90
+end
+
 if wezterm.target_triple:find("darwin") then
 	wezterm.on("gui-startup", function(cmd)
-		local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
+		local window = wezterm.mux.spawn_window(cmd or {})
 		window:gui_window():toggle_fullscreen()
 	end)
 end
