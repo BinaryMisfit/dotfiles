@@ -66,11 +66,66 @@ def _post(payload):
         pass
 
 
-def _status_text():
+def _model_safe(text):
+    """Return True if text is safe to display: alphanumeric, dash, dot only."""
+    if not text or len(text) > 100:
+        return False
+    if not text[0].isalnum():
+        return False
+    return all(c.isalnum() or c in "-." for c in text)
+
+
+def _compact_model(raw):
+    """Extract a compact model name for display only. Never forwarded."""
+    if not isinstance(raw, dict):
+        return None
+    model = raw.get("model")
+    if not isinstance(model, str) or not _model_safe(model):
+        return None
+    name = model[len("claude-"):] if model.startswith("claude-") else model
+    parts = name.split("-")
+    for i, part in enumerate(parts):
+        if part.isdigit():
+            label = "-".join(parts[:i])
+            major = part
+            rest = parts[i + 1 :]
+            if rest and rest[0].isdigit() and len(rest[0]) <= 2:
+                return f"{label}-{major}.{rest[0]}" if label else f"{major}.{rest[0]}"
+            return f"{label}-{major}" if label else major
+    return name
+
+
+def _quota_parts(raw):
+    """Return display strings for quota availability, e.g. ['5h 87%', '7d 94%']."""
+    if not isinstance(raw, dict):
+        return []
+    rate_limits = raw.get("rate_limits")
+    if not isinstance(rate_limits, dict):
+        return []
+    parts = []
+    for window, label in (("five_hour", "5h"), ("seven_day", "7d")):
+        limit = rate_limits.get(window)
+        if not isinstance(limit, dict):
+            continue
+        used = _number(limit.get("used_percentage"))
+        if used is None:
+            continue
+        available = max(0.0, min(100.0, 100.0 - used))
+        parts.append(f"{label} {available:.0f}%")
+    return parts
+
+
+def _status_text(raw):
     user = os.environ.get("USER") or "user"
     host = socket.gethostname().split(".", 1)[0] or "host"
     directory = os.path.basename(os.getcwd()) or os.getcwd()
-    return f"{user}@{host} {directory}"
+    base = f"{user}@{host} {directory}"
+    suffix = []
+    model = _compact_model(raw)
+    if model:
+        suffix.append(model)
+    suffix.extend(_quota_parts(raw))
+    return f"{base} | {' | '.join(suffix)}" if suffix else base
 
 
 def main() -> int:
@@ -83,7 +138,7 @@ def main() -> int:
     if payload is not None:
         _post(payload)
     {{- end }}
-    print(_status_text(), end="")
+    print(_status_text(raw), end="")
     return 0
 
 
