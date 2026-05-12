@@ -16,16 +16,27 @@ stylua = "latest"
 tree-sitter = "latest"
 yq = "latest"
 
+# Cross-platform CLI tools.
+atuin = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+zoxide = "latest"
+
+# Real tmux remains POSIX-only. Windows uses psmux via Scoop.
+{{ if ne .chezmoi.os "windows" }}
+tmux = "latest"
+eza = "latest"
+{{ end }}
+
+# AI / language tooling
 "npm:@anthropic-ai/claude-code" = "latest"
-"npm:@openai/codex" = "latest"
 "npm:vscode-langservers-extracted" = "latest"
 "npm:yaml-language-server" = "latest"
 
-{{ if ne .chezmoi.os "windows" }}
-atuin = "latest"
-eza = "latest"
-shellcheck = "latest"
-shfmt = "latest"
-tmux = "latest"
-zoxide = "latest"
+{{ if eq (get . "profile" | default "home") "home" }}
+"npm:@openai/codex" = "latest"
+{{ end }}
+
+{{ if eq (get . "profile" | default "home") "work" }}
+"npm:@github/copilot" = "latest"
 {{ end }}
