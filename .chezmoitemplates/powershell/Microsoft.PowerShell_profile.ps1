@@ -1,4 +1,4 @@
-onsole]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
+[Console]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 
 $profileDir = Split-Path -Parent $PROFILE
 
