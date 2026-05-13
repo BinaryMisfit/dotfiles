@@ -12,6 +12,8 @@
 .copilot/instructions/tooling.instructions.md
 .copilot/skills/**/test*
 .claude/rules/k1ra.instuctions.md
+.claude/rules/commits.instuctions.md
+.claude/rules/skills.instuctions.md
 mise.toml
 
 {{- $isWindows := eq .chezmoi.os "windows" -}}
