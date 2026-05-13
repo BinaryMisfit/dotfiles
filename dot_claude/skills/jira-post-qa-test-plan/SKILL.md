@@ -63,6 +63,8 @@ Stop and report if any env var is missing.
 Required table header rows:
 - Test Cases: `| ID | Scenario | Preconditions | Steps | Expected Result | Priority |`
 - Evidence Required: `| Evidence ID | Artifact | Mapped Test Case IDs | Notes |`
+- Use deterministic IDs for traceability (`TC-01`, `TC-02`, `EV-01`, etc.).
+- Keep language focused: no filler, no implementation deep dive, no speculative statements.
 
 ---
 
@@ -72,17 +74,8 @@ Required table header rows:
 2. Generate the QA plan using the required headings in exact order and a formal test-plan tone.
 3. Format `Test Cases` and `Evidence Required` as markdown tables with required columns.
 4. Validate section completeness, exact section title order, table headers, explicit expected results, measurable pass criteria, and regression risk level + one-line justification.
-5. Preview full comment.
-6. Require `Approve` to post.
-7. Post comment and return metadata.
-
----
-
-## Guardrails
-
-- Do not post if any required section or validation rule fails.
-- Keep language focused: no filler, no implementation deep dive, no speculative statements.
-- Use deterministic IDs for traceability (`TC-01`, `TC-02`, `EV-01`, etc.).
+5. Preview full comment and wait for affirmation before proceeding.
+6. Post comment and return metadata.
 
 ---
 
@@ -90,7 +83,6 @@ Required table header rows:
 
 Return:
 - comment_preview
-- required_confirmation: `Approve`
 - posted_comment_id
 - execution_result
 

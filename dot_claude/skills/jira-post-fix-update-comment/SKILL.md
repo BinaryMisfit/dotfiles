@@ -46,16 +46,8 @@ Stop and report if any env var is missing.
 1. Perform the integration and authentication checks defined above. Stop and report if requirements are not met.
 2. Build comment draft as a short paragraph using natural language (no bullet points, no label prefixes).
 3. Validate no root cause, stack traces, internal identifiers, jargon, PR references, or current-state wording.
-4. Preview full comment.
-5. Require `Approve` to post.
-6. Post comment and return metadata.
-
----
-
-## Guardrails
-
-- Never include root cause, stack traces, internal identifiers, or implementation jargon.
-- Never use bullet points or field-label prefixes in the final comment body.
+4. Preview full comment and wait for affirmation before proceeding.
+5. Post comment and return metadata.
 
 ---
 
@@ -63,7 +55,6 @@ Stop and report if any env var is missing.
 
 Return:
 - comment_preview
-- required_confirmation: `Approve`
 - posted_comment_id
 - execution_result
 

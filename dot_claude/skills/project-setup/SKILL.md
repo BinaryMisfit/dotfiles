@@ -45,6 +45,8 @@ Probe for indicator files. Collect all matches — projects can have multiple.
 
 Also check `Makefile`, `justfile`, CI configs (`.github/workflows/`, `azure-pipelines.yml`, `buildspec.yml`), and existing CLAUDE.md/README for actual commands used.
 
+Ambiguous toolchain (e.g., `pyproject.toml`) → emit allowlist entries for both candidates.
+
 ## Phase 3: CLAUDE.md Assessment
 
 ### New repo path
@@ -61,7 +63,7 @@ Generate from scratch. Include only sections with discovered content — no plac
 ## Infrastructure / Deployment    ← only if present
 ```
 
-All commands must be copy-paste ready and verified against actual files. No generic advice.
+All commands must be copy-paste ready and verified against actual files. Never include generic advice, placeholder text, or TODO markers.
 
 ### Existing repo path — Staleness Check
 
@@ -79,7 +81,7 @@ Output the staleness report before proposing any edits.
 
 ## Phase 4: Settings Construction
 
-Target file: `.claude/settings.local.json` (project-local only).
+Target file: `.claude/settings.local.json` (project-local only). Never write to global `~/.claude/settings.json`.
 
 ### Always allowed
 
@@ -137,7 +139,7 @@ Show before writing:
 - `.claude/settings.local.json`: action + final JSON
 - `.claude/settings.json`: merge-and-delete if present
 
-Prompt: **"Proceed? (yes / Approve)"** — any other response aborts.
+Show preview and wait for affirmation before proceeding.
 
 ## Phase 6: Apply
 
@@ -147,10 +149,3 @@ Prompt: **"Proceed? (yes / Approve)"** — any other response aborts.
 4. Write (new/obsolete path) or Edit (Minor drift/Stale path) `CLAUDE.md` per Phase 3 rating. Skip if Fresh.
 5. Report paths written and deleted. Do not commit or stage.
 
-## Guardrails
-
-- Never write global `~/.claude/settings.json`.
-- Never add write git/gh subcommands to the allowlist (see list above).
-- Ambiguous toolchain (e.g., `pyproject.toml`) → emit entries for both candidates.
-- Obsolete CLAUDE.md → treat as new repo path; regenerate from scratch.
-- CLAUDE.md must never contain generic advice, placeholder text, or TODO markers.

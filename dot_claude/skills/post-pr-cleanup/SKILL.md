@@ -7,16 +7,13 @@ user-invocable: true
 # Skill: Post-PR Cleanup
 
 ## Purpose
-Identify and delete branches that have been merged into the configured default branch or are patch-equivalent, with a preview-first approval gate.
+Identify and delete branches that have been merged into the configured default branch or are patch-equivalent, with a preview-first approval gate. Final target state: configured default branch plus only active (unmerged) branches.
 
 ---
 
 ## Required Inputs
 
 - pr_completion_confirmed
-
-Optional:
-- include_patch_equivalents (defaults to `true`)
 
 ---
 
@@ -34,8 +31,9 @@ Stop and report if any requirement is not met.
 
 ## Eligibility Rules
 
-- Cleanup-eligible: ancestry-merged into the configured default branch, or patch-equivalent when `include_patch_equivalents=true`.
+- Cleanup-eligible: ancestry-merged into the configured default branch, or patch-equivalent.
 - Never eligible: protected branches (including the configured default branch, `integration`, `develop`, and `release/*`, case-insensitive), branches not created by the user, the current checked-out branch, branches with unique patches vs the configured default branch, or branches with ambiguous merge status.
+- Always identify specific branches; never use broad prune-based cleanup.
 
 ---
 
@@ -44,21 +42,11 @@ Stop and report if any requirement is not met.
 1. Perform the integration and repo checks defined above. Stop and report if requirements are not met.
 2. If `pr_completion_confirmed` is false, stop and report.
 3. Switch to the configured default branch and pull latest from origin.
-4. Compute cleanup candidates using the Eligibility Rules above.
+4. Compute cleanup candidates (merged and patch-equivalent) using the Eligibility Rules above.
 5. Preview local and remote deletion lists with reason (`merged` or `patch-equivalent`).
 6. Require `Approve` to execute cleanup.
 7. Delete local and remote branches.
 8. Verify final state and report deleted and skipped branches.
-
----
-
-## Guardrails
-
-- Always preview before requesting any confirmation.
-- Never use broad prune-based cleanup; always identify specific branches.
-- Require a single `Approve` confirmation after previewing both local and remote deletions.
-- Never delete protected branches in this skill.
-- Final target state: configured default branch plus only active (unmerged) branches.
 
 ---
 

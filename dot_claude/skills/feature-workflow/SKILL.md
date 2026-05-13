@@ -30,7 +30,7 @@ Check environment variables for credentials:
 - Azure DevOps: `AZURE_DEVOPS_ORG`, `AZURE_DEVOPS_TOKEN`
 - GitHub Issues: `GITHUB_TOKEN`
 
-Use MCP integrations first; fall back to REST API.
+Use MCP integrations first; fall back to REST API. **Exception:** Azure DevOps — REST API first (`ADO_MCP_AUTH_TOKEN`); MCP fallback only.
 
 **1.2 Fetch the primary ticket**
 
@@ -68,49 +68,11 @@ If a linked ticket references work in another module, branch, or platform — re
 
 **2.3 Map the layers**
 
-Use the table that fits this project type. Fill in what exists and what is missing.
+Use the format matching the project type. Fill in what exists and what is missing.
 
-**Mobile / frontend**
-
-| Layer | Exists | Missing |
-|---|---|---|
-| API / OpenAPI spec | | |
-| Generated/network models | | |
-| Domain models | | |
-| Repository interface | | |
-| Repository implementation | | |
-| Use cases / services | | |
-| ViewModel / state | | |
-| Screens / components | | |
-| Navigation | | |
-| Shared resources | | |
-| Tests | | |
-
-**Backend / API service**
-
-| Layer | Exists | Missing |
-|---|---|---|
-| API contract | | |
-| Controllers / handlers | | |
-| Service / business logic | | |
-| Domain models / DTOs | | |
-| Data access / repository | | |
-| DB schema / migrations | | |
-| Auth / middleware | | |
-| Config / feature flags | | |
-| Tests | | |
-
-**Pipeline / CI-CD / infrastructure**
-
-| Layer | Exists | Missing |
-|---|---|---|
-| Pipeline definition files | | |
-| Triggers / conditions | | |
-| Reusable templates | | |
-| Env / variable group dependencies | | |
-| Secrets / key vault references | | |
-| Artifact publishing / consumption | | |
-| Notifications / failure handling | | |
+**Mobile:** API spec · Generated models · Domain models · Repository (interface + impl) · Use cases · ViewModel · Screens · Navigation · Shared resources · Tests
+**Backend:** API contract · Controllers · Service · Domain/DTOs · Data access · DB schema/migrations · Auth · Config/flags · Tests
+**Pipeline:** Definition · Triggers · Templates · Env/variables · Secrets · Artifact publishing · Failure handling
 
 ---
 
@@ -152,6 +114,4 @@ Present the full briefing to the user:
 2. Gap table (Phase 3)
 3. Blockers / assumptions / questions (Phase 4)
 
-Then **stop**. Tell the user: *"Answer the blockers above and I'll build the plan."*
-
-Do not start Phase 5 (planning) or any implementation until the user has responded to the blockers.
+Then **stop**. Do not start planning or any implementation until the user has responded to the blockers.

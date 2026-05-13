@@ -1,13 +1,13 @@
 ---
 name: jira-unassign-ticket
-description: Remove the assignee from a Jira ticket with preview-first confirmation. Invoke for actions like "unassign ticket", "remove assignee", or "clear ticket owner".
+description: Remove the assignee from a Jira ticket. Invoke for actions like "unassign ticket", "remove assignee", or "clear ticket owner".
 user-invocable: true
 ---
 
 # Skill: Jira Unassign Ticket
 
 ## Purpose
-Unassign a single Jira ticket as a standalone action.
+Unassign a single Jira ticket as a standalone action. This skill performs only one write action per run.
 
 ---
 
@@ -35,17 +35,9 @@ Stop and report if any env var is missing.
 1. Perform the integration and authentication checks defined above. Stop and report if requirements are not met.
 2. Resolve ticket and read current assignee.
 3. If `expected_current_assignee` is provided, verify it matches. Stop and report mismatch if it does not.
-4. Preview assignee change.
-5. Require `Approve` to proceed.
-6. Remove assignee.
-7. Verify and report final assignee state.
-
----
-
-## Guardrails
-
-- Always preview before write.
-- This skill performs only one write action.
+4. Preview assignee change and wait for affirmation before proceeding.
+5. Remove assignee.
+6. Verify and report final assignee state.
 
 ---
 
@@ -53,7 +45,6 @@ Stop and report if any env var is missing.
 
 Return:
 - unassign_preview
-- required_confirmation: `Approve`
 - previous_assignee
 - execution_result
 

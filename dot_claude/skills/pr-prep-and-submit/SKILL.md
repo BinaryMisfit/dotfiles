@@ -24,9 +24,9 @@ Optional:
 
 ## Integration & Authentication
 
-**Try MCP first:** Use available Git/ADO MCP tools.
+**Azure DevOps auth order: REST API first.** Required env vars: `AZURE_DEVOPS_ORG`, `AZURE_DEVOPS_PROJECT`, `AZURE_DEVOPS_TOKEN`.
 
-**Fallback:** Direct Git CLI + ADO REST API. Required env vars: `AZURE_DEVOPS_ORG`, `AZURE_DEVOPS_PROJECT`, `AZURE_DEVOPS_TOKEN`.
+**MCP fallback:** Use available ADO MCP tools only if REST API is unavailable.
 
 **Azure DevOps setup:** Repo must be a valid Azure DevOps project repo with origin configured.
 
@@ -57,8 +57,6 @@ Stop and report if integration fails.
 
 **Delete source branch:** Always `true` on completion.
 
-**Auto-complete:** Attempt to enable via API.
-
 ---
 
 ## Required Flow
@@ -68,26 +66,17 @@ Stop and report if integration fails.
 3. Collect commits and changed files between base and head.
 4. Generate PR title, body, and file list per metadata rules.
 5. Determine merge strategy per metadata rules.
-6. Attempt to enable auto-complete via API.
-7. Present a full PR summary including title, body, head branch -> base branch, file list, merge strategy, auto-complete state, delete source branch setting, and any branch naming warning.
-8. Require `Approve` to submit.
-9. Submit PR via ADO API.
-10. Return PR ID, URL, and confirmation.
-
----
-
-## Guardrails
-
-- Never auto-submit without `Approve` confirmation.
-- Always show full preview before requesting confirmation.
-- Branch naming mismatch is a warning, not a hard block, unless the user asks for strict enforcement.
+6. Present a full PR summary including title, body, head branch -> base branch, file list, merge strategy, delete source branch setting, and any branch naming warning.
+7. Require `Approve` to submit.
+8. Submit PR via ADO API.
+9. Return PR ID, URL, and confirmation.
 
 ---
 
 ## Output Contract
 
 Return:
-- pr_preview (title, body, file_list, merge_strategy, auto_complete, delete_source_branch)
+- pr_preview (title, body, file_list, merge_strategy, delete_source_branch)
 - required_confirmation: `Approve`
 - pr_id
 - pr_url
@@ -101,5 +90,4 @@ Return:
 - If head and base branches are identical, stop and report.
 - If either branch does not exist, stop and report.
 - If ADO API submission fails, stop and report cause.
-- If auto-complete cannot be enabled, report the limitation (identity ID required); user must enable manually.
 - If MCP fails during submission, stop and report cause.

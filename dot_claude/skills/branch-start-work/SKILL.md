@@ -21,7 +21,7 @@ Optional:
 
 ---
 
-## Integration & Authentication
+## Integration
 
 **Try MCP first:** Use available Git MCP tools or direct CLI.
 
@@ -36,7 +36,8 @@ Stop and report if any requirement is not met.
 **With JIRA ticket:**
 - Feature ticket → `Feature/[TICKET]` (e.g., `Feature/UA-1234`)
 - Defect ticket → `Defect/[TICKET]` (e.g., `Defect/UATD-5678`)
-- Other/Task/Spike ticket → `Other/[TICKET]` (e.g., `Other/UA-9012`)
+- Other/Task/Spike → `Other/[TICKET]` (e.g., `Other/UA-9012`)
+- Release → `Release/[version]` (e.g., `Release/26.10`) — requires `version` input
 
 **Without JIRA (local description):**
 - Format: `Other/[PascalCaseShortDesc]` (e.g., `Other/AddLoginButton`)
@@ -44,33 +45,15 @@ Stop and report if any requirement is not met.
 
 ---
 
-## Release Branch Rules
-
-- Format: `Release/[version]` (e.g., `Release/26.10`)
-- Create locally only; do NOT push without explicit user confirmation (`Approve`).
-- Once pushed, treated as protected; all further changes require PR.
-
----
-
 ## Required Flow
 
 1. Validate input (ticket_id OR description provided; if both, use ticket_id).
-2. If ticket_id provided: resolve ticket and determine branch type (Feature/Defect/Other). Stop if ticket not found.
+2. If ticket_id provided: resolve ticket and determine branch type. Stop if ticket not found.
 3. Construct branch name per Branch Naming Rules.
-4. Check that branch name does not already exist. Stop if it does.
+4. Check that branch name does not already exist locally or on remote. Stop if it does.
 5. Create branch locally from current HEAD.
 6. Switch to new branch.
-7. For Release branches: note that push requires explicit `Approve` confirmation.
-8. Return created branch name and current checkout state.
-
----
-
-## Guardrails
-
-- Never push new branches to remote without explicit user confirmation.
-- Branch names: alphanumeric + forward slashes + hyphens only; no spaces or special chars.
-- Do not create branches with names that already exist locally or on remote.
-- Working directory must be clean before branch creation.
+7. Return created branch name and current checkout state.
 
 ---
 
@@ -81,7 +64,7 @@ Return:
 - branch_type
 - created_successfully (true/false)
 - current_branch_after_creation
-- next_action_note (e.g., "Ready to commit" or "Push requires 'Approve' confirmation")
+- next_action_note
 
 ---
 

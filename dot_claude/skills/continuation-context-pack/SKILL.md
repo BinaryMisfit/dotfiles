@@ -12,8 +12,6 @@ user-invocable: true
 ## Purpose
 Compress current working state into a minimal handoff packet for a new session.
 
-Not a conversation summary. It is a state transfer artifact for zero-context resume.
-
 ---
 
 ## Output Format (STRICT)
@@ -25,19 +23,20 @@ Start on a new line before the opening delimiter, and end with a newline after t
 Prepare continuation context:
 - Current state:
 - Key decisions:
-- Next action: [describe step - DO NOT execute automatically; wait for explicit user instruction]
+- Next action: [describe step — wait for explicit user instruction before executing]
 - Constraints:
-- Files (if relevant):
+[- Files: only if needed for the next step]
 ===========================================================
 
 The opening and closing delimiter lines must always be standalone lines.
+Omit any field with nothing relevant to include.
 
 ---
 
 ## Rules
 
 - Bullet points only
-- Max 6 bullets total (not per section)
+- 1–2 bullets per field
 - No explanations
 - No prose
 - No repetition
@@ -51,36 +50,8 @@ The opening and closing delimiter lines must always be standalone lines.
 
 ## Compression Heuristics
 
-- Current state -> what exists now (code, plan, progress)
-- Key decisions -> irreversible or important choices
-- Next action -> immediate executable step, or "Start new session" if no pending work
-- Constraints -> limits, requirements, edge conditions
-- Files -> only if needed for the next step
-
----
-
-## When To Use
-
-- After completing a meaningful unit of work
-- Before starting a new session
-- When context is getting large or unfocused
-- Before handing off to another AI/system
-
----
-
-## Anti-Patterns (DO NOT DO)
-
-- Do not summarize the entire conversation
-- Do not explain reasoning
-- Do not include history unless it affects the next step
-- Do not exceed 6 bullets
-- Do not turn this into documentation
-
----
-
-## Success Criteria
-
-A new session should be able to:
-- Understand the current state instantly
-- Know exactly what to do next, but wait for user instruction
-- Avoid rework or repeated decisions
+- Current state → what exists now (code, plan, progress)
+- Key decisions → irreversible or important choices
+- Next action → immediate executable step, or "Start new session" if no pending work
+- Constraints → limits, requirements, edge conditions
+- Files → only if needed for the next step

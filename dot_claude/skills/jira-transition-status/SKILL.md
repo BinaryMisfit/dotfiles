@@ -45,17 +45,9 @@ Stop and report if any env var is missing.
 8. Once all required fields are satisfied, present a full transition summary:
    - Current status → target status
    - All field values that will be written
+   - Standard sequential transitions are executable after this preview; no additional confirmation required.
 9. Execute transition.
 10. Verify and report final status.
-
----
-
-## Guardrails
-
-- Always preview before executing.
-- Never batch multiple transitions in one run.
-- Treat standard sequential transitions as executable after preview.
-- Require `Approve` only when presenting a generated suggestion or warning for user review.
 
 ---
 

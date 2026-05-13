@@ -1,25 +1,20 @@
 ## JIRA
 
-Auth env vars: `JIRA_URL`, `JIRA_USERNAME`, `JIRA_API_TOKEN`
-
----
-
 ## Ticket Workflow Sequencing
 
 ### Starting Work
-When beginning work on a ticket (branch created, investigation started, or implementation begun):
+After `branch-start-work` completes for a ticket:
 - Invoke `jira-transition-status` → **"In Progress Dev"**
 
 ### On PR Creation
-Run in order — complete and verify each step before moving to the next:
+After PR is submitted — run in order, complete and verify each step before the next:
 1. Invoke `jira-post-fix-update-comment`
 2. Invoke `jira-post-qa-test-plan`
 3. Invoke `jira-transition-status` → **"In Code Review"**
 
-Stop and report if any step fails. If this flow starts and PR-creation comments are missing, run the missing steps first.
+If this flow starts with PR-creation comments missing, run the missing steps first.
 
 ### On PR Completion
-When PR completion is confirmed (check via ADO MCP only when requested — do not poll autonomously):
+When user confirms PR completion (do not poll):
 1. Invoke `jira-transition-status` → **"Ready for QA"**
 2. Invoke `jira-unassign-ticket`
-3. Invoke `post-pr-cleanup`

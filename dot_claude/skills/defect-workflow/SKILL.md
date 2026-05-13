@@ -11,7 +11,7 @@ user-invocable: true
 
 # Defect Workflow Skill
 
-You are executing the defect triage workflow. Your job is to complete **Phases 1–4** and present a structured briefing. Do not start fixing anything.
+You are executing the defect triage workflow. Your job is to complete **Phases 1–4** and present a structured briefing.
 
 ---
 
@@ -53,7 +53,6 @@ Pull the full ticket including rendered description. Extract:
 | Affected version(s) | |
 | Affected platform(s) | |
 | User/org scope (all users or specific?) | |
-| iOS / other platform parity (does it crash there?) | |
 
 **Copy error messages, stack traces, and specified values verbatim — do not paraphrase them.**
 
@@ -63,7 +62,7 @@ Pull the full ticket including rendered description. Extract:
 
 **2.1 Locate the crash or failure site**
 
-Grep the codebase for the screen name, error type, model fields, and API endpoints mentioned in the ticket. Map the call chain from UI tap → ViewModel → UseCase → Repository → API.
+Grep the codebase for the component name, error type, model fields, and API endpoints mentioned in the ticket. Map the call chain from the entry point through to the failure site.
 
 **2.2 Read the reference platform (if applicable)**
 
@@ -71,40 +70,11 @@ If the ticket notes that another platform (iOS, web) handles this correctly — 
 
 **2.3 Map the affected layers**
 
-Use the table that fits the project type. Mark each layer as Affected, Clean, or Unknown.
+Use the format matching the project type. Mark each layer Affected, Clean, or Unknown.
 
-**Mobile / frontend**
-
-| Layer | Status | Notes |
-|---|---|---|
-| Generated/network models | | |
-| Domain models | | |
-| Repository | | |
-| Use cases / services | | |
-| ViewModel / state | | |
-| Screens / components | | |
-| Navigation | | |
-
-**Backend / API service**
-
-| Layer | Status | Notes |
-|---|---|---|
-| API contract / spec | | |
-| Controllers / handlers | | |
-| Service / business logic | | |
-| Domain models / DTOs | | |
-| Data access / repository | | |
-| Auth / middleware | | |
-
-**Pipeline / CI-CD / infrastructure**
-
-| Layer | Status | Notes |
-|---|---|---|
-| Pipeline definition | | |
-| Triggers / conditions | | |
-| Env / variable groups | | |
-| Artifact publishing | | |
-| Failure handling | | |
+**Mobile:** Generated models · Domain models · Repository · Use cases · ViewModel · Screens · Navigation
+**Backend:** API contract · Controllers · Service · Domain/DTOs · Data access · Auth · Middleware
+**Pipeline:** Definition · Triggers · Env/variables · Artifact publishing · Failure handling
 
 ---
 
@@ -135,19 +105,19 @@ After root cause analysis, assess your confidence level in the identified cause:
 - You found the exact line of code that's broken (typo, logic error, null dereference)
 - The root cause is obvious and deterministic
 - No ambiguity in reproduction steps
-- **Recommendation:** Fix the code. Test on device *after* fix to confirm it resolves the issue.
+- **Recommendation:** Fix the code. Test after the fix to confirm it resolves the issue.
 
 **Medium Confidence (60–89%)**
 - Root cause is plausible but not 100% certain
 - The logic *looks* wrong based on code review, but replication criteria don't perfectly match
 - Multiple possible causes exist
-- **Recommendation:** Test on device *first* to narrow down root cause before fixing.
+- **Recommendation:** Reproduce and test first to narrow down root cause before fixing.
 
 **Low Confidence (<60%)**
 - Multiple theories; unclear which is correct
-- Device-specific signals (logcat, memory spikes, race conditions) suggest deeper issue
+- Runtime signals (logs, memory, timing, race conditions) suggest a deeper issue
 - Code review inconclusive
-- **Recommendation:** Gather device logs, reproduce on device, then revisit root cause analysis.
+- **Recommendation:** Gather runtime logs, reproduce, then revisit root cause analysis.
 
 ---
 
@@ -167,7 +137,7 @@ After root cause analysis, assess your confidence level in the identified cause:
 - Prefer defensive nullability over structural refactoring
 - Note if a backend fix is also needed (separate ticket)
 - Note if the fix should be backported to a release branch
-- *If confidence is <100%: suggest device test before fix to avoid false positives.*
+- *If confidence is <100%: suggest reproduction test before fix to avoid false positives.*
 
 **Questions** — do not block starting but must be answered before the PR merges.
 
@@ -180,11 +150,4 @@ Present the full briefing to the user:
 2. Root cause + fix table + confidence assessment (Phase 3 + 3.5)
 3. Blast radius / regression risk / approach (Phase 4)
 
-**Include a clear recommendation on next steps:**
-- **100% confident?** → "Fix is X in file Y. Test on device after to confirm."
-- **60–89% confident?** → "Hypothesis: X in file Y. Recommend device test first to validate before fixing."
-- **<60% confident?** → "Multiple theories. Need device logs / reproduction to narrow down."
-
-Then **stop**. Tell the user: *"Confirm the fix approach above and I'll build the plan."* (Or: *"Want to test on device first, or proceed with the fix?"* if confidence is medium.)
-
-Do not start Phase 5 (planning) or any implementation until the user has confirmed.
+State the confidence level and recommended next step per Phase 3.5. Then stop and wait for the user to confirm the fix approach before beginning implementation planning.
