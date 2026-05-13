@@ -19,16 +19,12 @@
   "worktreeBaseRef": "fresh",
   "statusLine": {
     "type": "command",
-    {{- if eq $profile "home" }}
-    "command": "python3 {{ .chezmoi.homeDir }}/.claude/rate-limit-statusline-bridge.py"
-    {{- else }}
-    "command": "bash {{ .chezmoi.homeDir }}/.claude/statusline-command.sh"
-    {{- end }}
+    "command": "python {{ .chezmoi.homeDir }}/.claude/rate-limit-statusline-bridge.py"
   },
   "advisorModel": "opus",
   "effortLevel": "medium",
   "theme": "dark",
-  "editorMode": "vim",
+  "editorMode": "normal",
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": false,
   "inputNeededNotifEnabled": false,

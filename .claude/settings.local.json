@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\WillieR\\\\.local\\\\share\\\\chezmoi\\\\dot_claude\\\\\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
+      "Bash(grep -E '\\\\.\\(tmpl|lua|toml|conf|json\\)$')",
+      "Bash(where python3 *)"
+    ]
+  }
+}

@@ -11,6 +11,7 @@
 .copilot/instructions/gitflow.instructions.md
 .copilot/instructions/tooling.instructions.md
 .copilot/skills/**/test*
+.claude/rules/k1ra.instuctions.md
 mise.toml
 
 {{- $isWindows := eq .chezmoi.os "windows" -}}

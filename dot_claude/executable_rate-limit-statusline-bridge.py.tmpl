@@ -116,7 +116,7 @@ def _quota_parts(raw):
 
 
 def _status_text(raw):
-    user = os.environ.get("USER") or "user"
+    user = os.environ.get("USER") or os.environ.get("USERNAME") or "user"
     host = socket.gethostname().split(".", 1)[0] or "host"
     directory = os.path.basename(os.getcwd()) or os.getcwd()
     base = f"{user}@{host} {directory}"
