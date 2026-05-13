@@ -77,6 +77,16 @@ chezmoi encrypt --recipients-file <file>
 
 Scripts ending in `.ps1.tmpl` run on Windows; `.sh.tmpl` run on POSIX. They are paired — if you modify behavior, update both. All run scripts are idempotent.
 
+### Claude Code Config
+
+Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`:
+- `CLAUDE.md.tmpl` — global instructions; `@rules` includes work-only rules on work profile
+- `mcp.json.tmpl` — work profile gets amaza-core MCP server; home gets empty `mcpServers`
+- `settings.json.tmpl` — Claude Code permissions and model settings
+- `output-styles/k1ra.md` — K1ra output style definition
+- `rules/` — instruction files `@`-included from `CLAUDE.md.tmpl`; work-only files gated in `.chezmoiignore`
+- `skills/` — slash-command skill definitions; work-only skills gated in `.chezmoiignore`
+
 ## Key Files
 
 | File | Target | Notes |
@@ -84,7 +94,13 @@ Scripts ending in `.ps1.tmpl` run on Windows; `.sh.tmpl` run on POSIX. They are 
 | `dot_gitconfig.tmpl` | `~/.gitconfig` | Credential helper is OS-specific |
 | `dot_zshrc.tmpl` | `~/.zshrc` | Znap plugin manager, mise, fzf, atuin, zoxide |
 | `dot_zshenv` | `~/.zshenv` | Minimal env — sourced even for non-interactive shells |
-| `dot_tmux.conf` | `~/.tmux.conf` | Prefix is `Ctrl+\`, vi mode |
+| `dot_tmux.conf.tmpl` | `~/.tmux.conf` | Prefix is `Ctrl+\`, vi mode |
+| `dot_p10k.zsh` | `~/.p10k.zsh` | Powerlevel10k theme config |
+| `dot_wezterm.lua` | `~/.wezterm.lua` | WezTerm terminal config |
+| `dot_codex/config.toml.tmpl` | `~/.codex/config.toml` | Codex telemetry config |
+| `dot_claude/CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | Claude Code global instructions (profile-gated) |
+| `dot_claude/settings.json.tmpl` | `~/.claude/settings.json` | Claude Code permissions |
+| `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config (work profile only) |
 | `private_dot_config/mise/config.toml.tmpl` | `~/.config/mise/config.toml` | All tool versions |
 | `.chezmoitemplates/vscode/settings.json.tmpl` | VS Code settings | Rendered per profile |
 | `.chezmoitemplates/vscode/extensions.txt.tmpl` | VS Code extension list | Profile-gated |
