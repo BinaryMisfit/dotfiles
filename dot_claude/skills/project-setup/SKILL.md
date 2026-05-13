@@ -1,19 +1,28 @@
 ---
 name: project-setup
-description: Bootstrap or refresh Claude Code configuration for the current git repo. Initializes CLAUDE.md if missing, updates it if stale, creates/updates .claude/settings.json with toolchain-appropriate allowed commands (file writes and read-only git/gh auto-approved; write git/gh operations prompt at runtime). Invoke for actions like "setup project", "init claude config", "refresh project setup", "bootstrap claude for this repo".
+description: Bootstrap or refresh Claude Code configuration for the current git repo. Initializes CLAUDE.md if missing, updates it if stale, creates/updates .claude/settings.local.json with toolchain-appropriate allowed commands (file writes and read-only git/gh auto-approved; write git/gh operations prompt at runtime). Invoke for actions like "setup project", "init claude config", "refresh project setup", "bootstrap claude for this repo".
 user-invocable: true
 tools: Read, Glob, Grep, Bash, Write, Edit
 ---
 
 # Skill: Project Setup
 
-Bootstrap Claude Code for the current git repo in one pass: generate or patch `CLAUDE.md`, then write/merge `.claude/settings.json` with a toolchain-aware permission allowlist. Only the project-local `.claude/settings.json` is written — global user settings are never touched.
+Bootstrap Claude Code for the current git repo in one pass: generate or patch `CLAUDE.md`, then write/merge `.claude/settings.local.json` with a toolchain-aware permission allowlist. Only the project-local `.claude/settings.local.json` is written — global user settings are never touched.
 
-**Optional flags** (all default `false`): `force_reinit` · `skip_claude_md` · `skip_settings`
+Two deterministic paths — no flags, no overrides:
+- **New repo** (no `CLAUDE.md` and no `.claude/`): create `CLAUDE.md` and `.claude/settings.local.json` from scratch.
+- **Existing repo** (has `CLAUDE.md` or `.claude/`): update `CLAUDE.md` and enforce the settings merge/delete flow.
 
 ## Phase 1: Prerequisite Checks
 
-Confirm git repo (`git rev-parse --show-toplevel`). Capture repo root. Note if `.claude/` is absent.
+Confirm git repo (`git rev-parse --show-toplevel`). Capture repo root.
+
+Detect repo state:
+- `CLAUDE.md` exists → **existing repo path**
+- `CLAUDE.md` absent, `.claude/` exists → **existing repo path** (CLAUDE.md will be generated as new)
+- Neither present → **new repo path**
+
+Check for `.claude/settings.json` — if present, it will be merged into `.claude/settings.local.json` and deleted in Phase 6.
 
 ## Phase 2: Toolchain Detection
 
@@ -38,7 +47,7 @@ Also check `Makefile`, `justfile`, CI configs (`.github/workflows/`, `azure-pipe
 
 ## Phase 3: CLAUDE.md Assessment
 
-### Missing (or `force_reinit=true`)
+### New repo path
 
 Generate from scratch. Include only sections with discovered content — no placeholders.
 
@@ -54,7 +63,7 @@ Generate from scratch. Include only sections with discovered content — no plac
 
 All commands must be copy-paste ready and verified against actual files. No generic advice.
 
-### Existing — Staleness Check
+### Existing repo path — Staleness Check
 
 | Check | Method |
 |---|---|
@@ -64,13 +73,13 @@ All commands must be copy-paste ready and verified against actual files. No gene
 | Conventions current | Check `Directory.Packages.props`, `.editorconfig` |
 | New structure since last update | `git log --oneline --diff-filter=A --name-only -20` |
 
-Rating: **Fresh** (no action) · **Minor drift** (patch 1–2 items) · **Stale** (section rewrites) · **Obsolete** (stop, recommend `force_reinit=true`).
+Rating: **Fresh** (no action) · **Minor drift** (patch 1–2 items) · **Stale** (section rewrites) · **Obsolete** (full regeneration required — treat as new repo path).
 
 Output the staleness report before proposing any edits.
 
 ## Phase 4: Settings Construction
 
-Target file: `.claude/settings.json` (project-local only).
+Target file: `.claude/settings.local.json` (project-local only).
 
 ### Always allowed
 
@@ -116,25 +125,32 @@ Add per detected toolchain. Both `Bash(...)` and `PowerShell(...)` variants for 
 
 ### Merge strategy
 
-If `.claude/settings.json` exists: union existing `allow` with new entries; preserve all other keys; never remove existing `allow` or `deny` entries. If absent: create with `permissions` key only.
+If `.claude/settings.local.json` exists: union existing `allow` with new entries; preserve all other keys; never remove existing `allow` or `deny` entries. If absent: create with `permissions` key only.
+
+If `.claude/settings.json` exists in the project: merge its `allow` and `deny` entries into `.claude/settings.local.json` first (deduplicating), then delete `.claude/settings.json`. This step is always enforced and cannot be skipped.
 
 ## Phase 5: Preview and Confirmation
 
 Show before writing:
-- Repo root, toolchains detected
+- Repo root, path (new / existing), toolchains detected
 - CLAUDE.md: status + action + diff/full content if changing
-- `.claude/settings.json`: action + final JSON
+- `.claude/settings.local.json`: action + final JSON
+- `.claude/settings.json`: merge-and-delete if present
 
-Prompt: **"Proceed? (yes / Approve / skip-settings / skip-claude-md)"** — any other response aborts.
+Prompt: **"Proceed? (yes / Approve)"** — any other response aborts.
 
 ## Phase 6: Apply
 
-Create `.claude/` if absent. Write approved files. Report paths written. Do not commit or stage.
+1. Create `.claude/` if absent.
+2. If `.claude/settings.json` present: merge into `.claude/settings.local.json`, then delete `.claude/settings.json`.
+3. Write `.claude/settings.local.json`.
+4. Write (new/obsolete path) or Edit (Minor drift/Stale path) `CLAUDE.md` per Phase 3 rating. Skip if Fresh.
+5. Report paths written and deleted. Do not commit or stage.
 
 ## Guardrails
 
 - Never write global `~/.claude/settings.json`.
 - Never add write git/gh subcommands to the allowlist (see list above).
 - Ambiguous toolchain (e.g., `pyproject.toml`) → emit entries for both candidates.
-- Obsolete CLAUDE.md → stop, recommend `force_reinit=true`; do not attempt partial repair.
+- Obsolete CLAUDE.md → treat as new repo path; regenerate from scratch.
 - CLAUDE.md must never contain generic advice, placeholder text, or TODO markers.
