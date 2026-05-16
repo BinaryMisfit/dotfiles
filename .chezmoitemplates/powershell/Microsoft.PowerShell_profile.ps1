@@ -88,22 +88,11 @@ function netctrl-tmux {
 
 Set-Alias nt netctrl-tmux
 
-# PSReadLine defaults
-Set-PSReadLineOption -BellStyle None
-Set-PSReadLineOption -PredictionSource History
+# PSReadLine intentionally left unconfigured on this machine.
+# Scoop pwsh + PSReadLine 2.4.5 is throwing GetHistoryItems() null refs during startup.
 
-# Fallback history keys only when Atuin is unavailable.
-if (-not (Get-Command atuin -ErrorAction SilentlyContinue)) {
-    Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
-    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+function atuin-search {
+    atuin search @args
 }
 
-# Atuin owns history keybinds when available.
-# Keep this last so it wins over PSReadLine bindings. Tiny keyboard coup.
-if (Get-Command atuin -ErrorAction SilentlyContinue) {
-    try {
-        atuin init powershell | Out-String | Invoke-Expression
-    } catch {
-        Write-Warning "Atuin PowerShell init failed: $($_.Exception.Message)"
-    }
-}
+Set-Alias ah atuin-search
