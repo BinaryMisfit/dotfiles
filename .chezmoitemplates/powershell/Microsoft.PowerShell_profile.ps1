@@ -101,5 +101,9 @@ if (-not (Get-Command atuin -ErrorAction SilentlyContinue)) {
 # Atuin owns history keybinds when available.
 # Keep this last so it wins over PSReadLine bindings. Tiny keyboard coup.
 if (Get-Command atuin -ErrorAction SilentlyContinue) {
-    atuin init powershell | Out-String | Invoke-Expression
+    try {
+        atuin init powershell | Out-String | Invoke-Expression
+    } catch {
+        Write-Warning "Atuin PowerShell init failed: $($_.Exception.Message)"
+    }
 }
