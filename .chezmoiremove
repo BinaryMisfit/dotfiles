@@ -16,29 +16,26 @@
 .claude/rules/skills.instuctions.md
 mise.toml
 
-{{- $isWindows := eq .chezmoi.os "windows" -}}
 {{- $profile := get . "profile" | default "home" -}}
 
-{{ if $isWindows }}
-.local/bin/install-mcp-*.sh
-.local/bin/uninstall-mcp-*.sh
-{{ else }}
-.local/bin/install-mcp-*.ps1
-.local/bin/uninstall-mcp-*.ps1
+# Claude Code profile cleanup
+# Removes home-only files when profile is work.
+# Prevents stale home AI instructions/skills persisting after a profile switch.
+{{ if ne $profile "home" }}
+.claude/
 {{ end }}
 
 # Copilot profile cleanup
 # Removes work-only files when profile is home (or unset).
 # Prevents stale work instructions/skills persisting after a profile switch.
 {{ if ne $profile "work" }}
-.copilot/instructions/external-services.instructions.md
-.copilot/instructions/pull-requests.instructions.md
-.copilot/instructions/branches.instructions.md
-.copilot/instructions/jira.instructions.md
-.copilot/instructions/commits.instructions.md
-.copilot/skills/feature-workflow
-.copilot/skills/defect-workflow
-.copilot/skills/jira-transition-status
-.copilot/skills/jira-post-fix-update-comment
-.copilot/skills/jira-post-qa-test-plan
+.copilot/
 {{ end }}
+
+# Remove Codex entirely (replaced by profile-specific Claude/Copilot)
+.codex/
+
+# Remove all MCP server configurations and binaries
+.local/share/mcp/
+AppData/Local/MCP/
+.config/mcp/

@@ -25,9 +25,6 @@ setup-github-ssh.ps1
 setup-github-ssh.sh
 
 # Runtime-only state
-# MCP runtime state must never be managed by chezmoi.
-.local/share/mcp/**
-AppData/Local/MCP/**
 # Claude Code accumulates local permissions here; never manage it.
 .claude/settings.local.json
 
@@ -89,37 +86,17 @@ Documents/
 OneDrive - Powerfleet/
 {{ end }}
 
-# Copilot profile gating
-# work: all instructions and skills deployed
-# home (default): entire .copilot directory ignored
+# AI tool profile gating
+# Claude Code: home profile only (default)
+{{ if ne $profile "home" }}
+.claude/**
+{{ end }}
+
+# Copilot: work profile only
 {{ if ne $profile "work" }}
 .copilot/**
 {{ end }}
 
-# Codex profile gating
-# home (default): AGENTS.md and skills deployed
-# work: codex not relevant
-{{ if eq $profile "work" }}
-.codex/**
-{{ end }}
-
-# Claude profile gating
-# work: all rules and skills deployed
-# home (default): only k1ra and continuation-context-pack deployed
-{{ if ne $profile "work" }}
-.claude/rules/branches.instructions.md
-.claude/rules/commits.instructions.md
-.claude/rules/external-services.instructions.md
-.claude/rules/jira.instructions.md
-.claude/rules/pull-requests.instructions.md
-.claude/skills/branch-start-work/
-.claude/skills/commit-ready-check/
-.claude/skills/defect-workflow/
-.claude/skills/feature-workflow/
-.claude/skills/jira-post-fix-update-comment/
-.claude/skills/jira-post-qa-test-plan/
-.claude/skills/jira-transition-status/
-.claude/skills/jira-unassign-ticket/
-.claude/skills/post-pr-cleanup/
-.claude/skills/pr-prep-and-submit/
-{{ end }}
+# Codex: removed entirely
+dot_codex/
+.codex/

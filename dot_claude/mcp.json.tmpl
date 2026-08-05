@@ -1,12 +1,3 @@
-{{- $profile := get . "profile" | default "home" -}}
 {
-  "mcpServers": {
-    {{- if eq $profile "work" }}
-    "amaza-core": {
-      "type": "stdio",
-      "command": "amaza-mcp",
-      "args": []
-    }
-    {{- end }}
-  }
+  "mcpServers": {}
 }
