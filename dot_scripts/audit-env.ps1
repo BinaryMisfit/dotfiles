@@ -5,7 +5,6 @@ $tools = @(
     "git",
     "chezmoi",
     "age",
-    "mise",
     "rg",
     "fd",
     "fzf",
@@ -43,11 +42,4 @@ foreach ($tool in $tools) {
     }
 
     Write-Host ""
-}
-
-Write-Host "==> mise doctor"
-if (Get-Command mise -ErrorAction SilentlyContinue) {
-    mise doctor
-} else {
-    Write-Host "MISSING: mise" -ForegroundColor Red
 }

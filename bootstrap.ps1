@@ -133,24 +133,25 @@ function Ensure-ChezmoiUpdateApplyFalse {
 Section "bootstrap"
 Info "repo: $Repo"
 
-Section "scoop"
-
-if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
-    Info "installing scoop"
-    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-    irm get.scoop.sh | iex
-} else {
-    Info "scoop already installed"
-}
-
 Section "core tools"
 
-$Tools = @("git", "chezmoi", "age", "mise", "openssh", "gpg")
+$WingetPackages = @("Git.Git", "twpayne.chezmoi", "FiloSottile.age", "GnuPG.Gpg4win")
 
-foreach ($Tool in $Tools) {
-    Info "ensuring $Tool"
-    scoop install $Tool
+foreach ($Package in $WingetPackages) {
+    Info "ensuring $Package"
+    winget install --id $Package --exact --silent --accept-package-agreements --accept-source-agreements
 }
+
+if (-not (Get-Command ssh-keygen -ErrorAction SilentlyContinue)) {
+    Info "installing OpenSSH client capability"
+    Add-WindowsCapability -Online -Name "OpenSSH.Client~~~~0.0.1.0" | Out-Null
+} else {
+    Info "OpenSSH client already installed"
+}
+
+# Refresh PATH in this process: winget-installed tools land on the machine/user
+# PATH via registry but this session's environment doesn't see them yet.
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 
 $Chezmoi = Get-Command chezmoi -ErrorAction SilentlyContinue
 $AgeKeygen = Get-Command age-keygen -ErrorAction SilentlyContinue
@@ -290,7 +291,6 @@ Write-Host ""
 Write-Host "Verify:"
 Write-Host "  ssh -T git@github.com"
 Write-Host '  git -C "$HOME\.local\share\chezmoi" remote -v'
-Write-Host "  mise doctor"
 Write-Host '  Select-String -Path "$HOME\.config\chezmoi\chezmoi.yaml" -Pattern "^update:","^\s+apply:"'
 Write-Host ""
 

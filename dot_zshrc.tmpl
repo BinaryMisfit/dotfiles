@@ -29,17 +29,16 @@ fi
 # -----------------------------------------------------------------------------
 # PATH
 # Priority model:
-#   1. mise shims after activation
-#   2. user-local tools
-#   3. OS package manager tools
-#   4. system tools
+#   1. user-local tools
+#   2. OS package manager tools
+#   3. system tools
 # -----------------------------------------------------------------------------
 path_prepend "$HOME/.local/bin"
 path_prepend "$HOME/bin"
 
 {{- if eq .chezmoi.os "darwin" }}
 # macOS Homebrew paths. Apple Silicon uses /opt/homebrew, Intel uses /usr/local.
-# Keep this macOS-only; Linux gets apt + mise, not Homebrew cosplay.
+# Keep this macOS-only; Linux gets apt, not Homebrew cosplay.
 if [[ -d /opt/homebrew/bin ]]; then
   path_prepend /opt/homebrew/sbin
   path_prepend /opt/homebrew/bin
@@ -51,14 +50,10 @@ fi
 
 {{- if eq .chezmoi.os "linux" }}
 # Debian / Ubuntu / Raspbian stay intentionally boring here.
-# System packages come from apt; developer tools come from mise.
+# System packages and developer tools both come from apt (plus upstream
+# install scripts for the handful apt doesn't package).
 # No Linuxbrew path unless you deliberately add it later. Future-you is welcome.
 {{- end }}
-
-# mise
-if command -v mise >/dev/null 2>&1; then
-  eval "$(mise activate zsh)"
-fi
 
 # Terminal
 export TERM=${TERM:-xterm-256color}

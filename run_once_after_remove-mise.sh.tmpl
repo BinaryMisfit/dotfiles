@@ -1,0 +1,22 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/usr/bin/env sh
+set -u
+
+# One-time cleanup: remove mise from machines bootstrapped before the
+# native-package-manager migration. Runs after the apt/brew-based
+# tool-install script, so the new installers already own PATH before
+# mise is removed.
+
+echo "==> removing mise binary and data"
+
+rm -rf "$HOME/.local/bin/mise" "$HOME/.local/share/mise" "$HOME/.config/mise"
+
+# bootstrap.sh used to append this line to .bashrc imperatively, outside
+# chezmoi's management, so it has to be stripped out imperatively too.
+if [ -f "$HOME/.bashrc" ] && grep -q 'mise activate' "$HOME/.bashrc"; then
+  echo "==> removing mise activation line from .bashrc"
+  TMP="$HOME/.bashrc.tmp"
+  grep -v 'mise activate' "$HOME/.bashrc" >"$TMP"
+  mv "$TMP" "$HOME/.bashrc"
+fi
+{{ end -}}

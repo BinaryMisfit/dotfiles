@@ -1,0 +1,43 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!powershell
+$ErrorActionPreference = "Continue"
+
+# One-time cleanup: uninstall scoop (and everything it installed) and mise
+# from machines bootstrapped before winget/native-package-manager migration.
+# Runs after the winget-based tool-install script, so the new installers
+# already own PATH/shims before old ones are removed.
+
+$ScoopCommand = Get-Command scoop -ErrorAction SilentlyContinue
+
+if ($ScoopCommand) {
+    Write-Host "==> removing scoop-installed apps"
+
+    $ScoopApps = @("git", "chezmoi", "age", "mise", "openssh", "gpg", "psmux")
+
+    foreach ($App in $ScoopApps) {
+        scoop uninstall $App 2>$null
+    }
+
+    Write-Host "==> removing scoop itself"
+
+    $ScoopHome = if ($env:SCOOP) { $env:SCOOP } else { Join-Path $HOME "scoop" }
+    $ScoopAppData = Join-Path $env:LOCALAPPDATA "scoop"
+
+    Remove-Item -Recurse -Force -Path $ScoopHome -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force -Path $ScoopAppData -ErrorAction SilentlyContinue
+} else {
+    Write-Host "==> scoop not present, skipping"
+}
+
+Write-Host "==> removing mise data (if scoop didn't already take it with it)"
+
+$MiseDataDirs = @(
+    (Join-Path $env:LOCALAPPDATA "mise"),
+    (Join-Path $HOME ".local\share\mise"),
+    (Join-Path $HOME ".config\mise")
+)
+
+foreach ($Dir in $MiseDataDirs) {
+    Remove-Item -Recurse -Force -Path $Dir -ErrorAction SilentlyContinue
+}
+{{ end -}}

@@ -9,10 +9,6 @@ if ((Get-Command oh-my-posh -ErrorAction SilentlyContinue) -and (Test-Path $ompT
     oh-my-posh init pwsh --config $ompTheme | Invoke-Expression
 }
 
-# mise
-if (Get-Command mise -ErrorAction SilentlyContinue) {
-    mise activate pwsh | Out-String | Invoke-Expression
-}
 
 # zoxide
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {

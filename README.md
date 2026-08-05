@@ -32,12 +32,16 @@ This repo is the single source of truth for configuration across macOS, Linux, a
 Bootstrap installs only the minimum local prerequisites needed to unlock the repo:
 
 - `git` / `curl` where needed
-- `mise`
 - `chezmoi`
 - `age`
 - machine-local age and GitHub SSH keys/config
 
-Repeatable development tools are installed by chezmoi after apply through `mise`.
+On Windows, prerequisites come from `winget`. On macOS/Linux, `chezmoi` installs via its
+official install script and `age` via Homebrew or apt.
+
+Repeatable development tools are installed by chezmoi after apply through native package
+managers: `winget` on Windows, Homebrew on macOS, apt (plus a few upstream install scripts
+for tools Debian/Ubuntu doesn't package) on Linux.
 
 ### Unix (macOS / Linux)
 
@@ -64,25 +68,15 @@ chezmoi diff
 chezmoi apply
 ```
 
-When the rendered mise config changes, chezmoi runs the mise onchange script, which executes:
+When the tool-install script's contents change, chezmoi re-runs it: `run_onchange_install-tools.ps1.tmpl` on Windows, `run_onchange_install-tools.sh.tmpl` on macOS/Linux.
 
-```sh
-mise install
-mise reshim
-```
+Machines previously bootstrapped with scoop/mise get them actively uninstalled by a
+one-time cleanup script (`run_once_after_remove-scoop-mise.ps1.tmpl` /
+`run_once_after_remove-mise.sh.tmpl`) the first time they run `chezmoi apply` after
+this change.
 
 ## Local data
 
-Node defaults to the current mise LTS alias:
-
-```toml
-node = "lts"
-```
-
-Override Node per machine in the local chezmoi config when needed:
-
-```yaml
-data:
-  node:
-    version: "20"
-```
+Node and Python versions are whatever the native package manager resolves as
+current/LTS — there is no per-machine version pinning or override (that was a
+mise-specific feature that didn't carry over to winget/brew/apt).

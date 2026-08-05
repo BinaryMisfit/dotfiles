@@ -5,13 +5,6 @@
 {{- $isWorkWin := and $isWindows (eq $user "willier") -}}
 {{- $useWorkPwsh := $isWorkWin -}}
 {{- $useLocalPwsh := and $isWindows (not $isWorkWin) -}}
-{{- $scoopVscodeData := joinPath .chezmoi.homeDir "scoop" "persist" "vscode" "data" -}}
-{{- $scoopVscodeExe := joinPath .chezmoi.homeDir "scoop" "apps" "vscode" "current" "Code.exe" -}}
-{{- $isScoopVscode := and (eq .chezmoi.os "windows") (stat $scoopVscodeData) (stat $scoopVscodeExe) -}}
-{{- $vscodeMode := "system" -}}
-{{- if $isScoopVscode -}}
-{{- $vscodeMode = "scoop" -}}
-{{- end -}}
 {{- $profile := get . "profile" | default "home" -}}
 
 # Bootstrap / root-only files
@@ -37,7 +30,6 @@ Library/
 # Windows-only targets
 {{ if not $isWindows }}
 AppData/
-scoop/
 Documents/
 OneDrive - Powerfleet/
 .scripts/*.ps1
@@ -56,16 +48,6 @@ OneDrive - Powerfleet/
 .vscode/
 install-vscode-extensions.sh
 install-vscode-extensions.ps1
-{{ end }}
-
-# VS Code target selection
-# Prefer Scoop portable VS Code data over AppData/Roaming/Code on Windows.
-{{ if and $isWindows (eq $vscodeMode "scoop") }}
-AppData/Roaming/Code/
-{{ end }}
-
-{{ if and $isWindows (eq $vscodeMode "system") }}
-scoop/
 {{ end }}
 
 # VS Code installer selection

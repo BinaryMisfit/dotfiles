@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# fzf shell integration from mise-managed fzf
+# fzf shell integration
 # -----------------------------------------------------------------------------
 if command -v fzf >/dev/null 2>&1; then
   unset FZF_CTRL_R_COMMAND 2>/dev/null || true

@@ -1,0 +1,159 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/usr/bin/env sh
+set -eu
+
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+export PATH="$LOCAL_BIN:$PATH"
+
+section() { printf '\n==> %s\n' "$1"; }
+info() { printf '  %s\n' "$1"; }
+
+{{ if eq .chezmoi.os "darwin" -}}
+# --------------------------------------------------
+# macOS: Homebrew has near 1:1 formula names, no fallback needed.
+# --------------------------------------------------
+section "homebrew tools"
+
+# age and chezmoi are installed by bootstrap.sh directly; not repeated here.
+BREW_FORMULAS="bat fd fzf gh jq lazygit lua-language-server neovim node python@3.13 ripgrep stylua tree-sitter yq atuin shellcheck shfmt zoxide tmux eza"
+
+# shellcheck disable=SC2086
+brew install $BREW_FORMULAS
+{{ end -}}
+
+{{ if eq .chezmoi.os "linux" -}}
+# --------------------------------------------------
+# Linux: apt where the package is current/available; upstream install
+# methods (official apt repos or install scripts) for everything else.
+# Debian/Ubuntu repos lag or omit several of these entirely.
+# --------------------------------------------------
+section "apt: base packages"
+
+# age is installed by bootstrap.sh directly; not repeated here.
+sudo apt-get update -y
+sudo apt-get install -y \
+  bat fd-find fzf jq neovim python3 python3-pip \
+  ripgrep shellcheck tmux ca-certificates curl gnupg
+
+# Debian/Ubuntu ship bat/fd under different binary names; symlink to the
+# names every other tool/script in this repo expects.
+if [ ! -x "$LOCAL_BIN/bat" ] && command -v batcat >/dev/null 2>&1; then
+  ln -sf "$(command -v batcat)" "$LOCAL_BIN/bat"
+fi
+if [ ! -x "$LOCAL_BIN/fd" ] && command -v fdfind >/dev/null 2>&1; then
+  ln -sf "$(command -v fdfind)" "$LOCAL_BIN/fd"
+fi
+
+section "node.js (NodeSource LTS)"
+if ! command -v node >/dev/null 2>&1; then
+  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+fi
+
+section "github cli"
+if ! command -v gh >/dev/null 2>&1; then
+  sudo mkdir -p -m 755 /etc/apt/keyrings
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
+  sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+  sudo apt-get update -y
+  sudo apt-get install -y gh
+fi
+
+section "eza"
+if ! command -v eza >/dev/null 2>&1; then
+  sudo mkdir -p -m 755 /etc/apt/keyrings
+  wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null
+  sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
+  sudo apt-get update -y
+  sudo apt-get install -y eza
+fi
+
+section "atuin"
+if ! command -v atuin >/dev/null 2>&1; then
+  curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+fi
+
+section "zoxide"
+if ! command -v zoxide >/dev/null 2>&1; then
+  curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+fi
+
+section "yq"
+if ! command -v yq >/dev/null 2>&1; then
+  ARCH="$(dpkg --print-architecture)"
+  curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${ARCH}" -o "$LOCAL_BIN/yq"
+  chmod +x "$LOCAL_BIN/yq"
+fi
+
+# --------------------------------------------------
+# Tools only published as GitHub release binaries: fetch the latest
+# release asset via the GitHub API (needs jq, installed above) and
+# extract the binary into $LOCAL_BIN.
+# --------------------------------------------------
+install_from_github_release() {
+  REPO="$1"
+  ASSET_PATTERN="$2"
+  BINARY_NAME="$3"
+
+  if command -v "$BINARY_NAME" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  info "installing $BINARY_NAME from $REPO"
+  ASSET_URL="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" |
+    jq -r --arg pattern "$ASSET_PATTERN" '.assets[] | select(.name | test($pattern)) | .browser_download_url' |
+    head -n 1)"
+
+  [ -n "$ASSET_URL" ] || { info "no matching release asset for $BINARY_NAME, skipping"; return 0; }
+
+  TMP_DIR="$(mktemp -d)"
+  ASSET_FILE="$TMP_DIR/asset"
+  curl -fsSL "$ASSET_URL" -o "$ASSET_FILE"
+
+  case "$ASSET_URL" in
+    *.tar.gz | *.tgz) tar -xzf "$ASSET_FILE" -C "$TMP_DIR" ;;
+    *.zip) unzip -q "$ASSET_FILE" -d "$TMP_DIR" ;;
+    *) cp "$ASSET_FILE" "$TMP_DIR/$BINARY_NAME" ;;
+  esac
+
+  FOUND_BIN="$(find "$TMP_DIR" -type f -name "$BINARY_NAME" | head -n 1)"
+  [ -n "$FOUND_BIN" ] || FOUND_BIN="$ASSET_FILE"
+
+  install -m 755 "$FOUND_BIN" "$LOCAL_BIN/$BINARY_NAME"
+  rm -rf "$TMP_DIR"
+}
+
+section "github-release tools"
+install_from_github_release "jesseduffield/lazygit" "Linux_x86_64\\.tar\\.gz$" "lazygit"
+install_from_github_release "JohnnyMorganz/StyLua" "linux-x86_64\\.zip$" "stylua"
+install_from_github_release "LuaLS/lua-language-server" "linux-x64\\.tar\\.gz$" "lua-language-server"
+install_from_github_release "mvdan/sh" "linux_amd64$" "shfmt"
+
+section "tree-sitter-cli (via npm)"
+if command -v npm >/dev/null 2>&1 && ! command -v tree-sitter >/dev/null 2>&1; then
+  npm install -g tree-sitter-cli
+fi
+{{ end -}}
+
+# --------------------------------------------------
+# AI / language tooling (npm globals, all platforms)
+# --------------------------------------------------
+section "npm global packages"
+
+if ! command -v npm >/dev/null 2>&1; then
+  echo "install-tools: npm not found after node install" >&2
+  exit 1
+fi
+
+npm install -g @anthropic-ai/claude-code vscode-langservers-extracted yaml-language-server
+
+{{ if eq (get . "profile" | default "home") "home" -}}
+npm install -g @openai/codex
+{{ end -}}
+{{ if eq (get . "profile" | default "home") "work" -}}
+npm install -g @github/copilot
+{{ end -}}
+{{ end -}}

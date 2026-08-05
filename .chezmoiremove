@@ -15,6 +15,10 @@
 .claude/rules/commits.instuctions.md
 .claude/rules/skills.instuctions.md
 mise.toml
+.config/mise/
+
+# scoop-portable VS Code data (replaced by system AppData/Roaming/Code target)
+scoop/
 
 {{- $profile := get . "profile" | default "home" -}}
 

@@ -24,10 +24,7 @@ chezmoi cd                # Open shell in source directory
 
 For encrypted files, age is required. Key lives at `~/.config/age/key.txt`.
 
-After changing `private_dot_config/mise/config.toml.tmpl`, chezmoi triggers the mise onchange script automatically on next apply:
-```sh
-mise install && mise reshim
-```
+After changing the tool list in `run_onchange_install-tools.ps1.tmpl` / `run_onchange_install-tools.sh.tmpl`, chezmoi re-runs the changed script automatically on next apply (winget / Homebrew / apt, depending on OS).
 
 ## Architecture
 
@@ -48,7 +45,6 @@ Template variables come from the local `~/.config/chezmoi/chezmoi.yaml` (not in 
 | `.chezmoi.username` | Current user |
 | `.profile` | `work` or `home` — gates VS Code extensions, copilot instructions and skills |
 | `.vscode.layout` | `large` or `small` |
-| `.node.version` | Defaults to `"lts"` |
 | `.git.name` / `.git.email` | Git identity |
 
 ### Cross-Platform Gating
@@ -92,7 +88,7 @@ Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`
 | File | Target | Notes |
 |---|---|---|
 | `dot_gitconfig.tmpl` | `~/.gitconfig` | Credential helper is OS-specific |
-| `dot_zshrc.tmpl` | `~/.zshrc` | Znap plugin manager, mise, fzf, atuin, zoxide |
+| `dot_zshrc.tmpl` | `~/.zshrc` | Znap plugin manager, fzf, atuin, zoxide |
 | `dot_zshenv` | `~/.zshenv` | Minimal env — sourced even for non-interactive shells |
 | `dot_tmux.conf.tmpl` | `~/.tmux.conf` | Prefix is `Ctrl+\`, vi mode |
 | `dot_p10k.zsh` | `~/.p10k.zsh` | Powerlevel10k theme config |
@@ -101,6 +97,7 @@ Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`
 | `dot_claude/CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | Claude Code global instructions (profile-gated) |
 | `dot_claude/settings.json.tmpl` | `~/.claude/settings.json` | Claude Code permissions |
 | `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config (work profile only) |
-| `private_dot_config/mise/config.toml.tmpl` | `~/.config/mise/config.toml` | All tool versions |
+| `run_onchange_install-tools.ps1.tmpl` | n/a (script) | Dev tool list via winget (Windows) |
+| `run_onchange_install-tools.sh.tmpl` | n/a (script) | Dev tool list via Homebrew/apt (macOS/Linux) |
 | `.chezmoitemplates/vscode/settings.json.tmpl` | VS Code settings | Rendered per profile |
 | `.chezmoitemplates/vscode/extensions.txt.tmpl` | VS Code extension list | Profile-gated |

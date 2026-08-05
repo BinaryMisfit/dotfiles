@@ -4,7 +4,6 @@ set -eu
 REPO="${CHEZMOI_REPO:-BinaryMisfit/dotfiles}"
 
 LOCAL_BIN="$HOME/.local/bin"
-MISE_SHIMS="$HOME/.local/share/mise/shims"
 
 CHEZMOI_DIR="$HOME/.config/chezmoi"
 CHEZMOI_CONFIG="$CHEZMOI_DIR/chezmoi.yaml"
@@ -18,7 +17,7 @@ SSH_REMOTE="git@github.com:${REPO}.git"
 SSH_DIR="$HOME/.ssh"
 SSH_KEY="$SSH_DIR/id_ed25519_github"
 
-export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
+export PATH="$LOCAL_BIN:$PATH"
 
 section() { printf '\n==> %s\n' "$1"; }
 info() { printf '  %s\n' "$1"; }
@@ -96,48 +95,41 @@ if command -v apt-get >/dev/null 2>&1; then
 fi
 
 # --------------------------------------------------
-# mise
-# --------------------------------------------------
-section "mise"
-
-if [ ! -x "$LOCAL_BIN/mise" ]; then
-  info "installing mise"
-  curl -fsLS https://mise.run | sh
-else
-  info "mise already installed"
-fi
-
-MISE="$LOCAL_BIN/mise"
-[ -x "$MISE" ] || die "mise not found after install"
-
-info "using: $MISE"
-
-if [ -f "$HOME/.bashrc" ] && ! grep -q 'mise activate' "$HOME/.bashrc"; then
-  info "persisting mise activation"
-  echo 'eval "$($HOME/.local/bin/mise activate sh)"' >>"$HOME/.bashrc"
-fi
-
-export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
-
-# --------------------------------------------------
-# core tools
+# core tools (chezmoi, age)
 # --------------------------------------------------
 section "core tools"
 
-"$MISE" use -g age@latest
-"$MISE" use -g chezmoi@latest
+mkdir -p "$LOCAL_BIN"
 
-"$MISE" install age@latest chezmoi@latest
-"$MISE" reshim || true
+if ! command -v chezmoi >/dev/null 2>&1 && [ ! -x "$LOCAL_BIN/chezmoi" ]; then
+  info "installing chezmoi"
+  sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$LOCAL_BIN"
+else
+  info "chezmoi already installed"
+fi
 
-export PATH="$MISE_SHIMS:$LOCAL_BIN:$PATH"
+if ! command -v age-keygen >/dev/null 2>&1; then
+  info "installing age"
+  if command -v brew >/dev/null 2>&1; then
+    brew install age
+  elif command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get install -y age
+  else
+    die "no supported package manager found for age (expected brew or apt-get)"
+  fi
+else
+  info "age already installed"
+fi
 
-CHEZMOI="$MISE_SHIMS/chezmoi"
-AGE_KEYGEN="$MISE_SHIMS/age-keygen"
+export PATH="$LOCAL_BIN:$PATH"
+
+CHEZMOI="$(command -v chezmoi || true)"
+[ -n "$CHEZMOI" ] || CHEZMOI="$LOCAL_BIN/chezmoi"
+AGE_KEYGEN="$(command -v age-keygen || true)"
 SSH_KEYGEN="$(command -v ssh-keygen || true)"
 
 [ -x "$CHEZMOI" ] || die "chezmoi not found after install"
-[ -x "$AGE_KEYGEN" ] || die "age-keygen not found after install"
+[ -n "$AGE_KEYGEN" ] || die "age-keygen not found after install"
 [ -n "$SSH_KEYGEN" ] || die "ssh-keygen not found"
 
 info "chezmoi: $CHEZMOI"
@@ -262,7 +254,6 @@ printf 'When done run:\n  %s\n\n' "$CHEZ"
 printf 'Verify:\n'
 printf '  ssh -T git@github.com\n'
 printf '  git -C "$HOME/.local/share/chezmoi" remote -v\n'
-printf '  mise doctor\n'
 printf '  chezmoi data | grep -A5 update\n\n'
 
 printf 'bootstrap: complete\n'

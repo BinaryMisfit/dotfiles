@@ -5,7 +5,6 @@ tools=(
   git
   chezmoi
   age
-  mise
   rg
   fd
   fzf
@@ -40,10 +39,3 @@ for tool in "${tools[@]}"; do
 
   echo
 done
-
-echo "==> mise doctor"
-if command -v mise >/dev/null 2>&1; then
-  mise doctor
-else
-  echo "MISSING: mise"
-fi

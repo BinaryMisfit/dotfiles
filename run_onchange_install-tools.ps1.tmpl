@@ -1,0 +1,55 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!powershell
+$ErrorActionPreference = "Stop"
+
+$Packages = @(
+    "sharkdp.bat",
+    "sharkdp.fd",
+    "junegunn.fzf",
+    "GitHub.cli",
+    "jqlang.jq",
+    "JesseDuffield.lazygit",
+    "LuaLS.lua-language-server",
+    "Neovim.Neovim",
+    "OpenJS.NodeJS.LTS",
+    "Python.Python.3.14",
+    "BurntSushi.ripgrep.MSVC",
+    "JohnnyMorganz.StyLua",
+    "tree-sitter.tree-sitter-cli",
+    "MikeFarah.yq",
+    "Atuinsh.Atuin",
+    "koalaman.shellcheck",
+    "mvdan.shfmt",
+    "ajeetdsouza.zoxide"
+)
+
+foreach ($Package in $Packages) {
+    Write-Host "==> ensuring $Package"
+    winget install --id $Package --exact --silent --accept-package-agreements --accept-source-agreements
+}
+
+# Refresh PATH in this process so npm (just installed via Node.js) is visible.
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Error "install-tools: npm not found after Node.js install"
+}
+
+$NpmPackages = @(
+    "@anthropic-ai/claude-code",
+    "vscode-langservers-extracted",
+    "yaml-language-server"
+)
+
+{{ if eq (get . "profile" | default "home") "home" -}}
+$NpmPackages += "@openai/codex"
+{{ end -}}
+{{ if eq (get . "profile" | default "home") "work" -}}
+$NpmPackages += "@github/copilot"
+{{ end -}}
+
+foreach ($NpmPackage in $NpmPackages) {
+    Write-Host "==> npm install -g $NpmPackage"
+    npm install -g $NpmPackage
+}
+{{ end -}}
