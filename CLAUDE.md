@@ -30,7 +30,7 @@ After changing the tool list in `run_onchange_install-tools.ps1.tmpl` / `run_onc
 
 This is a chezmoi-managed dotfiles repo. Chezmoi file prefixes:
 - `dot_*` → `~/.` (plain dotfiles)
-- `private_dot_*` → encrypted with age
+- `private_dot_*` → restrictive file permissions (0600/0700) — **not** encryption; see [Encrypted Files](#encrypted-files)
 - `run_once_*` → execute once on first apply
 - `run_onchange_*` → execute when file content changes
 - `.chezmoitemplates/` → reusable partials included by `.tmpl` files
@@ -57,7 +57,10 @@ Extension list lives in `.chezmoitemplates/vscode/extensions.txt.tmpl` and is pr
 
 ### Encrypted Files
 
-Files under `private_dot_*` are age-encrypted. To add a new encrypted file:
+**No file in this repo is currently age-encrypted.** `private_dot_*` (e.g. `private_dot_ssh/`,
+`private_dot_config/`) only marks restrictive permissions in chezmoi — it does not imply
+encryption. An actually-encrypted source file gets an `encrypted_` prefix component instead,
+and none exist here yet. To add a new encrypted file:
 ```sh
 chezmoi add --encrypt <path>
 ```
