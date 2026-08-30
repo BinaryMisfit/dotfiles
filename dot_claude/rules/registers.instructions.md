@@ -30,6 +30,15 @@ of `Open` for not-yet-triaged items — pick one status set per repo, don't mix)
 to a full section closing with a concrete **Next action** — never leave an entry vague
 enough that a future session can't act on it without re-asking what it means.
 
+**The entry itself is one line — the action, nothing else.** Any real detail (context,
+investigation notes, discussion, alternatives) does not live in the todo register at all;
+it lives wherever it actually belongs by type, and the todo line links to it:
+- A call that needs to be made or was already made → an ADR (`docs/adr/`)
+- A concept that needs to mature before it's actionable → the Idea Register
+- Anything else with real substance → whatever existing document or register already
+  covers that area, or a new doc under `docs/` if none does
+The todo register stays a list of pointers to act on, never the place the thinking happens.
+
 ### Idea Register
 
 `docs/idea-register.md` — single running file, ID `IDEA-N`.
@@ -85,11 +94,20 @@ already explains on its own.
 
 ### Other register types
 
-A repo may have domain-specific registers beyond these three — `gameplay-register.md`,
-`engine-issues-register.md`, `release-register.md`, `document-register.md` (an index of
-other docs for later retrieval), etc. These follow the shared rules above (explicit
-status, stable IDs, tracking-index entry) but their fields are repo-specific — don't force
-todo/idea/ADR field names onto a register tracking something else entirely.
+**One-file-per-entry is an ADR-only pattern.** Every other register — todos, ideas, and
+any new one created below — is a single running file. Don't generalize the ADR shape to
+new register types just because it's the newest one written down.
+
+A repo may need a domain-specific register beyond todo/idea/ADR —
+`gameplay-register.md`, `engine-issues-register.md`, `release-register.md`,
+`document-register.md` (an index of other docs for later retrieval), etc. **Don't create
+one speculatively.** The trigger is real: you have something concrete to write down right
+now and none of the existing registers or documents is the right place for it. At that
+point, motivate the new register on the spot — one line on why todo/idea/ADR/an existing
+doc doesn't fit — then create it, add it to `docs/tracking-index.md`, and write the entry.
+New register types follow the shared rules above (explicit status, stable IDs,
+tracking-index entry) but their fields are repo-specific — don't force todo/idea/ADR field
+names onto a register tracking something else entirely.
 
 ### Session-start integration
 
