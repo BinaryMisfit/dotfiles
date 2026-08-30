@@ -20,7 +20,7 @@ mise.toml
 # scoop-portable VS Code data (replaced by system AppData/Roaming/Code target)
 scoop/
 
-{{- $profile := get . "profile" | default "home" -}}
+{{- $profile := get . "profile" | default "home" }}
 
 # Claude Code profile cleanup (ADR 0007/0008): rules/skills/output-styles
 # split into common/work/home instead of one blanket .claude/ switch, since
