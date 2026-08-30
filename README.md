@@ -80,3 +80,27 @@ this change.
 Node and Python versions are whatever the native package manager resolves as
 current/LTS — there is no per-machine version pinning or override (that was a
 mise-specific feature that didn't carry over to winget/brew/apt).
+
+---
+
+## AI tooling
+
+Profile-gated (`.profile` = `work` or `home`, set in local `chezmoi.yaml`):
+
+- **Claude Code** (`dot_claude/`) — deploys on `home` profile. Global instructions,
+  permissions, output styles, and skills. `dot_claude/rules/registers.instructions.md`
+  defines the todo/idea/decision-record convention used by every repo that adopts it.
+- **GitHub Copilot** (`dot_copilot/`) — deploys on `work` profile. Instructions and
+  skills mirroring the Claude Code side, ported to Copilot's format.
+- **Codex** (`dot_codex/`) — checked in, but both `.chezmoiignore` and `.chezmoiremove`
+  currently exclude it on every profile. Not actively deployed anywhere right now.
+
+## Decision records & registers
+
+Non-obvious decisions in this repo live under [`docs/adr/`](docs/adr/) — one file per
+decision, indexed in [`docs/adr/README.md`](docs/adr/README.md). A full catalog of what
+this repo contains and what each part does lives in
+[`docs/inventory-register.md`](docs/inventory-register.md); active registers are listed
+in [`docs/tracking-index.md`](docs/tracking-index.md).
+
+Start-of-session routine for this repo: [`docs/session-start-playbook.md`](docs/session-start-playbook.md).
