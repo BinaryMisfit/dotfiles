@@ -1,6 +1,8 @@
 {{- $profile := get . "profile" | default "home" -}}
 # Global Instructions
 
+@rules/registers.instructions.md
+
 {{- if eq $profile "work" }}
 @rules/external-services.instructions.md
 @rules/branches.instructions.md

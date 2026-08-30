@@ -86,6 +86,12 @@ Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`
 - `rules/` — instruction files `@`-included from `CLAUDE.md.tmpl`; work-only files gated in `.chezmoiignore`
 - `skills/` — slash-command skill definitions; work-only skills gated in `.chezmoiignore`
 
+## Decision Records
+
+Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decision, indexed in
+`docs/adr/README.md`. This follows the global ADR convention (see
+`dot_claude/rules/registers.instructions.md`, deployed to `~/.claude/rules/`).
+
 ## Key Files
 
 | File | Target | Notes |
