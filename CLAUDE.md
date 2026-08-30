@@ -9,6 +9,10 @@ These override any global Claude Code or git configuration:
 - **Commit author email:** always `diagoza@me.com` (local git config is set; do not change it)
 - **Branching:** all changes committed directly to `main` — no feature branches, no PRs
 - **Push:** push directly to `main`
+- **Removal policy:** any change that removes a tool, config file, target path, or setting
+  must ship with a scripted cleanup (`run_once_after_remove-*` or equivalent) in the same
+  change — never leave cleanup as a manual, ad hoc step. Applies to `bootstrap.*` changes
+  too. See [ADR 0004](docs/adr/0004-scripted-cleanup-required-for-every-removal.md).
 
 ## Common Commands
 

@@ -9,3 +9,4 @@ enum, supersession rule).
 | [0001](0001-bootstrap-session-start-playbook.md) | Bootstrap session-start playbook for this repo | Decided |
 | [0002](0002-private-prefix-is-not-encryption.md) | `private_` prefix means restrictive permissions, not encryption | Decided |
 | [0003](0003-drop-private-prefix-from-npmrc.md) | Drop `private_` prefix from npmrc | Decided |
+| [0004](0004-scripted-cleanup-required-for-every-removal.md) | Every removal ships with a scripted cleanup; a full uninstall path is required | Decided |

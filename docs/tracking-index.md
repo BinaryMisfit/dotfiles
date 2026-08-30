@@ -8,3 +8,4 @@ included) never hardcodes a file list.
 |---|---|---|
 | Decisions | [`docs/adr/README.md`](adr/README.md) | One file per entry (`docs/adr/NNNN-*.md`) |
 | Inventory | [`docs/inventory-register.md`](inventory-register.md) | Single running file |
+| Todos | [`docs/todo-register.md`](todo-register.md) | Single running file |
