@@ -11,13 +11,18 @@ Listed in [`docs/tracking-index.md`](tracking-index.md).
 
 | Path | Deploys to / runs where | Purpose |
 |---|---|---|
-| `bootstrap.sh` / `bootstrap.ps1` | run manually, once, pre-chezmoi | Installs `git`/`curl`, `chezmoi`, `age`, and local age/SSH prerequisites |
+| `.chezmoi.yaml.tmpl` | processed once by `chezmoi init` | Prompts once for `profile` (default home) and git `name`/`email` (defaulted per profile), generates the age encryption block from `CHEZMOI_AGE_RECIPIENT` — see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md) |
+| `bootstrap.sh` / `bootstrap.ps1` | run manually, once, pre-chezmoi | Installs `git`/`curl`, `chezmoi`, `age`, local age/SSH prerequisites, then hands off to `chezmoi init` for profile/git prompts |
 | `run_once_setup-github-ssh.{ps1,sh}.tmpl` | `~/.ssh/id_ed25519_github` | Generates a GitHub-specific ed25519 key if absent; POSIX side also does `ssh-add`/agent setup |
 | `run_once_create_nvim_junction.ps1.tmpl` | Windows only | Junctions `%LOCALAPPDATA%\nvim` → `~/.config/nvim` (Neovim looks for config in the Windows-native path) |
 | `run_once_install-iterm2-shell-integration.sh.tmpl` | macOS/Linux | Downloads iTerm2 shell integration if not already present |
 | `run_once_after_remove-mise.sh.tmpl` | POSIX | One-time cleanup: removes an old `mise` install and its `.bashrc` activation line |
 | `run_once_after_remove-scoop-mise.ps1.tmpl` | Windows | One-time cleanup: uninstalls scoop and everything scoop had installed (git, chezmoi, age, mise, openssh, gpg, psmux), then removes leftover mise data |
-| `run_once_after_restructure-claude-work-content.{sh,ps1}.tmpl` | both | One-time cleanup: removes old flat-path Claude rule files, and (non-work profiles) the now-gated work-only skills/output-style, from the [ADR 0007](adr/0007-work-home-split-for-claude-code.md) restructure |
+| `run_once_after_remove-codex.sh.tmpl` | all platforms (runs via chezmoi's bash, even on Windows) | One-time cleanup: `npm uninstall -g @openai/codex` on machines that already have it — the install line was dropped, see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md) |
+
+Claude Code's work/home cleanup (old flat rule paths, gated skills/output-style) lives in
+`.chezmoiremove` now, not a custom script — see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md)
+for why that replaced the one-time script ADR 0007 originally shipped with.
 
 ## Tool & extension installation (`run_onchange_*`)
 
@@ -116,15 +121,13 @@ rule files and (on non-work profiles) the now-gated work skills/output-style, pe
 
 Deployed on work profile only. Never referenced in the root `CLAUDE.md` — this whole subsystem existed undocumented until this inventory pass.
 
-## OpenAI Codex (`dot_codex/`) — dead weight, see Flags
+## OpenAI Codex — removed (2026-08-30)
 
-| Path | Purpose |
-|---|---|
-| `AGENTS.md` | K1ra persona definition for Codex |
-| `config.toml.tmpl` | OTEL telemetry / TUI config |
-| `skills/user/private_continuation-context-pack/**` | A "pack my context" skill — generates a compact session-resume artifact, with a Windows clipboard-copy script |
-
-**Both `.chezmoiignore` and `.chezmoiremove` exclude/actively remove `~/.codex/` entirely** — this tree never deploys to any machine, on any profile. Checked in, fully built out, and permanently inert.
+`dot_codex/` was fully inert (excluded by `.chezmoiignore`/`.chezmoiremove` on every
+profile) and its `@openai/codex` npm install line was the one part of it still actually
+running. Both are gone now — see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md).
+`.chezmoiremove`'s `.codex/` entry stays, cleaning up any machine that still has a live
+`~/.codex/` from before.
 
 ## Diagnostics
 
@@ -137,7 +140,7 @@ Deployed on work profile only. Never referenced in the root `CLAUDE.md` — this
 | Path | Purpose |
 |---|---|
 | `.chezmoiignore` | OS/profile gating template — see Flags for stale entries |
-| `.chezmoiremove` | Profile-aware forced removal list (e.g. strips `~/.codex/` entirely, `~/.claude/`/`~/.copilot/` on the non-matching profile) |
+| `.chezmoiremove` | Profile-aware forced removal list — strips `~/.codex/` entirely, `~/.copilot/` on non-work profiles, and the granular common/work/home Claude paths on the non-matching profile (fixed 2026-08-30, see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md)) |
 | `.gitattributes` | Forces LF line endings on shell/config/text file types |
 | `.gitignore` | Standard ignores (node_modules, `__pycache__`, `.env`, venv, dist/build) |
 | `.vscode/settings.json` | This repo's own workspace settings (not a chezmoi target) — `*.tmpl` → go-template syntax highlighting, autofetch |
@@ -155,6 +158,7 @@ Deployed on work profile only. Never referenced in the root `CLAUDE.md` — this
 ## Flags — found during this pass, not yet actioned
 
 1. **`.chezmoiignore`'s "Bootstrap / root-only files" section references `install-core.ps1`, `install-core.sh`, `setup-github-ssh.ps1`, `setup-github-ssh.sh`** — none of these exist on disk, and git history shows no trace of them ever existing under those names. Likely superseded by `run_once_setup-github-ssh.*.tmpl` and left stale. Candidate for cleanup.
-2. **`dot_codex/` is fully checked in but never deploys anywhere** — both gating mechanisms exclude it unconditionally. Either Codex support is meant to come back (keep, note why) or it's dead and should be removed rather than carried as inert weight.
-3. **`dot_claude/mcp.json.tmpl` has no profile branching** — always `{"mcpServers": {}}` — while root `CLAUDE.md` documents a work-profile `amaza-core` server that isn't in the template. Unresolved from the earlier repo scan.
-4. **PowerShell profile-location gating keys off a hardcoded Windows username (`willier`)** to decide work vs. home — functionally fine today, fragile if that account name ever changes.
+2. **`dot_claude/mcp.json.tmpl` has no profile branching** — always `{"mcpServers": {}}` — while root `CLAUDE.md` documents a work-profile `amaza-core` server that isn't in the template. Unresolved from the earlier repo scan.
+3. **PowerShell profile-location gating keys off a hardcoded Windows username (`willier`)** to decide work vs. home — functionally fine today, fragile if that account name ever changes.
+
+Resolved since the last pass: `dot_codex/` dead weight (removed, [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md)); bootstrap's stale `encrypted_private_env.age` re-encrypt instructions (fixed, same ADR); `.chezmoiremove`'s blanket `.claude/` removal on non-home profiles (fixed, same ADR — this one was actively dangerous, not just stale).

@@ -57,10 +57,13 @@ irm https://raw.githubusercontent.com/BinaryMisfit/dotfiles/main/bootstrap.ps1 |
 
 ## New machine flow
 
-1. Run the platform bootstrap command above.
-2. Add the generated age recipient to the encrypted file recipients from an existing trusted machine.
-3. Re-encrypt encrypted files and push the repo update.
-4. On the new machine, run:
+1. Run the platform bootstrap command above. Partway through, `chezmoi init` will prompt
+   once for this machine's **profile** (`work`/`home`, defaults to `home`) and **git
+   name/email** (defaulted per profile) — answered once, persisted in `chezmoi.yaml`,
+   never asked again.
+2. If this repo has encrypted files by then: add the generated age recipient to their
+   recipients list from an existing trusted machine, and re-encrypt/push from there.
+3. On the new machine, run:
 
 ```sh
 chezmoi update

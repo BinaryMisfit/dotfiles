@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -u
+
+# One-time cleanup: Codex config (dot_codex/) has been excluded from
+# deployment via .chezmoiignore/.chezmoiremove for a while, but the
+# @openai/codex npm package kept getting installed on home profile until
+# this change removed that line too - see ADR 0008. Uninstalls it from any
+# machine that already has it, so the removal is actually complete per
+# ADR 0004's scripted-cleanup requirement.
+
+if command -v npm >/dev/null 2>&1 && npm list -g @openai/codex >/dev/null 2>&1; then
+  echo "==> removing globally-installed @openai/codex"
+  npm uninstall -g @openai/codex
+fi

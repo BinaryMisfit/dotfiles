@@ -1,0 +1,29 @@
+{{- /* Processed once by `chezmoi init`, before the source state is read — never
+       re-runs on later apply/diff/status, so the prompt*Once functions below
+       only ever ask a fresh machine, and only once each. bootstrap.{sh,ps1}
+       sets CHEZMOI_AGE_RECIPIENT before calling `chezmoi init` so the age
+       config below can be generated here instead of hand-written by the
+       bootstrap script. See ADR 0008. */ -}}
+{{- $profile := promptChoiceOnce . "profile" "Which profile is this machine?" (list "work" "home") "home" -}}
+{{- $defaultName := "BinaryMisfit" -}}
+{{- $defaultEmail := "diagoza@me.com" -}}
+{{- if eq $profile "work" -}}
+{{-   $defaultName = "Willie Roberts" -}}
+{{-   $defaultEmail = "willie.roberts@mixtelematics.com" -}}
+{{- end -}}
+encryption: age
+
+age:
+  identities:
+    - {{ joinPath .chezmoi.homeDir ".config" "age" "key.txt" }}
+  recipients:
+    - {{ env "CHEZMOI_AGE_RECIPIENT" }}
+
+update:
+  apply: false
+
+data:
+  profile: {{ $profile | quote }}
+  git:
+    name: {{ promptStringOnce . "name" "Git name" $defaultName | quote }}
+    email: {{ promptStringOnce . "email" "Git email" $defaultEmail | quote }}

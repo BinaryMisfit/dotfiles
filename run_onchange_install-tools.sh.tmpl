@@ -150,9 +150,6 @@ fi
 
 npm install -g @anthropic-ai/claude-code vscode-langservers-extracted yaml-language-server
 
-{{ if eq (get . "profile" | default "home") "home" -}}
-npm install -g @openai/codex
-{{ end -}}
 {{ if eq (get . "profile" | default "home") "work" -}}
 npm install -g @github/copilot
 {{ end -}}

@@ -42,9 +42,6 @@ $NpmPackages = @(
     "yaml-language-server"
 )
 
-{{ if eq (get . "profile" | default "home") "home" -}}
-$NpmPackages += "@openai/codex"
-{{ end -}}
 {{ if eq (get . "profile" | default "home") "work" -}}
 $NpmPackages += "@github/copilot"
 {{ end -}}

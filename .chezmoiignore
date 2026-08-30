@@ -100,6 +100,5 @@ OneDrive - Powerfleet/
 .copilot/**
 {{ end }}
 
-# Codex: removed entirely
-dot_codex/
+# Codex: removed entirely (dot_codex/ source deleted 2026-08-30, ADR 0008)
 .codex/

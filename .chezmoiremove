@@ -22,12 +22,38 @@ scoop/
 
 {{- $profile := get . "profile" | default "home" -}}
 
-# Claude Code profile cleanup
-# Removes home-only files when profile is work.
-# Prevents stale home AI instructions/skills persisting after a profile switch.
-{{ if ne $profile "home" }}
-.claude/
+# Claude Code profile cleanup (ADR 0007/0008): rules/skills/output-styles
+# split into common/work/home instead of one blanket .claude/ switch, since
+# Claude Code now deploys on both profiles. Re-enforced every apply, so a
+# profile switch (or an old flat-path file left over from before the split)
+# cleans up automatically instead of needing a one-time script.
+{{ if ne $profile "work" }}
+.claude/rules/work/
+.claude/output-styles/k1ra.md
+.claude/skills/branch-start-work/
+.claude/skills/commit-ready-check/
+.claude/skills/continuation-context-pack/
+.claude/skills/defect-workflow/
+.claude/skills/feature-workflow/
+.claude/skills/jira-post-fix-update-comment/
+.claude/skills/jira-post-qa-test-plan/
+.claude/skills/jira-transition-status/
+.claude/skills/jira-unassign-ticket/
+.claude/skills/post-pr-cleanup/
+.claude/skills/pr-prep-and-submit/
+.claude/skills/project-setup/
 {{ end }}
+
+{{ if ne $profile "home" }}
+.claude/rules/home/
+.claude/home/
+{{ end }}
+
+# Old flat-path rule files, superseded by rules/work/*.instructions.md
+.claude/rules/branches.instructions.md
+.claude/rules/external-services.instructions.md
+.claude/rules/jira.instructions.md
+.claude/rules/pull-requests.instructions.md
 
 # Copilot profile cleanup
 # Removes work-only files when profile is home (or unset).
