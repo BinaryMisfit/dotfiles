@@ -70,9 +70,29 @@ OneDrive - Powerfleet/
 {{ end }}
 
 # AI tool profile gating
-# Claude Code: home profile only (default)
+# Claude Code now deploys on both profiles; only work- or home-specific
+# content within .claude/** is gated. See dot_claude/rules/registers.instructions.md
+# and ADR 0006/0007 for why this replaced a single blanket .claude/** switch.
+{{ if ne $profile "work" }}
+.claude/rules/work/**
+.claude/output-styles/**
+.claude/skills/branch-start-work/**
+.claude/skills/commit-ready-check/**
+.claude/skills/continuation-context-pack/**
+.claude/skills/defect-workflow/**
+.claude/skills/feature-workflow/**
+.claude/skills/jira-post-fix-update-comment/**
+.claude/skills/jira-post-qa-test-plan/**
+.claude/skills/jira-transition-status/**
+.claude/skills/jira-unassign-ticket/**
+.claude/skills/post-pr-cleanup/**
+.claude/skills/pr-prep-and-submit/**
+.claude/skills/project-setup/**
+{{ end }}
+
 {{ if ne $profile "home" }}
-.claude/**
+.claude/rules/home/**
+.claude/home/**
 {{ end }}
 
 # Copilot: work profile only

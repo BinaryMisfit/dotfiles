@@ -1,4 +1,4 @@
-{{- $profile := get . "profile" | default "" -}}
+{{- $profile := get . "profile" | default "home" -}}
 {
   "permissions": {},
   {{- if eq $profile "home" }}
@@ -45,7 +45,9 @@
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": false,
   "inputNeededNotifEnabled": false,
+  {{- if eq $profile "work" }}
   "outputStyle": "K1ra",
+  {{- end }}
   "spinnerTipsEnabled": false,
   "sandbox": {
     "enabled": false,

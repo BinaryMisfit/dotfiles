@@ -17,6 +17,7 @@ Listed in [`docs/tracking-index.md`](tracking-index.md).
 | `run_once_install-iterm2-shell-integration.sh.tmpl` | macOS/Linux | Downloads iTerm2 shell integration if not already present |
 | `run_once_after_remove-mise.sh.tmpl` | POSIX | One-time cleanup: removes an old `mise` install and its `.bashrc` activation line |
 | `run_once_after_remove-scoop-mise.ps1.tmpl` | Windows | One-time cleanup: uninstalls scoop and everything scoop had installed (git, chezmoi, age, mise, openssh, gpg, psmux), then removes leftover mise data |
+| `run_once_after_restructure-claude-work-content.{sh,ps1}.tmpl` | both | One-time cleanup: removes old flat-path Claude rule files, and (non-work profiles) the now-gated work-only skills/output-style, from the [ADR 0007](adr/0007-work-home-split-for-claude-code.md) restructure |
 
 ## Tool & extension installation (`run_onchange_*`)
 
@@ -83,18 +84,27 @@ Listed in [`docs/tracking-index.md`](tracking-index.md).
 
 ## Claude Code (`dot_claude/`)
 
-| Path | Deploys to | Purpose |
-|---|---|---|
-| `CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | Global instructions; `@`-includes `rules/*` |
-| `mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config — currently always empty regardless of profile (see open finding below) |
-| `settings.json.tmpl` | `~/.claude/settings.json` | Claude Code permissions/model settings |
-| `output-styles/k1ra.md` | `~/.claude/output-styles/k1ra.md` | K1ra output style (terse, dry, developer-first) |
-| `rules/{branches,external-services,jira,pull-requests}.instructions.md` | `~/.claude/rules/` | Work-profile-only conventions, `@`-included conditionally |
-| `rules/registers.instructions.md` | `~/.claude/rules/` | The todo/idea/ADR register standard — included unconditionally, every profile |
-| `skills/*` (12 skill dirs: branch-start-work, commit-ready-check, continuation-context-pack, decision-register, defect-workflow, feature-workflow, jira-*, post-pr-cleanup, pr-prep-and-submit, project-setup) | `~/.claude/skills/` | Slash-command skills; jira/PR-flow ones are work-profile content |
-| `executable_rate-limit-statusline-bridge.py.tmpl` | `~/.claude/` (executable) | Status line helper script |
+Split common/work/home per [ADR 0006](adr/0006-capture-live-home-content-into-template.md)
+and [ADR 0007](adr/0007-work-home-split-for-claude-code.md) — Claude Code now deploys on
+both profiles, with content gated individually instead of one blanket switch.
 
-Deployment caveat: `.chezmoiignore` currently excludes all of `.claude/**` unless `profile == home` — see Flags below.
+| Path | Deploys to | Bucket | Purpose |
+|---|---|---|---|
+| `CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | — | Global instructions; `@`-includes `rules/*` per profile |
+| `mcp.json.tmpl` | `~/.claude/mcp.json` | — | MCP server config — currently always empty regardless of profile (see open finding below) |
+| `settings.json.tmpl` | `~/.claude/settings.json` | — | Permissions/model settings; home- and work-only blocks inside |
+| `rules/registers.instructions.md` | `~/.claude/rules/` | Common | The todo/idea/ADR register standard |
+| `skills/decision-register/` | `~/.claude/skills/` | Common | Logs/supersedes/lists ADRs |
+| `rules/work/{branches,external-services,jira,pull-requests}.instructions.md` | `~/.claude/rules/work/` | Work | Corporate branching/PR/Jira conventions |
+| `output-styles/k1ra.md` | `~/.claude/output-styles/k1ra.md` | Work | K1ra output style — structurally excluded from home, not just overridden |
+| `skills/{branch-start-work,commit-ready-check,continuation-context-pack,defect-workflow,feature-workflow,jira-post-fix-update-comment,jira-post-qa-test-plan,jira-transition-status,jira-unassign-ticket,post-pr-cleanup,pr-prep-and-submit,project-setup}/` | `~/.claude/skills/` (flat — Claude Code doesn't discover nested skill folders) | Work | Gated by name in `.chezmoiignore`, not by directory nesting |
+| `rules/home/preferences.instructions.md` | `~/.claude/rules/home/` | Home | Preferred-name + work-priority-tier instructions, captured from live state |
+| `home/scripts/executable_pick-persona.js` | `~/.claude/home/scripts/pick-persona.js` | Home | The persona-picker script the `SessionStart` hook runs |
+| `executable_rate-limit-statusline-bridge.py.tmpl` | `~/.claude/` (executable) | — | Status line helper script |
+
+`run_once_after_restructure-claude-work-content.{sh,ps1}.tmpl` cleans up the old flat-path
+rule files and (on non-work profiles) the now-gated work skills/output-style, per
+[ADR 0004](adr/0004-scripted-cleanup-required-for-every-removal.md).
 
 ## GitHub Copilot (`dot_copilot/`) — undocumented until now
 
