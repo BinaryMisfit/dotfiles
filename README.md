@@ -90,9 +90,12 @@ mise-specific feature that didn't carry over to winget/brew/apt).
 
 Profile-gated (`.profile` = `work` or `home`, set in local `chezmoi.yaml`):
 
-- **Claude Code** (`dot_claude/`) — deploys on `home` profile. Global instructions,
-  permissions, output styles, and skills. `dot_claude/rules/registers.instructions.md`
-  defines the todo/idea/decision-record convention used by every repo that adopts it.
+- **Claude Code** (`dot_claude/`) — common/work/home split, gated per-file in
+  `.chezmoiignore`. `dot_claude/rules/registers.instructions.md` defines the todo/idea/
+  decision-record convention used by every repo that adopts it. `output-styles/k1ra.md` is
+  work-only and authored here; `output-styles/{hailey,alexia,aphrodite,callie}.md` are
+  home-only and vendored from the `xls` project, which owns their content — see
+  [ADR 0009](docs/adr/0009-vendor-xls-persona-output-styles.md) for the re-sync step.
 - **GitHub Copilot** (`dot_copilot/`) — deploys on `work` profile. Instructions and
   skills mirroring the Claude Code side, ported to Copilot's format.
 - **Codex** (`dot_codex/`) — checked in, but both `.chezmoiignore` and `.chezmoiremove`

@@ -366,6 +366,33 @@ function dropStaleNicknames(entries) {
   return entries.map((e) => (e.nickname && !needsNickname(e, entries) ? { ...e, nickname: null } : e));
 }
 
+// Pure: builds the SessionStart `additionalContext` note about nickname
+// status for `entry`, against the CURRENT `entries` (post-push, so a
+// brand-new entry is already included and will see its own real
+// collisions). Real bug this replaces (2026-08-30): the brand-new-cwd path
+// used to hardcode "No nickname needed this session" for BOTH the inherited
+// (worktree-sibling) and genuinely-new-repo cases, unconditionally, without
+// ever calling `needsNickname` -- which is wrong every time an inherited
+// sibling's family root is already live (always true whenever `family.length
+// > 0`, i.e. every real case that path exists to handle) or a freshly
+// random-picked persona happens to already be live on an unrelated repo.
+// Observed live: `xls-playthrough`'s first-ever session told the user "no
+// nickname needed, still the only worktree holding this face" while a
+// same-persona root worktree had been live for hours -- the hook's own
+// hardcoded text, not a flaky model-generated greeting. `context` is just
+// flavor text (why this entry exists) and never affects the actual
+// true/false branch, which always defers to `needsNickname`. Exported for
+// testing.
+function buildNicknameNote(entry, entries, context) {
+  if (entry.nickname) {
+    return `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree's instance is already nicknamed "${entry.nickname}". State both the persona name and the nickname in this session's opening beat (e.g. "${entry.style} -- ${entry.nickname}, checking in").\n`;
+  }
+  if (needsNickname(entry, entries)) {
+    return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style} is also pinned to another worktree, and this one's the later duplicate${context ? ` (${context})` : ""} -- it needs a nickname to stay distinguishable; the other worktree (the original holder) does not. This session's opening beat should organically claim one, in-character, from this persona file's own "Instance nicknames" section (or a close riff on that flavor) -- not a mechanical announcement. **Persisting it is not optional and not deferrable: run \`node ~/.claude/scripts/pick-persona.js --set-nickname "<chosen nickname>"\` from this worktree's own directory (${entry.cwd}) in the SAME turn as the opening beat, immediately after claiming it in prose.** A nickname only said out loud and never persisted leaves this collision looking unresolved to every other tool that reads the registry (\`--list\`, \`--resolve\`, a peer session) -- confirmed live 2026-08-30, a session said "front desk" in its greeting and never ran this command.\n`;
+  }
+  return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other worktree currently holds this persona, so no nickname is needed right now. If that changes later (another worktree rotates/switches onto ${entry.style}), a future session here will be told to claim one then.\n`;
+}
+
 // Pure: is this entry independently eligible to roll its own auto-rotation,
 // or does it only ever follow via cascade? Same "earliest firstPinnedAt
 // wins" precedence as needsNickname, just answering a different question --
@@ -476,12 +503,22 @@ function listRegistry() {
   const header = "| Persona | Worktree | Session | Family | Pinned | Last seen |";
   const sep = "| --- | --- | --- | --- | --- | --- |";
   process.stdout.write(header + "\n" + sep + "\n");
+  const unresolved = [];
   for (const e of entries) {
     const personaCell = e.nickname ? `${e.style} -- ${e.nickname}` : e.style;
     const sessionCell = e.sessionName || "*(not self-registered)*";
     const siblings = findFamily(entries, e.repoId).filter((s) => s.cwd !== e.cwd);
     const familyCell = siblings.length > 0 ? `${siblings.length} sibling${siblings.length === 1 ? "" : "s"}` : "--";
     process.stdout.write(`| ${personaCell} | ${e.cwd} | ${sessionCell} | ${familyCell} | ${e.pinnedAt} | ${e.lastSeen} |\n`);
+    if (!e.nickname && needsNickname(e, entries)) unresolved.push(e);
+  }
+  if (unresolved.length > 0) {
+    process.stdout.write(
+      `\nUnresolved nickname collision${unresolved.length === 1 ? "" : "s"} (claimed in a greeting but never persisted, or never claimed at all):\n`,
+    );
+    for (const e of unresolved) {
+      process.stdout.write(`  ${e.style} at ${e.cwd} -- run --set-nickname from that worktree.\n`);
+    }
   }
 }
 
@@ -914,11 +951,7 @@ function main() {
     // now be stale even though its cwd hasn't changed.
     entry = findEntry(entries, cwd);
 
-    if (entry.nickname) {
-      nicknameNote = `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree's instance is already nicknamed "${entry.nickname}". State both the persona name and the nickname in this session's opening beat (e.g. "${entry.style} -- ${entry.nickname}, checking in").\n`;
-    } else if (needsNickname(entry, entries)) {
-      nicknameNote = `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style} is also pinned to another worktree, and this one's the later duplicate -- it needs a nickname to stay distinguishable; the other worktree (the original holder) does not. This session's opening beat should organically claim one, in-character, from this persona file's own "Instance nicknames" section (or a close riff on that flavor) -- not a mechanical announcement. Once settled, persist it by running \`node ~/.claude/scripts/pick-persona.js --set-nickname "<chosen nickname>"\` from this worktree's own directory (${cwd}).\n`;
-    }
+    nicknameNote = buildNicknameNote(entry, entries);
   } else {
     // A brand-new cwd: is this a new git-worktree SIBLING of a repo we
     // already track, or a genuinely new/unrelated repo? A sibling inherits
@@ -957,9 +990,11 @@ function main() {
       lastSeen: now,
     };
     entries.push(entry);
-    nicknameNote = inherited
-      ? `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree is a git-worktree sibling of a repo already pinned to ${styleName} -- inherited automatically, not randomly picked, since it's the same project. No nickname needed this session -- that starts from the second session onward, same as any other collision.\n`
-      : `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree was just pinned to ${styleName} for the first time. No nickname needed this session -- that starts from the second session onward.\n`;
+    nicknameNote = buildNicknameNote(
+      entry,
+      entries,
+      inherited ? "git-worktree sibling, inherited its family's current persona" : "freshly random-picked",
+    );
   }
 
   writeRegistry(entries);
@@ -1000,6 +1035,7 @@ module.exports = {
   parseFrontmatterName,
   settingsPathFor,
   needsNickname,
+  buildNicknameNote,
   matchByName,
   computeRepoId,
   findFamily,

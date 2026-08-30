@@ -5,7 +5,7 @@
 {{- $extra := get $vscode "extraSettings" | default dict -}}
 
 {{- $ai := get $vscode "ai" | default dict -}}
-{{- $profile := get $vscode "profile" | default "home" -}}
+{{- $profile := get . "profile" | default "home" -}}
 
 {{- $builtinAiEnabled := ne $profile "home" -}}
 {{- if hasKey $ai "builtinEnabled" -}}
@@ -45,8 +45,12 @@
   "workbench.editor.enablePreview": false,
   "workbench.editor.showTabs": "multiple",
   "workbench.activityBar.location": {{ if $small }}"default"{{ else }}"top"{{ end }},
+  "workbench.activityBar.autoHide": false,
+  "workbench.activityBar.compact": true,
+  "workbench.activityBar.iconClickBehavior": "focus",
+  "workbench.activityBar.visible": true,
   "workbench.sideBar.location": "left",
-  "workbench.secondarySideBar.defaultVisibility": "visible",
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
   "workbench.panel.defaultLocation": "bottom",
   "workbench.startupEditor": "none",
 
@@ -79,7 +83,6 @@
   {{- end }}
   "chat.agent.thinkingStyle": "collapsed",
   "chat.progressBorder.enabled": true,
-  "chat.persistentProgress.enabled": true,
   "chat.unifiedAgentsBar.enabled": true,
   "chat.viewProgressBadge.enabled": true,
   "chat.viewSessions.orientation": "stacked",
@@ -142,6 +145,22 @@
     "https://*.github.com": true,
     "https://*.claude.com": true
   },
+
+  // --- Claude Code extension ---
+  "claudeCode.hideOnboarding": true,
+  "claudeCode.initialPermissionMode": "bypassPermissions",
+  "claudeCode.focusView": true,
+
+  // --- Python ---
+  // Deliberately false, not just unset: X-Lifestyle project .env files (GITLAB_TOKEN,
+  // PIXELDRAIN_API_KEY, GITEA_TOKEN, etc.) are designed to be opt-in only, loaded per-script
+  // via Node's --env-file flag -- never auto-injected into every terminal session.
+  "python.terminal.useEnvFile": false,
+
+  // --- Misc ---
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
+  "network.meteredConnection": "off",
+  "security.promptForLocalFileProtocolHandling": false,
 
   // --- Vim ---
   "vim.useSystemClipboard": true,

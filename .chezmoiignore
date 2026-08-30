@@ -39,9 +39,18 @@ OneDrive - Powerfleet/
 
 # POSIX-only targets
 {{ if $isWindows }}
-.config/shell/env.zsh
 .scripts/*.sh
 .local/bin/*.sh
+{{ end }}
+
+# Zsh-only targets (no zsh on Windows; these are dead weight there)
+{{ if $isWindows }}
+.zshrc
+.zshenv
+.p10k.zsh
+.config/shell/aliases.zsh
+.config/shell/fzf.zsh
+.config/shell/helpers.zsh
 {{ end }}
 
 # Linux-only targets
@@ -75,7 +84,7 @@ OneDrive - Powerfleet/
 # and ADR 0006/0007 for why this replaced a single blanket .claude/** switch.
 {{ if ne $profile "work" }}
 .claude/rules/work/**
-.claude/output-styles/**
+.claude/output-styles/k1ra.md
 .claude/skills/branch-start-work/**
 .claude/skills/commit-ready-check/**
 .claude/skills/continuation-context-pack/**
@@ -93,6 +102,10 @@ OneDrive - Powerfleet/
 {{ if ne $profile "home" }}
 .claude/rules/home/**
 .claude/home/**
+.claude/output-styles/hailey.md
+.claude/output-styles/alexia.md
+.claude/output-styles/aphrodite.md
+.claude/output-styles/callie.md
 {{ end }}
 
 # Copilot: work profile only

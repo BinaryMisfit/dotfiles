@@ -57,7 +57,7 @@ Template variables come from the local `~/.config/chezmoi/chezmoi.yaml` (not in 
 
 ### VS Code Extensions
 
-Extension list lives in `.chezmoitemplates/vscode/extensions.txt.tmpl` and is profile-aware (`.vscode.profile`). The `run_onchange_install-vscode-extensions` script diffs against `.vscode/extensions.managed.txt` to install/uninstall on apply.
+Extension list lives in `.chezmoitemplates/vscode/extensions.txt.tmpl` and is profile-aware (top-level `.profile`, the same `work`/`home` value everything else in this repo uses — not a separate `.vscode.profile` key). The `run_onchange_install-vscode-extensions` script diffs against `.vscode/extensions.managed.txt` to install/uninstall on apply. `settings.json.tmpl`'s AI/Copilot gating reads the same `.profile` value (fixed 2026-08-30 — it previously read a dead `.vscode.profile` key that nothing ever set, so Copilot was silently force-disabled on every profile including work; see ADR 0010).
 
 ### Encrypted Files
 

@@ -14,3 +14,5 @@ enum, supersession rule).
 | [0006](0006-capture-live-home-content-into-template.md) | Capture live home-profile content into the template (Phase 1 of the work/home split) | Decided |
 | [0007](0007-work-home-split-for-claude-code.md) | Split `dot_claude/` into common/work/home, gated by profile instead of one blanket switch | Decided |
 | [0008](0008-interactive-bootstrap-and-finish-codex-removal.md) | Interactive profile/git-identity bootstrap; finish the Codex removal; fix a `.chezmoiremove` bug | Decided |
+| [0009](0009-vendor-xls-persona-output-styles.md) | Vendor xls-owned persona output-styles into this repo for distribution | Decided |
+| [0010](0010-fix-vscode-settings-profile-key-mismatch.md) | Fix `settings.json.tmpl` reading a dead `.vscode.profile` key instead of `.profile` | Decided |
