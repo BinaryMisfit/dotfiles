@@ -11,3 +11,4 @@ enum, supersession rule).
 | [0003](0003-drop-private-prefix-from-npmrc.md) | Drop `private_` prefix from npmrc | Decided |
 | [0004](0004-scripted-cleanup-required-for-every-removal.md) | Every removal ships with a scripted cleanup; a full uninstall path is required | Decided |
 | [0005](0005-settings-json-stays-machine-portable.md) | `settings.json` stays machine-portable; machine-specific state moves to `settings.local.json` | Decided |
+| [0006](0006-capture-live-home-content-into-template.md) | Capture live home-profile content into the template (Phase 1 of the work/home split) | Decided |

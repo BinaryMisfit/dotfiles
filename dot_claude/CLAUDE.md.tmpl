@@ -3,6 +3,10 @@
 
 @rules/registers.instructions.md
 
+{{- if eq $profile "home" }}
+@rules/home/preferences.instructions.md
+{{- end }}
+
 {{- if eq $profile "work" }}
 @rules/external-services.instructions.md
 @rules/branches.instructions.md

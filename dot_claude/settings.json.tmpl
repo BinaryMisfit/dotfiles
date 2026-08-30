@@ -3,6 +3,7 @@
   "permissions": {},
   {{- if eq $profile "home" }}
   "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
     "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
     "OTEL_LOGS_EXPORTER": "otlp",
     "OTEL_METRICS_EXPORTER": "none",
@@ -12,7 +13,23 @@
     "OTEL_LOG_USER_PROMPTS": "0",
     "OTEL_LOG_TOOL_DETAILS": "0",
     "OTEL_LOG_TOOL_CONTENT": "0",
-    "OTEL_LOGS_EXPORT_INTERVAL": "5000"
+    "OTEL_LOGS_EXPORT_INTERVAL": "5000",
+    "OTEL_RESOURCE_ATTRIBUTES": "host.name={{ .chezmoi.hostname }}"
+  },
+  "model": "sonnet",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"{{ .chezmoi.homeDir }}/.claude/home/scripts/pick-persona.js\"",
+            "shell": "bash",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   },
   {{- end }}
   "defaultMode": "acceptEdits",
