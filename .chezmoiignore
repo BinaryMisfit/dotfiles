@@ -16,6 +16,7 @@ install-core.ps1
 install-core.sh
 setup-github-ssh.ps1
 setup-github-ssh.sh
+docs/
 
 # Runtime-only state
 # Claude Code accumulates local permissions here; never manage it.
