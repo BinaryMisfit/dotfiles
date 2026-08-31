@@ -106,6 +106,17 @@ Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`
 - `rules/` — instruction files `@`-included from `CLAUDE.md.tmpl`; work-only files gated in `.chezmoiignore`
 - `skills/` — slash-command skill definitions; work-only skills gated in `.chezmoiignore`
 
+**`registers.instructions.md` and the `decision-register` skill are authored upstream, in
+`xls`** (BinaryMisfit's explicit call, 2026-08-31) — `binary-dotfiles` is the downstream
+distribution layer only, syncing content in but never originating changes to these two
+files. When refreshing them, pull **only** from the deployed, final copies at
+`~/.claude/rules/registers.instructions.md` and `~/.claude/skills/decision-register/SKILL.md`
+— never from `xls`'s own repo directly, in any form or path. `xls`'s internal source
+layout for this convention has already reorganized once (`registers/` →
+`claude-global/rules/...`) and is entirely its own business, irrelevant to and untracked by
+this repo. `binary-dotfiles` must never depend on `xls`'s repo being present or checked out
+on a given machine at all.
+
 ## Decision Records
 
 Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decision, indexed in
