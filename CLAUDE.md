@@ -26,6 +26,14 @@ chezmoi re-add <file>     # Sync a tracked file after manual edits
 chezmoi cd                # Open shell in source directory
 ```
 
+**This machine's chezmoi source (`~/.local/share/chezmoi`) is a separate clone from
+whichever working copy of this repo you're editing in** — they can silently diverge.
+Before ever running `chezmoi apply` (or `chezmoi diff`) to test something live, commit and
+push pending changes in the working copy, then `git pull` inside `~/.local/share/chezmoi`
+so it isn't stale. Skipping this can make `apply` revert real, already-verified fixes back
+to whatever the stale source last had. `chezmoi update` (pull + apply against the source
+dir itself) doesn't fix this — it does nothing for a working copy elsewhere on disk.
+
 For encrypted files, age is required. Key lives at `~/.config/age/key.txt`.
 
 After changing the tool list in `run_onchange_install-tools.ps1.tmpl` / `run_onchange_install-tools.sh.tmpl`, chezmoi re-runs the changed script automatically on next apply (winget / Homebrew / apt, depending on OS).

@@ -10,6 +10,23 @@ Host github.com
   IdentitiesOnly yes
   AddKeysToAgent yes
 
+# GitGud
+Host ssh.gitgud.io
+  HostName ssh.gitgud.io
+  User git
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+  AddKeysToAgent yes
+
+# Digital Misfit (formerly Fairview)
+Host git.digitalmisfit.net
+  HostName git.digitalmisfit.net
+  Port 10022
+  User git
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+  AddKeysToAgent yes
+
 # Global defaults
 Host *
   AddKeysToAgent yes
