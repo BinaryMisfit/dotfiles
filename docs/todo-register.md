@@ -8,7 +8,7 @@ inline here.
 | # | Item | Priority | Status | Type | Area |
 |---|---|---|---|---|---|
 | [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | Open | Targeted | chezmoi |
-| [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Open | Targeted | chezmoi |
+| [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Closed | Targeted | chezmoi |
 
 ---
 
@@ -40,27 +40,38 @@ each one. Do not touch the chezmoi binary, its config, or the repo checkout itse
 that the repo's templates don't know about — applying as-is would silently delete them.
 Paused before running `chezmoi apply` specifically to capture these first.
 
-**Status:** Open
+**Status:** Closed (2026-08-31)
 
 **Priority:** High
 
 **Type:** Targeted
 
-**Next action:** For each of the three, either fold it into the relevant template/source
-so it survives an apply, or make a deliberate call to drop it — then run the apply this
-was paused ahead of, with a real backup taken immediately before.
+**Resolution:** All three customizations resolved, then the apply itself run to
+completion:
 
-1. **`.gitconfig`** — live has two entries with no template equivalent:
-   `[safe] directory = D:/Source/python-movie-tools` and
-   `[credential "https://gitgud.io/binarymisfit/x-lifestyle-mcp.git"] provider = generic`.
-2. **`.ssh/config`** — live has two `Host` blocks the template would delete: `ssh.gitgud.io`
-   and `git.digitalmisfit.net` (port 10022) — the latter pairs with the GitGud credential
-   entry above, so losing both breaks that remote entirely.
-3. **`.claude/settings.json`** — live has settings the template doesn't carry: permission
-   grant `Bash(ssh netctrl *)`, `"tui": "fullscreen"`, `"switchModelsOnFlag": true`,
-   `"useAutoModeDuringPlan": false`, and `"inputNeededNotifEnabled": true` (template has
-   `false`).
+1. **`.gitconfig`** — `safe.directory` and the GitGud credential override left
+   live-only (origin unclear, user chose not to fold either in); the repo itself dropped
+   the `python-movie-tools` local clone that `safe.directory` pointed at, so that entry is
+   gone for good, not just untemplated.
+2. **`.ssh/config`** — folded in: `ssh.gitgud.io` and `git.digitalmisfit.net` (port 10022)
+   `Host` blocks added, plus new `[url] insteadOf` rewrite rules in `.gitconfig` forcing
+   SSH for github/gitgud/digitalmisfit regardless of URL form used.
+3. **`.claude/settings.json`** — folded in: `tui`, `switchModelsOnFlag` (flipped to
+   `false` after research showed it governs silent Fable/Opus safety-classifier
+   escalation), `useAutoModeDuringPlan`, `inputNeededNotifEnabled` (flipped to `true`),
+   and the `permissions.allow` grants. The `Bash(ssh netctrl *)` grant specifically moved
+   to `~/.claude/settings.local.json` instead, since that file isn't chezmoi-managed at
+   all — apply-proof without needing a template entry.
 
-Also already fixed and pushed while investigating this (`d36af0a`): a `.chezmoiremove`
-whitespace-trim bug that glued `scoop/` onto an unrelated comment line, corrupting it into
-a bogus removal path — this no longer blocks the apply, just noting it happened here.
+Also fixed along the way: the `.chezmoiremove` whitespace-trim bug (`d36af0a`, already
+noted here); a second, unrelated `remove-codex.sh` crash on Windows (bare POSIX script
+with no `.ps1` counterpart, `fork/exec`-failed outright) — fixed by adding
+`remove-codex.ps1` and documenting "every run script ships as a pair, no exceptions" in
+`CLAUDE.md`; and a real machine-level gotcha where `chezmoi`'s actual source dir
+(`~/.local/share/chezmoi`) turned out to be a separate, staler clone from whichever
+working copy was being edited — now documented in `CLAUDE.md` as "commit + push +
+`git pull` the source dir before any live test."
+
+Final `chezmoi apply` completed clean, verified via empty `chezmoi status`/`chezmoi diff`.
+A full backup of every touched file was taken immediately before applying, at
+`C:\Users\diago\chezmoi-apply-backups\20260831-090912\`.
