@@ -134,13 +134,22 @@ Where the `session-start` skill's register sweep step runs in a repo, it reads e
 `docs/tracking-index.md` lists (or the single register present, if only one exists) fresh
 each time — `docs/adr/README.md` counts as the decision register for that sweep.
 
-### Ownership and distribution (added 2026-08-31)
+### Ownership and distribution (added 2026-08-31, corrected 2026-08-31)
 
 This convention originated in `binary-dotfiles` (Aphrodite), deployed globally via
-chezmoi. As of 2026-08-31, its canonical source moved to `xls`'s own `registers/`
-directory, following the same author-here/sync-script/deploy-to-`~/.claude` pattern
-already used for `personas/`, `session-start/`, `scratchpad-check/`, `worktree-sync-check/`,
-and `audits/` — see `scripts/sync-global-registers-config.js`. `xls` owns fixes and real
-usage refinements to this file and the `decision-register` skill going forward, applies
-them locally via that script, and `binary-dotfiles` picks up changes from here to merge
-into chezmoi for distribution to other machines — the reverse of the original flow.
+chezmoi. As of 2026-08-31, its canonical *authoring* source moved to `xls`'s own
+`claude-global/rules/registers.instructions.md` — one of several tool sources under
+`claude-global/` (personas, session-start, scratchpad-check, worktree-sync-check, audits,
+and this convention itself), all deployed to `~/.claude/` via the single
+`scripts/sync-global-claude-config.js`. `xls` owns fixes and real usage refinements to
+this file and the `decision-register` skill going forward, and applies them locally via
+that script.
+
+**`binary-dotfiles`/chezmoi never depends on `xls`'s repo being present, cloned, or
+accessible.** It reads only this file's deployed, final copy at
+`~/.claude/rules/registers.instructions.md` (and `~/.claude/skills/decision-register/`) —
+the exact same artifact every other project on the machine reads — and merges *that* into
+chezmoi for distribution to other machines. Corrected same-day: earlier wording implied
+`binary-dotfiles` pulls "from here" (`xls`'s own repo), which was wrong — the dependency
+runs through the deployed `~/.claude/` artifact only, never through `xls`'s internal
+directory structure.
