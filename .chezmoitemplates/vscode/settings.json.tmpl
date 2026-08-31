@@ -147,8 +147,10 @@
   },
 
   // --- Claude Code extension ---
+  // No claudeCode.initialPermissionMode: that setting doesn't accept "auto" at all
+  // (only default/manual/acceptEdits/plan/bypassPermissions). Leaving it unset lets the
+  // extension fall through to permissions.defaultMode: "auto" in ~/.claude/settings.json.
   "claudeCode.hideOnboarding": true,
-  "claudeCode.initialPermissionMode": "bypassPermissions",
   "claudeCode.focusView": true,
   "claudeCode.preferredLocation": "panel",
 
