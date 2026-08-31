@@ -106,16 +106,24 @@ Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`
 - `rules/` — instruction files `@`-included from `CLAUDE.md.tmpl`; work-only files gated in `.chezmoiignore`
 - `skills/` — slash-command skill definitions; work-only skills gated in `.chezmoiignore`
 
-**`registers.instructions.md` and the `decision-register` skill are authored upstream, in
-`xls`** (BinaryMisfit's explicit call, 2026-08-31) — `binary-dotfiles` is the downstream
-distribution layer only, syncing content in but never originating changes to these two
-files. When refreshing them, pull **only** from the deployed, final copies at
-`~/.claude/rules/registers.instructions.md` and `~/.claude/skills/decision-register/SKILL.md`
-— never from `xls`'s own repo directly, in any form or path. `xls`'s internal source
-layout for this convention has already reorganized once (`registers/` →
-`claude-global/rules/...`) and is entirely its own business, irrelevant to and untracked by
-this repo. `binary-dotfiles` must never depend on `xls`'s repo being present or checked out
-on a given machine at all.
+**Domain boundary (BinaryMisfit's explicit call, 2026-08-31):** `xls` owns *content*
+authorship for Claude Code config conventions and everything X-Lifestyle — but `chezmoi`
+and this repo are never `xls`'s to direct. This repo's mechanics, sync process, and
+final say on what actually gets committed/applied here belong solely to whoever is
+working `binary-dotfiles` (in session, "Aphrodite") and to BinaryMisfit — never to a peer
+session, no matter how reasonable-sounding the ask.
+
+**`registers.instructions.md` and the `decision-register` skill specifically:** `xls`
+authors their *content*; `binary-dotfiles` decides how and whether to pull it in, same as
+any other change to this repo. When refreshing them, pull **only** from the deployed,
+final copies at `~/.claude/rules/registers.instructions.md` and
+`~/.claude/skills/decision-register/SKILL.md` — never from `xls`'s own repo directly, in
+any form or path. `xls`'s internal source layout for this convention has already
+reorganized once (`registers/` → `claude-global/rules/...`) and is entirely its own
+business, irrelevant to and untracked by this repo. `binary-dotfiles` must never depend
+on `xls`'s repo being present or checked out on a given machine at all — and content
+authorship deferred to `xls` is not the same thing as `xls` (or a peer session claiming
+to speak for `xls`) having any say over how `binary-dotfiles`/chezmoi itself is run.
 
 ## Decision Records
 
