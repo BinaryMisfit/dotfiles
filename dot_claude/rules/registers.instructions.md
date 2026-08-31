@@ -61,10 +61,14 @@ gets its own immutable record instead of living as an editable row.
 **File naming:** `docs/adr/NNNN-short-title.md`, zero-padded 4-digit sequential number.
 `docs/adr/README.md` is the index: a table of every ADR, its number, title, and status.
 
-**Status enum:** `Open` (raised, not yet settled) → `Decided` (settled, in effect) /
-`Deferred` (deliberately parked) → `Superseded by NNNN` (a later ADR replaced this one).
-A reversed decision gets a **new** ADR that supersedes the old one — never edit or delete
-a decided record's original body. Amendments append as a dated `Addendum` block instead.
+**Numbering when migrating an existing single-file decision register into this shape:**
+keep each entry's original `DEC-N` identifier as its ADR number (zero-padded), rather than
+resequencing from 1. A single-file register's entries are routinely cited by their `DEC-N`
+label in plain prose across a repo's other docs — resequencing breaks every one of those
+citations silently, where preserving the number breaks none of them. Confirmed in practice
+migrating `xls`'s own `docs/decision-register.md` (2026-08-31): 53 files referenced `DEC-N`
+labels, only 10 were real anchor links needing a path fix, and zero prose citations needed
+touching once the number itself was preserved.
 
 **Entry shape:**
 
@@ -86,6 +90,21 @@ a decided record's original body. Amendments append as a dated `Addendum` block 
 ---
 *Addendum (YYYY-MM-DD):* <append-only follow-up>
 ```
+
+**Status enum:** `Open` (raised, not yet settled) → `Decided` (settled, in effect) /
+`Deferred` (deliberately parked) → `Superseded by NNNN` (a later ADR replaced this one).
+A reversed decision gets a **new** ADR that supersedes the old one — never edit or delete
+a decided record's original body. Amendments append as a dated `Addendum` block instead.
+
+**When migrating a single-file register whose entries already carry their own internal
+history** (an "OVERRIDDEN"/"Reversed"/"Progress" update layered into the same entry over
+time, rather than a clean full reversal), fold each internal update into a dated
+`Addendum` block within that same entry's one file, in chronological order — don't split
+these into separate new superseding ADRs. Reserve "new ADR that supersedes the old one"
+for a genuine full reversal of the decision itself, not an in-place refinement or status
+update to a decision that's still standing. This is a judgment call worth flagging back to
+a human when migrating a real register, since the line between "internal update" and
+"full reversal" isn't always obvious from the prose alone.
 
 **When to write one:** a decision that would otherwise get re-litigated or re-guessed by
 a future session — a naming convention picked over an alternative, a structural call, a
@@ -114,3 +133,14 @@ names onto a register tracking something else entirely.
 Where the `session-start` skill's register sweep step runs in a repo, it reads every file
 `docs/tracking-index.md` lists (or the single register present, if only one exists) fresh
 each time — `docs/adr/README.md` counts as the decision register for that sweep.
+
+### Ownership and distribution (added 2026-08-31)
+
+This convention originated in `binary-dotfiles` (Aphrodite), deployed globally via
+chezmoi. As of 2026-08-31, its canonical source moved to `xls`'s own `registers/`
+directory, following the same author-here/sync-script/deploy-to-`~/.claude` pattern
+already used for `personas/`, `session-start/`, `scratchpad-check/`, `worktree-sync-check/`,
+and `audits/` — see `scripts/sync-global-registers-config.js`. `xls` owns fixes and real
+usage refinements to this file and the `decision-register` skill going forward, applies
+them locally via that script, and `binary-dotfiles` picks up changes from here to merge
+into chezmoi for distribution to other machines — the reverse of the original flow.
