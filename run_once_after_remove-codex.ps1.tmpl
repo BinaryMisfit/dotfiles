@@ -1,6 +1,6 @@
-{{ if ne .chezmoi.os "windows" -}}
-#!/usr/bin/env sh
-set -u
+{{ if eq .chezmoi.os "windows" -}}
+#!powershell
+$ErrorActionPreference = "Stop"
 
 # One-time cleanup: Codex config (dot_codex/) has been excluded from
 # deployment via .chezmoiignore/.chezmoiremove for a while, but the
@@ -9,8 +9,11 @@ set -u
 # machine that already has it, so the removal is actually complete per
 # ADR 0004's scripted-cleanup requirement.
 
-if command -v npm >/dev/null 2>&1 && npm list -g @openai/codex >/dev/null 2>&1; then
-  echo "==> removing globally-installed @openai/codex"
-  npm uninstall -g @openai/codex
-fi
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+    $installed = npm list -g @openai/codex 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "==> removing globally-installed @openai/codex"
+        npm uninstall -g @openai/codex
+    }
+}
 {{ end -}}

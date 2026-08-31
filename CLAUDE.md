@@ -86,7 +86,15 @@ chezmoi encrypt --recipients-file <file>
 
 ### Run Scripts
 
-Scripts ending in `.ps1.tmpl` run on Windows; `.sh.tmpl` run on POSIX. They are paired — if you modify behavior, update both. All run scripts are idempotent.
+**Every run script ships as a pair, no exceptions** (2026-08-31): a `.ps1.tmpl` for Windows
+and a `.sh.tmpl` for everything else, same `run_once_`/`run_onchange_` base name. Never a
+single-OS script with no counterpart — a bare `.sh` file will `fork/exec`-fail outright on
+Windows (`%1 is not a valid Win32 application`), since Windows can't execute a POSIX
+shebang script directly. Each file self-gates its own OS with `{{ if eq/ne .chezmoi.os
+"windows" -}} ... {{ end -}}` wrapping the whole body (see `run_onchange_install-tools.*.tmpl`
+for the reference shape) — chezmoi treats the other OS's empty rendered output as a no-op,
+rather than relying on `.chezmoiignore` to exclude the wrong one. If you modify behavior,
+update both. All run scripts are idempotent.
 
 ### Claude Code Config
 
