@@ -22,3 +22,4 @@ enum, supersession rule).
 | [0014](0014-registers-convention-ownership-and-domain-boundary.md) | Registers convention ownership moves to xls; domain boundary between xls and binary-dotfiles | Decided |
 | [0015](0015-scoop-to-winget-migration-order-of-operations.md) | Scoop→winget migration: order-of-operations, and real gaps found running it live | Decided |
 | [0016](0016-no-change-without-documentation.md) | Standing rule: no change lands without a matching documentation update, in the same change | Decided |
+| [0017](0017-fix-pick-persona-hook-path-mismatch.md) | Fix `pick-persona.js` tracked at the wrong deploy path, leaving the real `SessionStart` hook running a stale, unfixed duplicate | Decided |

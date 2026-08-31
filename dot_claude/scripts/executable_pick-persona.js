@@ -3,18 +3,20 @@
 
 // GLOBAL Claude Code tooling (promoted 2026-08-28 from an X-Lifestyle-only
 // project hook to `~/.claude/`) -- authored/tracked here in the xls repo,
-// under `personas/` at the repo root (deliberately NOT `.claude/scripts/`,
+// under `claude-global/` at the repo root (deliberately NOT `.claude/scripts/`,
 // `.claude/output-styles/`, or `.claude/skills/` -- those paths are ones
 // Claude Code auto-discovers, so a copy sitting there would make xls's own
 // sessions see a project-level output-style/skill that SHADOWS the global
 // one per Claude Code's own "project wins over global" precedence, silently
 // defeating the whole point of promoting this to global in the first
-// place). `personas/` mirrors the deploy target's own structure 1:1
-// (`personas/output-styles/` -> `~/.claude/output-styles/`,
-// `personas/skills/persona/` -> `~/.claude/skills/persona/`,
-// `personas/scripts/` -> `~/.claude/scripts/`) so the sync script's mapping
-// is a straight copy, no renaming. Deploy via
-// `npm run sync-global-persona-config` from the xls repo root after any
+// place). `claude-global/` mirrors the deploy target's own structure 1:1
+// (`claude-global/output-styles/` -> `~/.claude/output-styles/`,
+// `claude-global/skills/persona/` -> `~/.claude/skills/persona/`,
+// `claude-global/scripts/` -> `~/.claude/scripts/`), and every other global
+// tool this repo owns (session-start, scratchpad-check, worktree-sync-check,
+// the audits, the registers convention) lives under the same tree, so the
+// sync script's mapping is a straight copy, no renaming. Deploy via
+// `npm run sync-global-claude-config` from the xls repo root after any
 // edit here or to a persona file -- `~/.claude/` itself isn't a git repo,
 // so this project keeps the authored source instead of losing history to a
 // raw move. Once deployed, this hook fires for EVERY Claude Code project on
@@ -267,6 +269,37 @@ function findFamily(entries, repoId) {
   return entries.filter((e) => e.repoId === repoId);
 }
 
+// Identifies the OUTER (super-project) working tree when cwd is inside a
+// git submodule checkout -- e.g. opening a session directly inside
+// `xls-playthrough/refs/x-change-source` (a submodule, not its own
+// project). `git rev-parse --show-superproject-working-tree` prints the
+// absolute path of the enclosing repo's working tree when cwd is inside a
+// submodule, empty output otherwise. Returns null for "not in a
+// submodule" (including "not in a git repo at all") -- both are the same
+// "no superproject" answer to the caller. Real bug this exists to fix
+// (2026-08-31): without this, computeRepoId(cwd) resolves to the
+// SUBMODULE's own git-common-dir (under
+// `.git/worktrees/<name>/modules/<path>`), which is genuinely different
+// from the outer worktree's, so findFamily saw zero relation and the
+// submodule free-random-picked its own persona identity instead of
+// inheriting the project it's actually part of. Exported for testing.
+function computeSuperprojectCwd(cwd, execFn = execFileSync) {
+  try {
+    const out = execFn("git", ["-C", cwd, "rev-parse", "--show-superproject-working-tree"], { encoding: "utf8" }).trim();
+    if (!out) return null;
+    const abs = path.isAbsolute(out) ? out : path.join(cwd, out);
+    let real;
+    try {
+      real = fs.realpathSync(abs);
+    } catch {
+      real = abs;
+    }
+    return normalizePlatformPath(real);
+  } catch {
+    return null;
+  }
+}
+
 function readRegistry() {
   if (!fs.existsSync(registryPath)) return [];
   try {
@@ -468,23 +501,91 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// Self-heal for a real gap (found live 2026-08-31 in binary-dotfiles):
+// `setSessionName`/`setNickname`/`pinForever`/`switchPersona` all used to
+// hard-fail with "No registry entry ... run a normal session start here
+// first" whenever a worktree was ACTIVELY running a persona output-style
+// but the SessionStart hook had never actually written a registry row for
+// it -- Aphrodite was live in settings.local.json with zero registry entry
+// until an unrelated `--help`-as-unrecognized-flag call fell through to
+// the default hook path and created one as a side effect. That's a silent,
+// surprising failure mode for a worktree that's demonstrably already in
+// use, not a case that should ever need "run a normal session start
+// first" as the fix. `ensureEntry` runs the exact same brand-new-cwd
+// logic `main()` uses (submodule-aware repoId, family inheritance, fresh
+// random pick) so a self-healed entry is indistinguishable from one a real
+// SessionStart would have created -- just called from a write-path CLI
+// invocation instead of the hook. `everOpened: true` here (unlike a
+// pinForever advance-reservation) because every caller of ensureEntry is,
+// by construction, an already-running session interacting with its own
+// worktree, not a placeholder for one that hasn't started yet. Returns
+// `{ entries, entry }` with `entry: null` when no persona files exist to
+// pick from at all (styles dir missing/empty) -- the caller decides how to
+// report that. Exported for testing.
+function ensureEntry(entries, cwd, now) {
+  const existing = findEntry(entries, cwd);
+  if (existing) return { entries, entry: existing, healed: false };
+  if (!fs.existsSync(stylesDir)) return { entries, entry: null, healed: false };
+  const files = fs.readdirSync(stylesDir).filter((f) => f.endsWith(".md"));
+  if (files.length === 0) return { entries, entry: null, healed: false };
+
+  const superprojectCwd = computeSuperprojectCwd(cwd);
+  const repoId = computeRepoId(superprojectCwd || cwd);
+  const family = findFamily(entries, repoId);
+  // Unlike main()'s automatic SessionStart pick, ensureEntry does NOT
+  // refuse a non-git cwd (repoId null, no family) -- every caller here is
+  // an explicit, deliberate CLI invocation (--switch, --set-nickname,
+  // --set-session-name, --pin-forever), not a hook firing silently just
+  // because a session happened to launch somewhere. User design call,
+  // 2026-08-31: a non-project location should never get a persona picked
+  // FOR it automatically, but should still be able to ask for one via the
+  // script -- and once asked for, it's an entry like any other (rotation-
+  // eligible, nicknameable, not auto-forever-pinned), not a special case.
+  let pick, styleName;
+  if (family.length > 0) {
+    const anchor = (e) => e.firstPinnedAt ?? e.pinnedAt;
+    const root = family.reduce((a, b) => (anchor(a) < anchor(b) ? a : b));
+    pick = root.file;
+    styleName = root.style;
+  } else {
+    pick = pickForNewWorktree(files, entries);
+    const content0 = fs.readFileSync(path.join(stylesDir, pick), "utf8");
+    styleName = parseFrontmatterName(content0, path.basename(pick, ".md"));
+  }
+  const entry = {
+    cwd,
+    style: styleName,
+    file: pick,
+    nickname: null,
+    sessionName: null,
+    repoId,
+    everOpened: true,
+    firstPinnedAt: now,
+    pinnedAt: now,
+    rotateAfterDays: randomRotateAfterDays(),
+    lastSeen: now,
+  };
+  return { entries: [...entries, entry], entry, healed: true };
+}
+
 // Handles `node pick-persona.js --set-nickname "<text>"` -- called by the
 // assistant, from inside the worktree whose instance is claiming a
 // nickname, once it's settled on one in-character. Not a SessionStart
 // invocation: prints a plain confirmation, not hook JSON.
 function setNickname(nickname) {
   const cwd = resolveCwd();
-  const entries = readRegistry();
-  const entry = findEntry(entries, cwd);
+  const now = nowIso();
+  const { entries, entry, healed } = ensureEntry(readRegistry(), cwd, now);
   if (!entry) {
-    process.stderr.write(`No registry entry for ${cwd} -- run a normal session start here first.\n`);
+    process.stderr.write(`No persona files found to self-heal a registry entry for ${cwd}.\n`);
     process.exitCode = 1;
     return;
   }
   entry.nickname = nickname;
-  entry.lastSeen = nowIso();
+  entry.lastSeen = now;
   writeRegistry(entries);
-  process.stdout.write(`Nickname "${nickname}" recorded for ${cwd} (persona: ${entry.style}).\n`);
+  const healedNote = healed ? " (no registry entry existed yet -- created one)" : "";
+  process.stdout.write(`Nickname "${nickname}" recorded for ${cwd} (persona: ${entry.style})${healedNote}.\n`);
 }
 
 // `node pick-persona.js --list` -- human-facing table of every currently
@@ -547,17 +648,18 @@ function cleanRegistry() {
 // so a persona can be targeted BY NAME across sessions, not just listed.
 function setSessionName(sessionName) {
   const cwd = resolveCwd();
-  const entries = readRegistry();
-  const entry = findEntry(entries, cwd);
+  const now = nowIso();
+  const { entries, entry, healed } = ensureEntry(readRegistry(), cwd, now);
   if (!entry) {
-    process.stderr.write(`No registry entry for ${cwd} -- run a normal session start here first.\n`);
+    process.stderr.write(`No persona files found to self-heal a registry entry for ${cwd}.\n`);
     process.exitCode = 1;
     return;
   }
   entry.sessionName = sessionName;
-  entry.lastSeen = nowIso();
+  entry.lastSeen = now;
   writeRegistry(entries);
-  process.stdout.write(`Session name "${sessionName}" recorded for ${cwd} (persona: ${entry.style}).\n`);
+  const healedNote = healed ? " (no registry entry existed yet -- created one)" : "";
+  process.stdout.write(`Session name "${sessionName}" recorded for ${cwd} (persona: ${entry.style})${healedNote}.\n`);
 }
 
 // Pure: a dead sessionName is grounds to drop the WHOLE entry -- except an
@@ -700,17 +802,17 @@ function resetRegistry(targetPath) {
 function pinForever(targetPath) {
   const cwd = targetPath ? resolveMaybePath(targetPath) : resolveCwd();
   const now = nowIso();
-  const entries = readNormalizedRegistry(now);
-  const entry = findEntry(entries, cwd);
+  const { entries, entry, healed } = ensureEntry(readNormalizedRegistry(now), cwd, now);
   if (!entry) {
-    process.stderr.write(`No registry entry for ${cwd} -- run a normal session start here first.\n`);
+    process.stderr.write(`No persona files found to self-heal a registry entry for ${cwd}.\n`);
     process.exitCode = 1;
     return;
   }
   entry.pinnedAt = "Perm";
   entry.lastSeen = now;
   writeRegistry(entries);
-  process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} permanently pinned at ${cwd} -- exempt from auto-rotation until explicitly unpinned.\n`);
+  const healedNote = healed ? " (no registry entry existed yet -- created one)" : "";
+  process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} permanently pinned at ${cwd}${healedNote} -- exempt from auto-rotation until explicitly unpinned.\n`);
 }
 
 // `node pick-persona.js --unpin-forever [<path>]` -- reverses --pin-forever.
@@ -743,10 +845,11 @@ function unpinForever(targetPath) {
 function switchPersona(filename, targetPath) {
   const cwd = targetPath ? resolveMaybePath(targetPath) : resolveCwd();
   const now = nowIso();
-  let entries = readNormalizedRegistry(now);
-  const entry = findEntry(entries, cwd);
+  const healResult = ensureEntry(readNormalizedRegistry(now), cwd, now);
+  let entries = healResult.entries;
+  let entry = healResult.entry;
   if (!entry) {
-    process.stderr.write(`No registry entry for ${cwd} -- run a normal session start here first.\n`);
+    process.stderr.write(`No persona files found to self-heal a registry entry for ${cwd}.\n`);
     process.exitCode = 1;
     return;
   }
@@ -961,8 +1064,36 @@ function main() {
     // most recently rotated/switched to, since it reads the root's live
     // `file`/`style`). A genuinely new repo still random-picks from the
     // diversity pool exactly as before.
-    const repoId = computeRepoId(cwd);
+    //
+    // If cwd is actually inside a SUBMODULE (e.g. opened directly inside
+    // `xls-playthrough/refs/x-change-source` to browse reference source,
+    // not as a deliberate separate project), resolve repoId from the outer
+    // super-project's working tree instead of the submodule's own -- a
+    // submodule checkout is not a project of its own, and should inherit
+    // whatever persona the enclosing worktree already has rather than
+    // spawning an unrelated new identity.
+    const superprojectCwd = computeSuperprojectCwd(cwd);
+    const repoId = computeRepoId(superprojectCwd || cwd);
     const family = findFamily(entries, repoId);
+
+    // Never AUTOMATICALLY register a cwd that isn't inside a git repo at
+    // all AND has no existing family to inherit from -- real incident
+    // (2026-08-31): `c:\users\diago`, the bare Windows home directory, got
+    // permanently pinned to a persona simply because a session happened to
+    // launch with its cwd there before ever `cd`-ing into a real project;
+    // removing that entry by hand did nothing because the next incidental
+    // session there just recreated it. This guard is deliberately ONLY
+    // here, in the automatic SessionStart pick path -- a bare home
+    // directory should never get a persona picked FOR it, but the user can
+    // still explicitly ask for one via `--switch` (see ensureEntry's own
+    // comment on why it does NOT carry this same guard) -- explicit intent
+    // is exactly what distinguishes an incidental location from a real one
+    // here. A cwd with a real repoId but no family yet is still a
+    // legitimate brand-new project and is unaffected by this guard.
+    if (!repoId && family.length === 0) {
+      process.exit(0);
+    }
+
     let pick, styleName, inherited;
     if (family.length > 0) {
       const anchor = (e) => e.firstPinnedAt ?? e.pinnedAt;
@@ -1038,7 +1169,9 @@ module.exports = {
   buildNicknameNote,
   matchByName,
   computeRepoId,
+  computeSuperprojectCwd,
   findFamily,
+  ensureEntry,
   clearDeadSession,
   sweepDeadSessions,
   isForeverPinned,

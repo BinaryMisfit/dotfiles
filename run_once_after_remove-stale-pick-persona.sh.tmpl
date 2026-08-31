@@ -1,0 +1,23 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/bin/sh
+set -eu
+
+# One-time cleanup: pick-persona.js was tracked at the wrong deploy path
+# (dot_claude/home/scripts/ -> ~/.claude/home/scripts/pick-persona.js) since
+# ADR 0006 - a stale duplicate that stayed wired into the SessionStart hook
+# while every real fix landed on the correct ~/.claude/scripts/pick-persona.js
+# instead. See ADR 0017. Removes the stray deployed file (and the now-empty
+# directory, if nothing else lives there) on every machine that already has it.
+
+STALE_FILE="$HOME/.claude/home/scripts/pick-persona.js"
+STALE_DIR="$HOME/.claude/home/scripts"
+
+if [ -f "$STALE_FILE" ]; then
+    echo "==> removing stale ~/.claude/home/scripts/pick-persona.js"
+    rm -f "$STALE_FILE"
+fi
+
+if [ -d "$STALE_DIR" ] && [ -z "$(ls -A "$STALE_DIR" 2>/dev/null)" ]; then
+    rmdir "$STALE_DIR"
+fi
+{{ end -}}

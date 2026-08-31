@@ -104,7 +104,7 @@ both profiles, with content gated individually instead of one blanket switch.
 | `output-styles/k1ra.md` | `~/.claude/output-styles/k1ra.md` | Work | K1ra output style — structurally excluded from home, not just overridden |
 | `skills/{branch-start-work,commit-ready-check,continuation-context-pack,defect-workflow,feature-workflow,jira-post-fix-update-comment,jira-post-qa-test-plan,jira-transition-status,jira-unassign-ticket,post-pr-cleanup,pr-prep-and-submit,project-setup}/` | `~/.claude/skills/` (flat — Claude Code doesn't discover nested skill folders) | Work | Gated by name in `.chezmoiignore`, not by directory nesting |
 | `rules/home/preferences.instructions.md` | `~/.claude/rules/home/` | Home | Preferred-name + work-priority-tier instructions, captured from live state |
-| `home/scripts/executable_pick-persona.js` | `~/.claude/home/scripts/pick-persona.js` | Home | The persona-picker script the `SessionStart` hook runs |
+| `scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Home | The persona-picker script the `SessionStart` hook runs (path corrected 2026-08-31, see [ADR 0017](adr/0017-fix-pick-persona-hook-path-mismatch.md) — the old `home/scripts/` path deployed to the wrong, unused location) |
 | `executable_rate-limit-statusline-bridge.py.tmpl` | `~/.claude/` (executable) | — | Status line helper script |
 
 `run_once_after_restructure-claude-work-content.{sh,ps1}.tmpl` cleans up the old flat-path

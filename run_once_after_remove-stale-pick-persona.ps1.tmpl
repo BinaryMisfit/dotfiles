@@ -1,0 +1,23 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!powershell
+$ErrorActionPreference = "Continue"
+
+# One-time cleanup: pick-persona.js was tracked at the wrong deploy path
+# (dot_claude/home/scripts/ -> ~/.claude/home/scripts/pick-persona.js) since
+# ADR 0006 - a stale duplicate that stayed wired into the SessionStart hook
+# while every real fix landed on the correct ~/.claude/scripts/pick-persona.js
+# instead. See ADR 0017. Removes the stray deployed file (and the now-empty
+# directory, if nothing else lives there) on every machine that already has it.
+
+$StaleFile = Join-Path $HOME ".claude\home\scripts\pick-persona.js"
+$StaleDir = Join-Path $HOME ".claude\home\scripts"
+
+if (Test-Path $StaleFile) {
+    Write-Host "==> removing stale ~/.claude/home/scripts/pick-persona.js"
+    Remove-Item -Force -Path $StaleFile -ErrorAction SilentlyContinue
+}
+
+if ((Test-Path $StaleDir) -and ((Get-ChildItem -Force $StaleDir -ErrorAction SilentlyContinue | Measure-Object).Count -eq 0)) {
+    Remove-Item -Force -Path $StaleDir -ErrorAction SilentlyContinue
+}
+{{ end -}}

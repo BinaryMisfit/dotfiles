@@ -34,3 +34,12 @@ real content still only exists live).
 **What got cut/kept:** kept the hook and model pins as home-only rather than promoting them
 to always-on, since they're specific to this persona-driven home workflow, not something
 a work-profile Claude Code session should inherit.
+
+---
+*Addendum (2026-08-31):* decision point 1's tracked path, `dot_claude/home/scripts/`, was
+wrong — it deployed to `~/.claude/home/scripts/pick-persona.js`, not the script's real
+live location `~/.claude/scripts/pick-persona.js`. Two files existed on disk; the stale
+`home/scripts` one stayed wired into the `SessionStart` hook while every real fix landed
+on the correct one, unused. See [ADR 0017](0017-fix-pick-persona-hook-path-mismatch.md)
+for the investigation and fix. The home-profile *gating* here (point 2's `{{ if eq
+$profile "home" }}` block) was correct and is unchanged.
