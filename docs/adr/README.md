@@ -16,3 +16,9 @@ enum, supersession rule).
 | [0008](0008-interactive-bootstrap-and-finish-codex-removal.md) | Interactive profile/git-identity bootstrap; finish the Codex removal; fix a `.chezmoiremove` bug | Decided |
 | [0009](0009-vendor-xls-persona-output-styles.md) | Vendor xls-owned persona output-styles into this repo for distribution | Decided |
 | [0010](0010-fix-vscode-settings-profile-key-mismatch.md) | Fix `settings.json.tmpl` reading a dead `.vscode.profile` key instead of `.profile` | Decided |
+| [0011](0011-chezmoi-source-can-diverge-from-working-copy.md) | Chezmoi's source directory can silently diverge from the working copy | Decided |
+| [0012](0012-every-run-script-ships-as-a-pair.md) | Every run script ships as a Windows/POSIX pair, no exceptions | Decided |
+| [0013](0013-todo-2-resolution-ssh-force-and-settings-drift.md) | TODO-2 resolution: force SSH via `insteadOf`, drop disputed entries, relocate machine-local permission | Decided |
+| [0014](0014-registers-convention-ownership-and-domain-boundary.md) | Registers convention ownership moves to xls; domain boundary between xls and binary-dotfiles | Decided |
+| [0015](0015-scoop-to-winget-migration-order-of-operations.md) | Scoop→winget migration: order-of-operations, and real gaps found running it live | Decided |
+| [0016](0016-no-change-without-documentation.md) | Standing rule: no change lands without a matching documentation update, in the same change | Decided |

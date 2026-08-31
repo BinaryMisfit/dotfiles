@@ -13,6 +13,15 @@ These override any global Claude Code or git configuration:
   must ship with a scripted cleanup (`run_once_after_remove-*` or equivalent) in the same
   change — never leave cleanup as a manual, ad hoc step. Applies to `bootstrap.*` changes
   too. See [ADR 0004](docs/adr/0004-scripted-cleanup-required-for-every-removal.md).
+- **No change lands without a matching documentation update, in the same change.** A
+  template, run script, `.chezmoiignore`/`.chezmoiremove` entry, permission/settings key,
+  or domain-boundary/ownership call — before considering it done, find every doc that
+  makes a claim about the thing just changed (`README.md`, this file, `docs/adr/`,
+  `docs/todo-register.md`, `docs/inventory-register.md`) and update it in the same pass.
+  No doc covering the area yet? Create one — don't treat it as too small to write down. A
+  real ADR is for a decision that took investigation, reversed an assumption, or would
+  confuse a future session without its reasoning; a one-line tweak with no real "why"
+  doesn't need one. See [ADR 0016](docs/adr/0016-no-change-without-documentation.md).
 
 ## Common Commands
 

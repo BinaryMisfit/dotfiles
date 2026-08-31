@@ -18,7 +18,7 @@ Listed in [`docs/tracking-index.md`](tracking-index.md).
 | `run_once_install-iterm2-shell-integration.sh.tmpl` | macOS/Linux | Downloads iTerm2 shell integration if not already present |
 | `run_once_after_remove-mise.sh.tmpl` | POSIX | One-time cleanup: removes an old `mise` install and its `.bashrc` activation line |
 | `run_once_after_remove-scoop-mise.ps1.tmpl` | Windows | One-time cleanup: uninstalls scoop and everything scoop had installed (git, chezmoi, age, mise, openssh, gpg, psmux), then removes leftover mise data |
-| `run_once_after_remove-codex.sh.tmpl` | all platforms (runs via chezmoi's bash, even on Windows) | One-time cleanup: `npm uninstall -g @openai/codex` on machines that already have it — the install line was dropped, see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md) |
+| `run_once_after_remove-codex.sh.tmpl` / `.ps1.tmpl` | POSIX / Windows respectively, self-gated | One-time cleanup: `npm uninstall -g @openai/codex` on machines that already have it — the install line was dropped, see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md). Windows counterpart added after the bare `.sh` crashed `chezmoi apply` there — see [ADR 0012](adr/0012-every-run-script-ships-as-a-pair.md) |
 
 Claude Code's work/home cleanup (old flat rule paths, gated skills/output-style) lives in
 `.chezmoiremove` now, not a custom script — see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md)
