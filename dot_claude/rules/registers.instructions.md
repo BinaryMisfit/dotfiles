@@ -26,9 +26,19 @@ of `Open` for not-yet-triaged items — pick one status set per repo, don't mix)
 **Type** *(optional)*: `Targeted` (one-off, closes forever once done) or `Repeatable`
 (recurs — log each instance/round in the entry rather than opening a new TODO-N).
 
-**Entry shape:** index row (`| # | Item | Priority | Status | Type | Area |`) linking down
-to a full section closing with a concrete **Next action** — never leave an entry vague
-enough that a future session can't act on it without re-asking what it means.
+**Entry shape:** index row (`| # | Item | Priority | Status | Type | Area | Raised | Touched |`)
+linking down to a full section closing with a concrete **Next action** — never leave an
+entry vague enough that a future session can't act on it without re-asking what it means.
+
+**`Raised` and `Touched` are real dates (`YYYY-MM-DD`), not derived from prose (added
+2026-08-31).** `Raised` is the date the item first entered the register; `Touched` is the
+date of its most recent real edit (status change, scope change, progress note) — update it
+every time the row itself changes, not just when the item closes. Both exist specifically
+so a session returning after time away can see genuine age/staleness at a glance instead of
+mining each entry's own prose for the last date mentioned — a real, deliberately chosen
+tradeoff (two more columns to maintain) made because a user stepping away for days and
+coming back needs the register itself to remember this, not a session reconstructing it
+from scratch each time.
 
 **The entry itself is one line — the action, nothing else.** Any real detail (context,
 investigation notes, discussion, alternatives) does not live in the todo register at all;
