@@ -1,6 +1,12 @@
 {{- $profile := get . "profile" | default "home" -}}
 {
-  "permissions": {},
+  "permissions": {
+    "allow": [
+      "Bash(node --test scripts/check-worktree-fleet.test.js)",
+      "Bash(git -C . status --short)"
+    ],
+    "defaultMode": "auto"
+  },
   {{- if eq $profile "home" }}
   "env": {
     "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
@@ -45,8 +51,9 @@
   "editorMode": "normal",
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": false,
-  "inputNeededNotifEnabled": false,
+  "inputNeededNotifEnabled": true,
   "switchModelsOnFlag": false,
+  "useAutoModeDuringPlan": false,
   {{- if eq $profile "work" }}
   "outputStyle": "K1ra",
   {{- end }}
