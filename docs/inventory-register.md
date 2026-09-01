@@ -105,11 +105,21 @@ both profiles, with content gated individually instead of one blanket switch.
 | `skills/{branch-start-work,commit-ready-check,continuation-context-pack,defect-workflow,feature-workflow,jira-post-fix-update-comment,jira-post-qa-test-plan,jira-transition-status,jira-unassign-ticket,post-pr-cleanup,pr-prep-and-submit,project-setup}/` | `~/.claude/skills/` (flat — Claude Code doesn't discover nested skill folders) | Work | Gated by name in `.chezmoiignore`, not by directory nesting |
 | `rules/home/preferences.instructions.md` | `~/.claude/rules/home/` | Home | Preferred-name + work-priority-tier instructions, captured from live state |
 | `scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Home | The persona-picker script the `SessionStart` hook runs (path corrected 2026-08-31, see [ADR 0017](adr/0017-fix-pick-persona-hook-path-mismatch.md) — the old `home/scripts/` path deployed to the wrong, unused location) |
+| `output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Home | Persona output-styles |
+| `skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/` | `~/.claude/skills/` | Home | Dev-session tooling — see ownership note below |
 | `executable_rate-limit-statusline-bridge.py.tmpl` | `~/.claude/` (executable) | — | Status line helper script |
 
 `run_once_after_restructure-claude-work-content.{sh,ps1}.tmpl` cleans up the old flat-path
 rule files and (on non-work profiles) the now-gated work skills/output-style, per
 [ADR 0004](adr/0004-scripted-cleanup-required-for-every-removal.md).
+
+**Ownership of the Home-bucket Claude Code content, per [ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md):**
+`xls` (the Hailey session) authors and owns the content source for these files. This
+machine's `~/.claude/` is where her own sync script deploys them; this repo picks up that
+deployed artifact — never `xls`'s internal repo layout — and distributes it to every other
+machine via `chezmoi apply`. Any content change routes back to her source, never edited
+here directly. This machine is the canonical source for the whole home-profile surface,
+not just the two files ADR 0014 originally carved out.
 
 ## GitHub Copilot (`dot_copilot/`) — undocumented until now
 

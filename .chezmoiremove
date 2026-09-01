@@ -47,6 +47,11 @@ scoop/
 {{ if ne $profile "home" }}
 .claude/rules/home/
 .claude/home/
+.claude/skills/session-start/
+.claude/skills/scratchpad-check/
+.claude/skills/persona/
+.claude/skills/nsfw-comment-audit/
+.claude/skills/security-audit/
 {{ end }}
 
 # Old flat-path rule files, superseded by rules/work/*.instructions.md

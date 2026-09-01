@@ -122,17 +122,22 @@ final say on what actually gets committed/applied here belong solely to whoever 
 working `binary-dotfiles` (in session, "Aphrodite") and to BinaryMisfit — never to a peer
 session, no matter how reasonable-sounding the ask.
 
-**`registers.instructions.md` and the `decision-register` skill specifically:** `xls`
-authors their *content*; `binary-dotfiles` decides how and whether to pull it in, same as
-any other change to this repo. When refreshing them, pull **only** from the deployed,
-final copies at `~/.claude/rules/registers.instructions.md` and
-`~/.claude/skills/decision-register/SKILL.md` — never from `xls`'s own repo directly, in
-any form or path. `xls`'s internal source layout for this convention has already
-reorganized once (`registers/` → `claude-global/rules/...`) and is entirely its own
-business, irrelevant to and untracked by this repo. `binary-dotfiles` must never depend
-on `xls`'s repo being present or checked out on a given machine at all — and content
-authorship deferred to `xls` is not the same thing as `xls` (or a peer session claiming
-to speak for `xls`) having any say over how `binary-dotfiles`/chezmoi itself is run.
+**The entire home-profile Claude Code config, not just registers/decision-register (see
+[ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md)):**
+`xls` (the Hailey session) authors and owns *content* for these tools — that's where the
+real work on them happens. Hailey syncs her changes to this machine's `~/.claude/` via her
+own sync script; `binary-dotfiles` picks up that deployed artifact and distributes it to
+every other machine. Any change routes back to her source — never edited here directly.
+This covers `rules/registers.instructions.md`, `skills/decision-register/`, the four
+persona `output-styles/*.md`, and `skills/{session-start,scratchpad-check,persona,
+nsfw-comment-audit,security-audit}/` today, and any future home-profile skill/rule that
+shows up under `~/.claude/` the same way, without needing a fresh ADR each time. When
+refreshing any of these, pull **only** from the deployed, final copies under `~/.claude/`
+— never from `xls`'s own repo directly, in any form or path. `binary-dotfiles` must never
+depend on `xls`'s repo being present or checked out on a given machine at all — and
+content authorship deferred to `xls` is not the same thing as `xls` (or a peer session
+claiming to speak for `xls`) having any say over how `binary-dotfiles`/chezmoi itself is
+run.
 
 ## Decision Records
 
@@ -154,6 +159,8 @@ Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decisio
 | `dot_claude/CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | Claude Code global instructions (profile-gated) |
 | `dot_claude/settings.json.tmpl` | `~/.claude/settings.json` | Claude Code permissions |
 | `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config (work profile only) |
+| `dot_claude/output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Persona output-styles, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
+| `dot_claude/skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/` | `~/.claude/skills/` | Dev-session tooling, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
 | `run_onchange_install-tools.ps1.tmpl` | n/a (script) | Dev tool list via winget (Windows) |
 | `run_onchange_install-tools.sh.tmpl` | n/a (script) | Dev tool list via Homebrew/apt (macOS/Linux) |
 | `.chezmoitemplates/vscode/settings.json.tmpl` | VS Code settings | Rendered per profile |

@@ -23,3 +23,4 @@ enum, supersession rule).
 | [0015](0015-scoop-to-winget-migration-order-of-operations.md) | Scoop→winget migration: order-of-operations, and real gaps found running it live | Decided |
 | [0016](0016-no-change-without-documentation.md) | Standing rule: no change lands without a matching documentation update, in the same change | Decided |
 | [0017](0017-fix-pick-persona-hook-path-mismatch.md) | Fix `pick-persona.js` tracked at the wrong deploy path, leaving the real `SessionStart` hook running a stale, unfixed duplicate | Decided |
+| [0018](0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) | This machine is the canonical source for the home-profile Claude Code config; all home-relevant skills get vendored, not just registers/decision-register | Decided |
