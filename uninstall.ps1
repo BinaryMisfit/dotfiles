@@ -97,10 +97,15 @@ $OneTimeSideEffects = @(
 )
 
 # Category C: winget packages -- mirrors run_onchange_install-tools.ps1.tmpl's
-# $Packages list exactly. Keep these two lists in sync by hand; there's no
-# shared source between a plain root script and a chezmoi .tmpl.
+# $Packages list, MINUS Git.Git. bootstrap.ps1 installs Git.Git directly (its
+# own $WingetPackages, alongside chezmoi/age/gpg4win) -- bootstrap's own
+# domain, never uninstall's, same as chezmoi/the age key/the SSH key. Real
+# bug caught 2026-09-02: this list originally included it, meaning -Confirm
+# would have removed something bootstrap itself put there. Keep these two
+# lists in sync by hand otherwise; there's no shared source between a plain
+# root script and a chezmoi .tmpl.
 $WingetPackages = @(
-    "Microsoft.PowerShell", "Git.Git", "sharkdp.bat", "sharkdp.fd", "junegunn.fzf",
+    "Microsoft.PowerShell", "sharkdp.bat", "sharkdp.fd", "junegunn.fzf",
     "GitHub.cli", "jqlang.jq", "JesseDuffield.lazygit", "LuaLS.lua-language-server",
     "Neovim.Neovim", "OpenJS.NodeJS.LTS", "Python.Python.3.14", "BurntSushi.ripgrep.MSVC",
     "JohnnyMorganz.StyLua", "tree-sitter.tree-sitter-cli", "MikeFarah.yq", "Atuinsh.Atuin",
@@ -112,7 +117,7 @@ $NpmGlobalPackages = @(
 # Risk worth naming even though it proceeds: Git.Git, OpenJS.NodeJS.LTS, and
 # Python.Python.3.14 are commonly relied on by software with no relation to
 # this repo. Uninstalling them can break other things on this machine.
-$HighRiskPackages = @("Git.Git", "OpenJS.NodeJS.LTS", "Python.Python.3.14")
+$HighRiskPackages = @("OpenJS.NodeJS.LTS", "Python.Python.3.14")
 
 Write-Host "=== binary-dotfiles uninstall (Windows) ===" -ForegroundColor Cyan
 if (-not $Confirm) {
@@ -200,7 +205,7 @@ foreach ($pkg in $NpmGlobalPackages) {
 }
 
 Write-Host "`n--- Never touched by this script (bootstrap.ps1's own domain) ---"
-Write-Host "chezmoi.exe itself and its own config/state (~/.config/chezmoi/), the ~/.local/share/chezmoi source clone, this repo checkout, the age key (~/.config/age/key.txt), the GitHub SSH key (~/.ssh/id_ed25519_github + .pub) -- bootstrap.ps1 generates the chezmoi setup and both keys directly, so reversing them is bootstrap's own domain, not this script's. Also never touched: .claude/settings.local.json, .claude/persona-registry.json, .claude/projects/** (session history), .claude/memory/** -- none of these are chezmoi-managed at all."
+Write-Host "chezmoi.exe itself and its own config/state (~/.config/chezmoi/), the ~/.local/share/chezmoi source clone, this repo checkout, the age key (~/.config/age/key.txt), the GitHub SSH key (~/.ssh/id_ed25519_github + .pub), and Git.Git -- bootstrap.ps1 installs Git.Git and generates the chezmoi setup and both keys directly (its own separate winget package list: Git.Git, twpayne.chezmoi, FiloSottile.age, GnuPG.Gpg4win), so reversing any of it is bootstrap's own domain, not this script's. The general rule: anything bootstrap.ps1 itself installs or generates is never uninstall's to remove -- removing it would cut off the only way back in via bootstrap+apply. Also never touched: .claude/settings.local.json, .claude/persona-registry.json, .claude/projects/** (session history), .claude/memory/** -- none of these are chezmoi-managed at all."
 
 if (-not $Confirm) {
     Write-Host "`nDry run complete. Re-run with -Confirm to actually remove everything listed above, including winget/npm packages." -ForegroundColor Yellow

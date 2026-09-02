@@ -206,7 +206,7 @@ done
 
 echo
 echo "--- Never touched by this script (bootstrap.sh's own domain) ---"
-echo "chezmoi itself and its own config/state (~/.config/chezmoi/), the ~/.local/share/chezmoi source clone, this repo checkout, the age key (~/.config/age/key.txt), the GitHub SSH key (~/.ssh/id_ed25519_github + .pub) -- bootstrap.sh generates the chezmoi setup and both keys directly, so reversing them is bootstrap's own domain, not this script's. Also never touched: .claude/settings.local.json, .claude/persona-registry.json, .claude/projects/** (session history), .claude/memory/** -- none of these are chezmoi-managed at all."
+echo "chezmoi itself and its own config/state (~/.config/chezmoi/), the ~/.local/share/chezmoi source clone, this repo checkout, the age key (~/.config/age/key.txt), the GitHub SSH key (~/.ssh/id_ed25519_github + .pub), git, and curl -- bootstrap.sh installs git/curl/age/chezmoi directly, so reversing any of it is bootstrap's own domain, not this script's (confirmed already excluded from BREW_FORMULAS/APT_PACKAGES above, not just this message). The general rule: anything bootstrap.sh itself installs or generates is never uninstall's to remove -- removing it would cut off the only way back in via bootstrap+apply. Also never touched: .claude/settings.local.json, .claude/persona-registry.json, .claude/projects/** (session history), .claude/memory/** -- none of these are chezmoi-managed at all."
 
 echo
 if ! $CONFIRM; then

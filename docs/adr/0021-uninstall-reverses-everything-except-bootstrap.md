@@ -55,3 +55,27 @@ caveat as ADR 0020) — this ADR changes what the script WOULD do, not confirmat
 doing it works cleanly. TODO-1's own next action (real execution testing, ideally on
 disposable machines) now carries materially higher stakes than before, since a real run now
 uninstalls actual dev tools, not just config files.
+
+---
+*Addendum (2026-09-02):* Real bug caught by BinaryMisfit's own review, same day: this ADR's
+own **What got cut/kept** section above lists `Git.Git` as removed-but-flagged — wrong.
+`bootstrap.ps1` installs `Git.Git` directly (its own separate winget list: `Git.Git`,
+`twpayne.chezmoi`, `FiloSottile.age`, `GnuPG.Gpg4win`), so `Git.Git` was always meant to be
+bootstrap's domain, same as chezmoi/the age key/the SSH key — the v1 rescope simply missed
+it, copying the removal list wholesale from `run_onchange_install-tools.ps1.tmpl` without
+checking it against `bootstrap.ps1`'s own list first. Fixed: `Git.Git` removed from
+`uninstall.ps1`'s `$WingetPackages` and its risk-flag list, added to the script's own
+"never touched" output alongside the other three bootstrap-installed packages.
+
+**The general rule, stated precisely this time:** it's not just "the three things named in
+this ADR's Decision section" (chezmoi, age key, SSH key) — it's *anything*
+`bootstrap.ps1`/`bootstrap.sh` itself installs or generates, full stop, including any
+package in bootstrap's own install list. The motivating risk, BinaryMisfit's own words:
+removing something bootstrap provisions "nukes the only way back in" — even where a tool
+is technically reinstallable by re-running bootstrap (as `Git.Git` is, via bootstrap's own
+`winget install`), the correct design keeps bootstrap's provisioning step strictly upstream
+of anything uninstall/self-heal ever touches, not dependent on a later step to restore it.
+
+Verified `uninstall.sh`'s own package lists (`BREW_FORMULAS`/`APT_PACKAGES`) already never
+included `git`, `curl`, `age`, or `chezmoi` — no equivalent bug there, only the explanatory
+text was updated to state the same general rule.
