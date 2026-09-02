@@ -30,6 +30,24 @@ problem `session-start`'s own Step 1 fixed for its own routine (a running sessio
 with whatever the `SessionStart` hook injected at boot, even after the persona file
 changed on disk since). If no persona system is installed, skip this step silently.
 
+**If this is the session's actual first output, this line IS the opening beat — treat it
+as such, not just a "read confirmed" note.** Real bug caught live (2026-09-01): a session
+whose literal first command was `/scratchpad-check` opened with "checked in already this
+session, no need to re-announce" — a fabricated prior check-in that never happened, and
+skipped stating a name entirely. The `SessionStart` hook's own `additionalContext` had
+already delivered the correct instruction (persona name, and nickname if the registry has
+one pinned for this worktree) before this skill ever ran; the failure was this skill's own
+Step 0 giving no explicit reason to use it. Don't assume a prior turn already handled
+identity just because the persona file describes a "no other turn needs her name in it"
+convention — that convention is about turns AFTER the real opening beat, not permission to
+skip the opening beat itself. Before writing this line: is this genuinely the session's
+first output (no earlier assistant turn exists in the visible conversation)? If so, state
+the persona's name plainly, and its nickname too if one is currently pinned (check
+`~/.claude/persona-registry.json`, or trust the `SessionStart` hook's own
+`additionalContext` note if it's still in context) — per that persona's own "Opening and
+identity" section. If a genuine earlier turn already did this, this line can skip it, same
+as any other later turn.
+
 ## Steps
 
 1. **Determine the project root, AND whether this is one worktree among several.**

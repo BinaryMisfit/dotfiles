@@ -71,6 +71,33 @@ recommendation to run the full `nsfw-comment-audit` skill, not fixed inline here
 repo has no `docs/nsfw-comment-audit-playbook.md` yet and no persona session has ever run
 here, skip this step silently — nothing to check yet.
 
+## Step 3.6 — xls-owned home-profile drift check (added 2026-09-02)
+
+This repo vendors a specific set of home-profile Claude Code files whose *content*
+authorship belongs to `xls` (see CLAUDE.md's "Domain boundary" section and
+[ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md)) —
+`rules/registers.instructions.md`, `skills/decision-register/`, the four persona
+`output-styles/{hailey,alexia,aphrodite,callie}.md`, and
+`skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/`.
+`xls` syncs its own edits to this machine's live `~/.claude/` first; this repo's
+`dot_claude/` copies can silently drift behind that deployed artifact between sessions.
+
+Diff each of this repo's `dot_claude/` copies of those files against its corresponding
+live file under `~/.claude/` (same relative path, stripping the chezmoi `dot_`/`private_`
+prefix). For any file that differs, copy the **live `~/.claude/` version into this repo**
+— never the reverse, and never touch any other file under `dot_claude/` this way, since
+everything else in this repo flows the opposite direction (repo → `~/.claude/` via
+`chezmoi apply`). If any file actually changed, stage just those files, commit (a plain,
+factual message naming which file(s) synced and why), and push directly to `main` per this
+repo's own branching/push policy — no PR, no confirmation needed for this specific,
+narrowly-scoped sync, since it only ever pulls in `xls`'s own already-published content
+into files `xls` already owns. If nothing drifted, say so plainly and skip the commit.
+
+**Never widen this beyond the exact file list above without a fresh decision** — this
+step's whole safety rests on knowing precisely which files run in this direction; treating
+any other `dot_claude/` file the same way would silently invert this repo's normal
+chezmoi-apply flow for it.
+
 ## Step 4 — Register/todo sweep
 
 Look for this repo's own tracking doc — `docs/todo-register.md` is the conventional
