@@ -112,16 +112,15 @@ in the repo plus the relevant `.chezmoiignore` OS-gates):
    symlink, unlike the `bat`→`batcat` and `fd`→`fdfind` fixes that script already has for
    the same class of problem. Would report `python` MISSING on a clean Linux box that
    actually has it as `python3`.
-2. **Unconfirmed, lower confidence:** `bootstrap.sh`'s base-deps step (`git`/`curl`) only
-   branches on `apt-get`, with no Homebrew equivalent — inconsistent with the `age` install
-   two steps later in the same file, which correctly branches both. Likely harmless in
-   practice (macOS ships `git`/`curl` via Xcode CLT), but unverified.
-3. **Unconfirmed, lower confidence:** `run_once_setup-github-ssh.sh.tmpl` registers the
-   GitHub SSH key with an `ssh-agent` spawned inline — since it's `run_once`, that
-   registration doesn't obviously persist to future shell sessions or a reboot. Checked
-   `dot_zshrc.tmpl`/`dot_zshenv` for a persistent-agent pattern — found none. Not confirmed
-   broken (macOS's Keychain-integrated agent or a per-machine setup could already cover
-   this), just not verified either way.
+2. **Fixed 2026-09-02, per BinaryMisfit's own call ("always check both, apt for Linux/brew
+   for Mac"):** `bootstrap.sh`'s `git`/`curl` install now branches on `apt-get` or `brew`,
+   matching the `age` install pattern two steps later that already did this correctly.
+3. **Fixed 2026-09-02, per BinaryMisfit's own call ("SSH keys should be up"):**
+   `dot_zshrc.tmpl` now reuses a saved `ssh-agent` across shells
+   (`~/.ssh/agent.env`) and re-adds the GitHub key whenever the agent has none loaded —
+   self-heals after a reboot too, since a dead agent socket surfaces as `ssh-add` exit code
+   2, the same trigger as never having had an agent at all. Neither fix has run through a
+   real `zsh` yet — no `zsh` on this machine to test with.
 4. **False alarm, corrected on re-read — noted so it isn't re-investigated:** first pass
    flagged `run_once_install-iterm2-shell-integration.sh.tmpl` running on Linux (gated
    `ne .chezmoi.os "windows"`, i.e. darwin OR linux) as wrong, since iTerm2 is macOS-only
