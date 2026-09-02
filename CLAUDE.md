@@ -171,3 +171,4 @@ Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decisio
 | `run_onchange_install-tools.sh.tmpl` | n/a (script) | Dev tool list via Homebrew/apt (macOS/Linux) |
 | `.chezmoitemplates/vscode/settings.json.tmpl` | VS Code settings | Rendered per profile |
 | `.chezmoitemplates/vscode/extensions.txt.tmpl` | VS Code extension list | Profile-gated |
+| `uninstall.ps1` / `uninstall.sh` | n/a (script) | Reverses everything chezmoi manages on a machine, leaving chezmoi/repo intact — dry-run by default, see [ADR 0020](docs/adr/0020-uninstall-script-scope-and-safety-defaults.md) and [TODO-1](docs/todo-register.md#todo-1) |

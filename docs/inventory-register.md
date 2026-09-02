@@ -164,6 +164,7 @@ running. Both are gone now — see [ADR 0008](adr/0008-interactive-bootstrap-and
 | `docs/adr/` | Decision records — see [`docs/adr/README.md`](adr/README.md) |
 | `docs/inventory-register.md` | This file |
 | `docs/tracking-index.md` | Index of active registers |
+| `uninstall.ps1` / `uninstall.sh` | Reverses everything chezmoi manages on a machine (TODO-1) — dry-run by default, see [ADR 0020](adr/0020-uninstall-script-scope-and-safety-defaults.md) |
 
 ## Flags — found during this pass, not yet actioned
 

@@ -22,7 +22,7 @@ everything chezmoi has applied to a machine, while leaving chezmoi itself and th
 repo intact. See [ADR 0004](adr/0004-scripted-cleanup-required-for-every-removal.md) for
 the full policy and rationale.
 
-**Status:** In progress (2026-09-02)
+**Status:** In progress (2026-09-02) — v1 landed, real-machine testing outstanding
 
 **Priority:** High
 
@@ -32,12 +32,19 @@ the full policy and rationale.
 build needs is exactly what a self-heal/repair pass needs too; design the inventory-walk
 once, share it between both rather than duplicating it later.
 
-**Next action:** Design and write `uninstall.ps1` (Windows), `uninstall.sh` (macOS +
-Linux, or split if the two diverge enough to warrant it) — inventory every managed
-dotfile, every `run_onchange_install-tools`-installed package, and every `run_once_*` side
-effect (SSH keys, the nvim junction, shell integrations) using
-[`docs/inventory-register.md`](inventory-register.md) as the source list, then reverse
-each one. Do not touch the chezmoi binary, its config, or the repo checkout itself.
+**v1 shipped 2026-09-02:** `uninstall.ps1` and `uninstall.sh` at the repo root — dry-run by
+default, tiered risk (managed files/dirs → one-time `run_once_*` side effects → SSH keys
+opt-in-only → installed packages never automated). Full scoping rationale in
+[ADR 0020](adr/0020-uninstall-script-scope-and-safety-defaults.md). Verified via dry-run on
+this Windows machine (real state) and a syntax-checked POSIX dry-run under git-bash — **not
+yet run for real on macOS or Linux**, and never run with `-Confirm`/`--confirm` anywhere.
+
+**Next action:** Real `-Confirm` execution testing, ideally on a disposable/VM machine per
+platform, not this daily-driver machine. Cross-reference against
+[`docs/inventory-register.md`](inventory-register.md) periodically for drift, since the
+managed-file lists inside both scripts are hand-maintained, not generated from that doc.
+Coordinate with [TODO-4](#todo-4)'s non-Windows audit — real execution testing on
+macOS/Linux naturally belongs in that pass rather than duplicating the effort.
 
 ---
 
