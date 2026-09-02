@@ -11,7 +11,7 @@ inline here.
 | [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Closed | Targeted | chezmoi | 2026-08-30 | 2026-08-31 |
 | [TODO-3](#todo-3) | Build scheduled `chezmoi update` automation | High | Closed | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
-| [TODO-5](#todo-5) | Self-heal: detect and recover from broken/drifted chezmoi state | High | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-5](#todo-5) | Self-heal: detect and recover from broken/drifted chezmoi state | High | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 
 ---
 
@@ -158,12 +158,31 @@ should be. Raised 2026-09-02 alongside TODO-1, which it shares real design surfa
 compare against live state" logic; design once, use for both reversal (uninstall) and
 repair (self-heal).
 
-**Next action:** Scope what "broken state" actually means concretely (interrupted apply
-mid-write? a file that's been hand-edited off-template? a missing `run_once_*` side
-effect that should exist but doesn't?) before writing any recovery logic — this needs a
-real definition, not an assumed one, given how easily a self-heal mechanism can make things
-worse by "fixing" something that was actually a deliberate live-only customization (see
-TODO-2's own history).
+**Status:** In progress (2026-09-02) — detection half built, repair action still undecided
+
+**Scope, confirmed by BinaryMisfit:** three tiers picked (drift / missing `run_once` side
+effect / interrupted apply), plus his own fourth idea — if drift is severe or the machine's
+gone stale for months, offer a full uninstall→bootstrap→apply rebuild rather than trying to
+patch individual files. That fourth tier isn't built yet; needs its own real decision on
+thresholds and, given `uninstall` now removes actual packages, real caution before it's
+ever offered as automatic.
+
+**Built 2026-09-02:** `dot_scripts/chezmoi-self-heal-check.{ps1,sh}` — detection only, same
+posture as TODO-3's check: never fixes anything, just reports. Covers drift (reuses TODO-3's
+pull+diff) and missing `run_once` side effects (nvim junction, GitHub SSH key, iTerm2
+integration, the TODO-3 scheduled job — cleanup scripts like
+`run_once_after_remove-*` intentionally left out of this pass, a different check shape).
+Interrupted-apply detection is explicitly **not implemented** — flagged honestly rather than
+faked, needs real research into chezmoi's own state tracking (`chezmoistate.boltdb`) first.
+Ran the Windows script for real — it caught two genuine drifted files (both pulled and
+applied in the same pass) — and syntax-checked the POSIX side under git-bash.
+
+**Next action:** Decide the fourth tier's real trigger (what % drift, what "stale" means
+in months) and whether it's ever automatic or always human-confirmed — given uninstall's
+own package-removal scope, leaning toward "always confirmed, never automatic" but that's
+BinaryMisfit's call. Research interrupted-apply detection for real rather than guessing.
+Decide whether/how this gets scheduled (daily alongside TODO-3's check?) once repair
+action exists — a detection-only report has less urgency to schedule than TODO-3's did.
 
 ---
 
