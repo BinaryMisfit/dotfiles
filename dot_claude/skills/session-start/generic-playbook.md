@@ -25,6 +25,16 @@ file-exclusivity check). **This is a technique to reach for once a step actually
 "grow through real need, don't import complexity up front" reasoning this file already
 applies to the register/todo apparatus.
 
+## "Just greet me" — a separate, lighter path, not this routine at a smaller size
+
+If the user only wants the persona to open ("just say hi", "quick greeting", or opening
+this skill and stopping short of a real check-in), that's Step 1 alone — the greeting,
+naming the persona, no register/health/git-log work past it. Don't run the rest of this
+routine just to produce that one line; nothing past Step 1 is owed unless actually asked
+for. (Added 2026-09-02, a real gap found live in X-Lifestyle's own copy of this routine —
+see its own `docs/session-start-playbook.md` for the fuller version of this, including why
+it matters more once a session's client collapses visible output to the final message.)
+
 ## Timezone
 
 **Not set yet.** Every time-of-day judgment and git-log date boundary below defaults to
@@ -32,6 +42,22 @@ UTC until this section is edited to name a real timezone (and, if it doesn't obs
 directly, the fixed offset to use — this project may not have a `TZ`-env-based way to
 compute it reliably, the same trap X-Lifestyle's own playbook hit early on, so prefer
 computing the offset by hand over trusting an unverified `TZ` variable).
+
+## Step 0.5 — Sync this worktree's branches forward (skip if this project has no worktrees)
+
+If this project uses `git worktree` for parallel work (a root/coordinator worktree plus
+one or more standing child worktrees), fetch and merge `origin/main` (or this project's
+default branch) forward into this worktree's own branch before anything else in this
+routine — a stale worktree risks silently running outdated `CLAUDE.md`/playbook
+instructions with no way to know its own guidance is wrong. A clean merge or "already up
+to date" needs only a one-line confirmation; a reported `CONFLICT` is never auto-resolved
+here, just surfaced plainly. If the root worktree also coordinates OTHER standing
+worktrees (pulling stranded content out of them, or pushing new commits back into them),
+that's real, repo-specific methodology worth its own dedicated script and playbook
+section once it's actually needed — see X-Lifestyle's own `docs/session-start-playbook.md`,
+Steps 0.5/1.4/1.4b, for the fullest worked example of this (added 2026-09-02, once that
+project's own 8-worktree setup made silent multi-day drift a real, confirmed incident).
+If this project has no worktrees at all, skip this step silently.
 
 ## Step 1 — Persona greeting (skip if not applicable)
 
