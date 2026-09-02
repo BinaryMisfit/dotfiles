@@ -57,7 +57,7 @@
                 "face": "MesloLGS Nerd Font",
                 "size": 12
             },
-            "startingDirectory": "D:\\Source"
+            "startingDirectory": "%USERPROFILE%"
         },
         "list":
         [
