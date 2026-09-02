@@ -373,12 +373,25 @@ function readNormalizedRegistry(nowIsoStr) {
 // still lacks `firstPinnedAt` (shouldn't happen post-`normalizeEntry`, kept
 // defensive). The first-ever holder of a persona never needs a nickname, no
 // matter how many sessions or rotations it racks up -- nicknames exist
-// purely to resolve a collision, not to reward tenure. Exported for
-// testing.
+// purely to resolve a collision, not to reward tenure.
+//
+// A forever-pinned (`isForeverPinned`) PARTNER never counts as the collision
+// -- a `Perm` claim on a name is a closed, settled fact (BinaryMisfit's own
+// framing: "blocked, not forced"), not a live rival some fresh worktree
+// needs to dodge around. So a brand-new entry sharing that persona doesn't
+// need a nickname at all just because a `Perm` entry got there first; it's
+// simply Hailey (or whoever), no disambiguation required, the same as if
+// that Perm entry didn't exist. The Perm entry's OWN name stays permanently
+// blocked from reuse regardless (see `assignNicknameIfNeeded`'s `taken` set,
+// which filters on any held nickname with no Perm exception -- that part
+// was never broken). The `entry` being checked is NOT exempted by its own
+// Perm status, only a PARTNER's is -- a forever-pinned entry that's a later
+// duplicate of a still-live, non-Perm holder still needs to disambiguate
+// from it. Exported for testing.
 function needsNickname(entry, allEntries) {
   const anchor = (e) => e.firstPinnedAt ?? e.pinnedAt;
   return allEntries.some(
-    (e) => e.cwd !== entry.cwd && e.file === entry.file && anchor(e) < anchor(entry),
+    (e) => e.cwd !== entry.cwd && e.file === entry.file && !isForeverPinned(e) && anchor(e) < anchor(entry),
   );
 }
 
@@ -386,9 +399,45 @@ function needsNickname(entry, allEntries) {
 // e.g. the collision partner left the registry, or a cascade just unified
 // the whole family onto one persona/nickname slate. Nicknames track a LIVE
 // collision, not a permanent identity, so this runs on every registry
-// read/write path that touches nicknames at all. Exported for testing.
+// read/write path that touches nicknames at all.
+//
+// EXCEPT a forever-pinned entry (`isForeverPinned`) -- `pinnedAt: "Perm"` is
+// the one flag that only a deliberate, explicit human action ever sets (see
+// this file's own header comment), and the whole point of it is that the
+// entry's identity stops drifting on its own. A nickname claimed on a `Perm`
+// entry is part of that same locked identity, not a disambiguation label
+// that expires the moment a sibling collision happens to disappear -- so
+// this function leaves a forever-pinned entry's nickname completely alone,
+// however `needsNickname` would otherwise judge it. The only thing that can
+// still change a `Perm` entry's nickname is a genuine manual persona switch
+// (`switchPersona`'s own `genuinelyDifferent` branch), never a passive
+// side-effect of some OTHER worktree's session-start touching the registry.
+// Real incident this fixes (2026-09-02): `xls-playthrough`, forever-pinned
+// to Hailey with nickname "Hails" since 2026-08-30, had "Hails" silently
+// stripped here the moment sibling worktrees were reset out of the registry
+// -- and a brand-new, unrelated repo (`secretary-pool`) picked the same
+// freed word back up within hours, reading as if the identity had "swapped"
+// between two unconnected projects. Exported for testing.
 function dropStaleNicknames(entries) {
-  return entries.map((e) => (e.nickname && !needsNickname(e, entries) ? { ...e, nickname: null } : e));
+  return entries.map((e) =>
+    e.nickname && !isForeverPinned(e) && !needsNickname(e, entries) ? { ...e, nickname: null } : e,
+  );
+}
+
+// Pure: given the entries array immediately before and after a
+// `dropStaleNicknames` call, returns just the entries whose nickname it
+// actually cleared -- so a caller can log the release. `dropStaleNicknames`
+// itself stays pure/unlogged (called from several sites, some of them
+// exercised directly by unit tests against real state), so logging is the
+// caller's job. Exported for testing.
+function diffDroppedNicknames(before, after) {
+  const dropped = [];
+  for (const b of before) {
+    if (!b.nickname) continue;
+    const a = after.find((e) => e.cwd === b.cwd);
+    if (a && !a.nickname) dropped.push(a);
+  }
+  return dropped;
 }
 
 // Pure: extract nickname candidates from a persona file's own "##
@@ -518,7 +567,7 @@ function buildNicknameNote(entry, entries, context) {
     // it first.
     return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style} is also pinned to another worktree, and this one's the later duplicate${context ? ` (${context})` : ""}, but no nickname got auto-assigned -- that's a bug in pick-persona.js itself (a call path skipped \`assignNicknameIfNeeded\`), not something to fix by talking about it in character. Run \`node ~/.claude/scripts/pick-persona.js --set-nickname "<name>"\` from this worktree's own directory (${entry.cwd}) as a manual workaround, and flag this to the user as a real bug to look at.\n`;
   }
-  return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other worktree currently holds this persona, so no nickname is needed right now. If that changes later (another worktree rotates/switches onto ${entry.style}), one will be auto-assigned and recorded then, no action needed.\n`;
+  return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other LIVE worktree is currently competing for this persona (a forever-pinned holder elsewhere doesn't count -- its name stays permanently blocked from reuse, but it's not a rival this worktree needs to disambiguate from), so no nickname is needed right now. If that changes later (another non-Perm worktree rotates/switches onto ${entry.style}), one will be auto-assigned and recorded then, no action needed.\n`;
 }
 
 
@@ -712,6 +761,32 @@ function ensureEntry(entries, cwd, now) {
   return { entries: newEntries, entry: healedEntry, healed: true };
 }
 
+// Pure: does ANOTHER entry sharing this `file` already hold `nickname`
+// (case-insensitive) AND is forever-pinned? If so, `--set-nickname` must
+// refuse rather than silently duplicate a Perm-locked name -- every
+// AUTOMATIC assignment path already avoids a taken name (see
+// `assignNicknameIfNeeded`'s `taken` set), but the manual `--set-nickname`
+// CLI had no such guard at all, Perm or not (TODO-1, home-ansible... no,
+// secretary-pool's own docs/todo-register.md -- found live 2026-09-02
+// investigating the xls-playthrough/secretary-pool "Hails" incident).
+// Scoped to Perm partners only, matching that incident's own scope --
+// doesn't block reusing a transient, non-Perm nickname (a real but
+// deliberately smaller ask than "no duplicates ever"). Exported for
+// testing.
+function findPermNicknameCollision(entries, cwd, file, nickname) {
+  const needle = nickname.trim().toLowerCase();
+  return (
+    entries.find(
+      (e) =>
+        e.cwd !== cwd &&
+        e.file === file &&
+        isForeverPinned(e) &&
+        e.nickname &&
+        e.nickname.toLowerCase() === needle,
+    ) ?? null
+  );
+}
+
 // Handles `node pick-persona.js --set-nickname "<text>"` -- called by the
 // assistant, from inside the worktree whose instance is claiming a
 // nickname, once it's settled on one in-character. Not a SessionStart
@@ -726,6 +801,14 @@ function setNickname(nickname) {
     return;
   }
   if (healed) appendLog(now, "self-heal-new-worktree", entryLogFields(entry));
+  const collision = findPermNicknameCollision(entries, cwd, entry.file, nickname);
+  if (collision) {
+    process.stderr.write(
+      `"${nickname}" is permanently held by ${collision.style} at ${collision.cwd} -- pick a different name (that entry is forever-pinned, so its nickname is blocked from reuse, not up for grabs).\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
   entry.nickname = nickname;
   entry.lastSeen = now;
   writeRegistry(entries);
@@ -741,7 +824,9 @@ function setNickname(nickname) {
 function listRegistry() {
   const now = nowIso();
   let entries = pruneStale(readNormalizedRegistry(now));
+  const beforeDrop = entries;
   entries = dropStaleNicknames(entries);
+  for (const e of diffDroppedNicknames(beforeDrop, entries)) appendLog(now, "drop-stale-nickname", entryLogFields(e));
   writeRegistry(entries);
   if (entries.length === 0) {
     process.stdout.write("No worktrees pinned yet.\n");
@@ -1052,7 +1137,9 @@ function switchPersona(filename, targetPath) {
   if (genuinelyDifferent && entry.repoId) {
     entries = cascadeFamilyPersona(entries, entry.repoId, filename, styleName);
   }
+  const beforeDrop = entries;
   entries = dropStaleNicknames(entries);
+  for (const e of diffDroppedNicknames(beforeDrop, entries)) appendLog(now, "drop-stale-nickname", entryLogFields(e));
 
   // Structural nickname fix (2026-09-01): a switch (or the cascade it just
   // triggered) can create a fresh collision this worktree's own entry --
@@ -1236,7 +1323,9 @@ function main() {
     // 2026-09-02: a resumed session (`--resume=3af73ea3...`) firing a fresh
     // hook is exactly the shape of event that could trigger this.
 
+    const beforeDrop = entries;
     entries = dropStaleNicknames(entries);
+    for (const e of diffDroppedNicknames(beforeDrop, entries)) appendLog(now, "drop-stale-nickname", entryLogFields(e));
     // Re-find `entry` -- cascadeFamilyPersona/dropStaleNicknames both return
     // NEW entry objects via .map, so the local `entry` reference above may
     // now be stale even though its cwd hasn't changed.
@@ -1393,6 +1482,8 @@ module.exports = {
   randomRotateAfterDays,
   normalizeEntry,
   dropStaleNicknames,
+  diffDroppedNicknames,
+  findPermNicknameCollision,
   cascadeFamilyPersona,
   resolveMaybePath,
   extractNicknameCandidates,
