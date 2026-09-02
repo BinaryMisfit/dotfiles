@@ -232,6 +232,31 @@ every read that touches nicknames.
   — those paths would shadow the global copy inside xls's own sessions), deployed to
   `~/.claude/` via `scripts/sync-global-claude-config.js` — an edit there needs a re-sync
   before it's live anywhere else.
+
+## After a global persona-file edit, notify — don't just deploy and go quiet (added 2026-09-02)
+
+A persona file's content is loaded into a session's system prompt once, at that session's
+own start — deploying a new version to `~/.claude/output-styles/` does **not** retroactively
+change what an already-running session is voicing. Editing and syncing alone leaves every
+live session on the stale copy indefinitely, silently.
+
+Whenever this project (`xls`) edits and re-syncs one or more persona files:
+
+1. **`ListAgents`**, and for every currently-live peer session that isn't this one, send a
+   short message naming which persona file(s) changed and asking it to reload — the
+   practical mechanism is that session running `/persona <its own current name>` again
+   (re-reads the file fresh per step 3/4 above) or, if it would rather wait, at least
+   knowing a stale copy is loaded so it can decide when.
+2. **`binary-dotfiles` specifically also owns the deployed copy on other machines** (it's
+   the chezmoi-distribution source per `~/.claude/rules/registers.instructions.md`'s
+   "Ownership and distribution" section) — if a `binary-dotfiles` session is listed as a
+   live peer, message it directly so it can pull the change promptly. If no
+   `binary-dotfiles` session is live, leave a note in `xls`'s own
+   `docs/ai/session-scratchpad.md` instead, so the next `binary-dotfiles` session picks it
+   up on its own session-start register sweep rather than the change sitting undiscovered
+   until someone happens to notice.
+3. This is notification, not enforcement — nothing here forces a live session to actually
+   reload; it just makes sure staleness is a known, visible fact rather than a silent gap.
 - Changing what the `SessionStart` hook does by default — this skill only ever sets
   `outputStyle` and calls `--switch` for this worktree's own row, never touches
   `pick-persona.js`'s own new-worktree pick logic, diversity rule, rotation timing, or

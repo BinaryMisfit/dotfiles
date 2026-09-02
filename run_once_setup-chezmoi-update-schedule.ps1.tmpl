@@ -1,0 +1,21 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!powershell
+# Registers a daily Windows Scheduled Task that runs chezmoi-update-check.ps1
+# (dot_scripts/chezmoi-update-check.ps1 -> ~/.scripts/chezmoi-update-check.ps1).
+# TODO-3 / ADR 0022: pull + diff + notify only, never an unattended apply.
+$ErrorActionPreference = "Stop"
+
+$TaskName = "BinaryDotfilesChezmoiUpdateCheck"
+$ScriptPath = Join-Path $HOME ".scripts\chezmoi-update-check.ps1"
+
+if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
+    Write-Host "==> scheduled task '$TaskName' already exists, skipping"
+} else {
+    Write-Host "==> registering daily chezmoi update check (Task Scheduler, 09:00)"
+    $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
+    $Trigger = New-ScheduledTaskTrigger -Daily -At "09:00"
+    $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd
+    Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings `
+        -Description "Daily chezmoi update pull+diff check, notify only (binary-dotfiles TODO-3)" | Out-Null
+}
+{{ end -}}

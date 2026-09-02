@@ -10,6 +10,8 @@
 # Bootstrap / root-only files
 bootstrap.sh
 bootstrap.ps1
+uninstall.ps1
+uninstall.sh
 README.md
 CLAUDE.md
 install-core.ps1

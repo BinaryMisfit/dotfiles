@@ -9,7 +9,7 @@ inline here.
 |---|---|---|---|---|---|---|---|
 | [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | In progress | Targeted | chezmoi | 2026-08-30 | 2026-09-02 |
 | [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Closed | Targeted | chezmoi | 2026-08-30 | 2026-08-31 |
-| [TODO-3](#todo-3) | Build scheduled `chezmoi update` automation | High | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-3](#todo-3) | Build scheduled `chezmoi update` automation | High | Closed | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 | [TODO-5](#todo-5) | Self-heal: detect and recover from broken/drifted chezmoi state | High | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 
@@ -65,23 +65,27 @@ belongs in that pass rather than duplicating the effort.
 
 Build the scheduled `chezmoi update` automation — investigated and approved 2026-08-30,
 asked about twice in that session with no answer given, dropped without ever being logged.
-Surfaced again during the 2026-09-02 session-history audit; deliberately not built in that
-same session (a recurring system-level scheduled task shouldn't get stood up right as the
-person who'd verify it works is stepping away).
+Surfaced again during the 2026-09-02 session-history audit; built the same day once
+cadence/safety were settled with BinaryMisfit.
 
-**Status:** Open
+**Status:** Closed (2026-09-02)
 
 **Priority:** High
 
 **Type:** Targeted
 
-**Next action:** Decide cadence (daily vs. every N hours) with BinaryMisfit, then write
-`run_once_setup-chezmoi-update-schedule.ps1.tmpl` (Windows Task Scheduler,
-`Register-ScheduledTask`) and `run_once_setup-chezmoi-update-schedule.sh.tmpl` (launchd on
-macOS, cron or a systemd `--user` timer on Linux) per this repo's own run-script-pair
-convention. Verify the job actually fires and applies clean before calling it done — don't
-just assume a scheduled task registered successfully because the registration command
-didn't error.
+**Resolution:** Daily (09:00 local), pull + diff + notify only, never an unattended apply
+— full reasoning in [ADR 0022](adr/0022-scheduled-chezmoi-update-check-pull-diff-notify-only.md).
+`dot_scripts/chezmoi-update-check.{ps1,sh}` does the actual check;
+`run_once_setup-chezmoi-update-schedule.{ps1,sh}.tmpl` registers the recurring job once
+(Windows Task Scheduler / macOS `launchd` / Linux `cron`). Ran the Windows check script for
+real on this machine — it found genuine pending drift (two xls-owned files this repo
+hadn't caught up to yet, and a real `.chezmoiignore` gap the check itself surfaced: `uninstall.ps1`/
+`uninstall.sh` had no root-only exclusion, so chezmoi wanted to deploy them into `~` — fixed
+in the same pass) and wrote the marker file correctly. **Not yet verified**: the actual
+Task Scheduler/launchd/cron registration firing on its own schedule (only the check
+script's logic itself was exercised directly, not the scheduling mechanism) — real
+macOS/Linux registration is untested entirely, same caveat as TODO-1/TODO-4.
 
 ---
 

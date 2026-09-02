@@ -1075,11 +1075,22 @@ function switchPersona(filename, targetPath) {
   const content = fs.readFileSync(path.join(stylesDir, filename), "utf8");
   const styleName = parseFrontmatterName(content, path.basename(filename, ".md"));
   const genuinelyDifferent = entry.file !== filename;
+  const wasForeverPinned = isForeverPinned(entry);
 
   entry.file = filename;
   entry.style = styleName;
-  entry.pinnedAt = now;
-  entry.rotateAfterDays = randomRotateAfterDays();
+  // A same-file "switch" is how a session refreshes its own stale in-memory
+  // copy after a persona file's content changed on disk (see the `persona`
+  // skill's "notify-on-global-persona-update" step) -- it must never be able
+  // to silently un-pin a forever-pinned worktree. Only a GENUINE persona
+  // change resets pinnedAt away from "Perm"/"Fixed"; a refresh onto the same
+  // file leaves an existing forever-pin exactly as it was. Real gap, caught
+  // live 2026-09-02: digital-homelab-4c deliberately avoided --switch after
+  // a content-only refresh specifically because this guard didn't exist yet.
+  if (genuinelyDifferent || !wasForeverPinned) {
+    entry.pinnedAt = now;
+    entry.rotateAfterDays = randomRotateAfterDays();
+  }
   entry.lastSeen = now;
   if (genuinelyDifferent) entry.nickname = null;
 
@@ -1110,7 +1121,11 @@ function switchPersona(filename, targetPath) {
   if (genuinelyDifferent && skippedSiblings > 0) {
     cascadeNote += `${cascadeNote ? "," : " --"} skipped ${skippedSiblings} forever-pinned sibling${skippedSiblings === 1 ? "" : "s"}`;
   }
-  process.stdout.write(`Switched ${cwd} to ${styleName}${cascadeNote}. Rotation clock reset -- not a permanent pin.\n`);
+  const pinNote =
+    genuinelyDifferent || !wasForeverPinned
+      ? "Rotation clock reset -- not a permanent pin."
+      : "Same file re-read -- forever-pin preserved, rotation clock untouched.";
+  process.stdout.write(`Switched ${cwd} to ${styleName}${cascadeNote}. ${pinNote}\n`);
 }
 
 function main() {

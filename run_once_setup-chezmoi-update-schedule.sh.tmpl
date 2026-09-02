@@ -1,0 +1,59 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/usr/bin/env sh
+# Registers a daily scheduled check that runs chezmoi-update-check.sh
+# (dot_scripts/executable_chezmoi-update-check.sh -> ~/.scripts/chezmoi-update-check.sh).
+# TODO-3 / ADR 0022: pull + diff + notify only, never an unattended apply.
+set -eu
+
+{{ if eq .chezmoi.os "darwin" -}}
+PLIST="$HOME/Library/LaunchAgents/com.binarydotfiles.chezmoi-update-check.plist"
+SCRIPT="$HOME/.scripts/chezmoi-update-check.sh"
+
+if [ -f "$PLIST" ]; then
+  echo "==> launchd job already registered, skipping"
+else
+  echo "==> registering daily chezmoi update check (launchd, 09:00)"
+  mkdir -p "$HOME/Library/LaunchAgents"
+  cat > "$PLIST" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.binarydotfiles.chezmoi-update-check</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$SCRIPT</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
+PLISTEOF
+  launchctl load "$PLIST" 2>/dev/null || true
+fi
+{{ end -}}
+
+{{ if eq .chezmoi.os "linux" -}}
+SCRIPT="$HOME/.scripts/chezmoi-update-check.sh"
+CRON_MARKER="# binary-dotfiles chezmoi-update-check"
+
+if command -v crontab >/dev/null 2>&1; then
+  if crontab -l 2>/dev/null | grep -qF "$CRON_MARKER"; then
+    echo "==> cron entry already registered, skipping"
+  else
+    echo "==> registering daily chezmoi update check (cron, 09:00)"
+    (crontab -l 2>/dev/null; echo "0 9 * * * $SCRIPT $CRON_MARKER") | crontab -
+  fi
+else
+  echo "==> crontab not found -- skipping scheduled chezmoi update check, set this up manually (e.g. a systemd --user timer)"
+fi
+{{ end -}}
+{{ end -}}
