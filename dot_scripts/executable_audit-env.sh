@@ -25,16 +25,24 @@ echo
 for tool in "${tools[@]}"; do
   echo "==> $tool"
 
-  if ! command -v "$tool" >/dev/null 2>&1; then
+  # Debian/Ubuntu's apt packages install python3, not a bare `python` --
+  # same class of naming mismatch install-tools.sh.tmpl already symlinks
+  # around for bat/fd, just not this one yet.
+  check_tool="$tool"
+  if [ "$tool" = "python" ] && ! command -v python >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+    check_tool="python3"
+  fi
+
+  if ! command -v "$check_tool" >/dev/null 2>&1; then
     echo "MISSING: $tool"
     echo
     continue
   fi
 
-  echo "Path: $(command -v "$tool")"
+  echo "Path: $(command -v "$check_tool")"
 
-  if ! "$tool" --version; then
-    echo "WARN: failed to run $tool --version"
+  if ! "$check_tool" --version; then
+    echo "WARN: failed to run $check_tool --version"
   fi
 
   echo

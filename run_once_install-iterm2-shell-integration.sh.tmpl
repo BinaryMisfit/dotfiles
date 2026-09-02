@@ -2,6 +2,13 @@
 #!/usr/bin/env sh
 set -eu
 
+# Deliberately covers Linux too, not just macOS -- iTerm2 itself only runs on
+# macOS, but Linux machines in this fleet are remote SSH targets reached FROM
+# a Mac running iTerm2 (see ms-vscode-remote.remote-ssh in the VS Code
+# extensions list for the same pattern). The integration script needs to live
+# on the remote/server side for iTerm2's features to work over that SSH
+# session. Confirmed intentional during the 2026-09-02 TODO-4 audit, after an
+# initial (wrong) read flagged this as a Linux-shouldn't-need-this bug.
 target="$HOME/.iterm2_shell_integration.zsh"
 
 if [ ! -f "$target" ]; then

@@ -10,7 +10,7 @@ inline here.
 | [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | In progress | Targeted | chezmoi | 2026-08-30 | 2026-09-02 |
 | [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Closed | Targeted | chezmoi | 2026-08-30 | 2026-08-31 |
 | [TODO-3](#todo-3) | Build scheduled `chezmoi update` automation | High | Closed | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
-| [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 | [TODO-5](#todo-5) | Self-heal: detect and recover from broken/drifted chezmoi state | High | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 
 ---
@@ -97,18 +97,48 @@ scheduled-update design) has been Windows-specific, run and verified on this one
 machine. macOS/Linux paths exist as paired `.sh.tmpl` files per this repo's own convention,
 but pairing a file doesn't mean it's actually been run for real anywhere.
 
-**Status:** Open
+**Status:** In progress (2026-09-02) — static read-through of every POSIX script done,
+real-machine execution still outstanding
 
 **Priority:** Normal
 
 **Type:** Targeted
 
-**Next action:** Audit every `run_once_*`/`run_onchange_*` `.sh.tmpl` and every
-`.chezmoiignore`/`.chezmoitemplates` OS-gate for macOS and Linux — confirm each one is
-still accurate against current tooling (Homebrew/apt package names, path assumptions,
-shell-specific syntax), and where possible actually exercise a fresh `chezmoi apply` on a
-real or disposable macOS/Linux environment rather than reasoning about it from the
-Windows-side template alone.
+**Static audit findings, 2026-09-02** (read every `run_once_*`/`run_onchange_*` `.sh.tmpl`
+in the repo plus the relevant `.chezmoiignore` OS-gates):
+
+1. **Real gap:** `audit-env.sh` checks for a bare `python` binary, but the Linux install
+   list (`run_onchange_install-tools.sh.tmpl`) only installs `python3`/`python3-pip` — no
+   symlink, unlike the `bat`→`batcat` and `fd`→`fdfind` fixes that script already has for
+   the same class of problem. Would report `python` MISSING on a clean Linux box that
+   actually has it as `python3`.
+2. **Unconfirmed, lower confidence:** `bootstrap.sh`'s base-deps step (`git`/`curl`) only
+   branches on `apt-get`, with no Homebrew equivalent — inconsistent with the `age` install
+   two steps later in the same file, which correctly branches both. Likely harmless in
+   practice (macOS ships `git`/`curl` via Xcode CLT), but unverified.
+3. **Unconfirmed, lower confidence:** `run_once_setup-github-ssh.sh.tmpl` registers the
+   GitHub SSH key with an `ssh-agent` spawned inline — since it's `run_once`, that
+   registration doesn't obviously persist to future shell sessions or a reboot. Checked
+   `dot_zshrc.tmpl`/`dot_zshenv` for a persistent-agent pattern — found none. Not confirmed
+   broken (macOS's Keychain-integrated agent or a per-machine setup could already cover
+   this), just not verified either way.
+4. **False alarm, corrected on re-read — noted so it isn't re-investigated:** first pass
+   flagged `run_once_install-iterm2-shell-integration.sh.tmpl` running on Linux (gated
+   `ne .chezmoi.os "windows"`, i.e. darwin OR linux) as wrong, since iTerm2 is macOS-only
+   software. Wrong call — the extension list includes `ms-vscode-remote.remote-ssh` and
+   friends, confirming Linux machines in this fleet are remote SSH targets accessed from a
+   Mac client, not local desktops. iTerm2 shell integration on the Linux *server* side is
+   exactly what makes iTerm2's features work over that SSH session — intentional, not a
+   bug. Same evidence explains `.chezmoiignore`'s "Linux-only targets" block (excludes
+   `.vscode/`/the extensions installer *on* Linux, despite the confusing label) — no local
+   VS Code needed on a remote-SSH target. Worth a comment-clarity fix on that misleading
+   label at some point, not a functional one.
+
+**Next action:** Real execution testing on a disposable/VM macOS and Linux machine — a
+fresh `chezmoi init`/`apply` end to end, not just reading the templates. Confirm or refute
+findings 2 and 3 above against real behavior. Coordinate with
+[TODO-1](#todo-1)'s own real-execution testing rather than running two separate disposable-
+machine passes.
 
 ---
 

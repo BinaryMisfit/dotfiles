@@ -55,7 +55,11 @@ OneDrive - Powerfleet/
 .config/shell/helpers.zsh
 {{ end }}
 
-# Linux-only targets
+# Excluded ON Linux (not "Linux-only" -- misleading label, corrected 2026-09-02
+# TODO-4 audit): Linux machines in this fleet are remote SSH targets accessed
+# from a Windows/macOS VS Code client (see ms-vscode-remote.remote-ssh in the
+# extensions list), not local desktops running VS Code themselves -- so no
+# local .vscode/ or extensions installer is needed there.
 {{ if $isLinux }}
 .vscode/
 install-vscode-extensions.sh
