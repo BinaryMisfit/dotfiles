@@ -57,46 +57,38 @@
 //
 // `firstPinnedAt` (added 2026-08-30) is IMMUTABLE -- stamped once, the
 // moment this worktree is first ever assigned a persona, and never touched
-// again by anything (not a manual switch, not auto-rotation, not a
-// cascade). It exists purely to answer "which family member came first" --
-// used by both `needsNickname` (nickname precedence) and
-// `isEligibleForOwnRotation` (root-of-family determination) -- because
-// `pinnedAt` itself now resets on every rotation/switch and can no longer
-// be trusted for "who was here first."
+// again by anything (not a manual switch, not a cascade). It exists purely
+// to answer "which family member came first" -- used by `needsNickname`
+// (nickname precedence) -- because `pinnedAt` itself resets on every
+// switch and can no longer be trusted for "who was here first."
 //
-// `pinnedAt` is now the MUTABLE rotation anchor, and deliberately loose-typed
-// (explicit user design call, 2026-08-30: "this is not a db file, we have
-// design authority") -- either a real ISO timestamp (this entry is
-// rotation-eligible, clock starts counting from this moment) or the literal
-// string `"Perm"` (or `"Fixed"`, recognized as a synonym) meaning
-// permanently, explicitly locked -- exempt from auto-rotation until
-// `--unpin-forever` reverses it. `"Perm"` is the ONLY thing that creates a
-// real permanent pin, and the ONLY way an entry gets it is the user
-// explicitly running `--pin-forever` -- no automatic path (a fresh pick, a
-// manual `/persona` switch, a cascade) ever writes it. Human-legible by
-// design: glance at the raw JSON and a locked entry is obviously different
-// from a normal one, no second boolean field to cross-reference.
+// `pinnedAt` is deliberately loose-typed (explicit user design call,
+// 2026-08-30: "this is not a db file, we have design authority") -- either
+// a real ISO timestamp, or the literal string `"Perm"` (or `"Fixed"`,
+// recognized as a synonym) meaning permanently, explicitly locked.
+// `"Perm"` is the ONLY thing that creates a real permanent pin, and the
+// ONLY way an entry gets it is the user explicitly running
+// `--pin-forever` -- no automatic path (a fresh pick, a manual `/persona`
+// switch, a cascade) ever writes it. Human-legible by design: glance at
+// the raw JSON and a locked entry is obviously different from a normal
+// one, no second boolean field to cross-reference.
 //
-// `rotateAfterDays` is a small integer, uniformly 2-4, rolled ONCE per
-// assignment (first pick, each rotation, each manual switch, `--unpin-
-// forever`) and held stable until the next one -- "small random but still a
-// random," not re-rolled on every check. See `needsRotation`.
+// `rotateAfterDays` is a vestigial field from the removed auto-rotation
+// feature (see below) -- still written on every switch/pin for schema
+// continuity, but nothing reads it anymore. Safe to strip from the schema
+// entirely in a future cleanup; not urgent on its own.
 //
-// Auto-rotation: once `rotateAfterDays` days have elapsed since `pinnedAt`
-// (and the entry isn't forever-pinned), the NEXT SessionStart there swaps to
-// a genuinely different persona -- pool excludes only the entry's OWN
-// current file, nothing else; two entries landing on the same persona is
-// normal and resolved via nickname the same way any other collision is, not
-// something rotation avoids. Only the ROOT of a worktree family (earliest
-// `firstPinnedAt`) or a standalone entry is independently eligible -- a
-// non-root sibling never rolls its own rotation, it only ever follows via
-// cascade (see `cascadeFamilyPersona`) when a family member's persona
-// actually changes, whether by rotation or by manual switch. "Not
-// retroactive" (explicit user requirement, 2026-08-30): `normalizeEntry`
-// resets `pinnedAt` to right now the first time an old-format entry
-// (missing `rotateAfterDays`) is touched, specifically so nobody's
-// already-elapsed history counts toward an immediate rotation the moment
-// this feature ships.
+// Auto-rotation, REMOVED 2026-09-02 (BinaryMisfit's own call): every
+// domain now gets one stable, deliberately-chosen persona, permanently --
+// "the persona's work differently now," not a rotating flavor pool that
+// swaps on its own every 2-4 days. The removed mechanic only ever fired
+// inside the automatic SessionStart pick path, but that path also runs on
+// a `--resume` of an already-in-progress session -- a fresh hook
+// invocation, same as any other -- so a not-yet-forever-pinned worktree
+// could have its persona silently swapped out from under a conversation
+// that was already running. Real incident this traces back to: a resumed
+// session (`--resume=<uuid>`) firing a fresh hook is exactly the shape of
+// event that could trigger it.
 //
 // Manual override (the `persona` skill) resolves a fuzzy name/nickname to
 // an exact filename itself, then calls `--switch <file> [path]` here to do
@@ -529,43 +521,6 @@ function buildNicknameNote(entry, entries, context) {
   return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other worktree currently holds this persona, so no nickname is needed right now. If that changes later (another worktree rotates/switches onto ${entry.style}), one will be auto-assigned and recorded then, no action needed.\n`;
 }
 
-// Pure: is this entry independently eligible to roll its own auto-rotation,
-// or does it only ever follow via cascade? Same "earliest firstPinnedAt
-// wins" precedence as needsNickname, just answering a different question --
-// a standalone entry (no family) is always its own root. Exported for
-// testing.
-function isEligibleForOwnRotation(entry, allEntries) {
-  if (!entry.repoId) return true;
-  const anchor = (e) => e.firstPinnedAt ?? e.pinnedAt;
-  return !allEntries.some((e) => e.repoId === entry.repoId && e.cwd !== entry.cwd && anchor(e) < anchor(entry));
-}
-
-// Pure: has this entry's rotation window elapsed? False for a forever-pin,
-// false for an entry that's never actually been opened (nothing to rotate
-// yet), false if `pinnedAt` isn't a real parseable timestamp. Exported for
-// testing.
-function needsRotation(entry, nowIsoStr) {
-  if (!entry.everOpened) return false;
-  if (isForeverPinned(entry)) return false;
-  if (typeof entry.pinnedAt !== "string") return false;
-  const anchorMs = Date.parse(entry.pinnedAt);
-  const nowMs = Date.parse(nowIsoStr);
-  if (Number.isNaN(anchorMs) || Number.isNaN(nowMs)) return false;
-  const days = entry.rotateAfterDays ?? 3;
-  return (nowMs - anchorMs) / 86400000 >= days;
-}
-
-// Pure: pick a rotation target -- excludes ONLY the entry's own current
-// file, nothing else. Unlike `pickForNewWorktree` (first-pick diversity),
-// rotation freely lands on a persona already live elsewhere; a resulting
-// collision is normal and resolved via nickname like any other (explicit
-// user call, 2026-08-30: "the only time this becomes a problem is when we
-// run out of nicknames"). Exported for testing.
-function pickRotationTarget(currentFile, files, randomFn = Math.random) {
-  const candidates = files.filter((f) => f !== currentFile);
-  const pool = candidates.length > 0 ? candidates : files;
-  return pool[Math.floor(randomFn() * pool.length)];
-}
 
 // Pure: pick a persona for a brand-new worktree, excluding whichever
 // persona files are already pinned to OTHER live entries -- falls back to
@@ -1245,7 +1200,6 @@ function main() {
   let entry = findEntry(entries, cwd);
 
   let nicknameNote = "";
-  let rotationNote = "";
 
   if (entry) {
     entry.lastSeen = now;
@@ -1269,25 +1223,18 @@ function main() {
       if (liveName !== entry.style) entry.style = liveName;
     }
 
-    // Auto-rotation (2026-08-30) -- only the root of a worktree family, or a
-    // standalone entry, is independently eligible; see
-    // isEligibleForOwnRotation's own comment.
-    if (isEligibleForOwnRotation(entry, entries) && needsRotation(entry, now)) {
-      const newFile = pickRotationTarget(entry.file, files);
-      const newContent = fs.readFileSync(path.join(stylesDir, newFile), "utf8");
-      const newStyle = parseFrontmatterName(newContent, path.basename(newFile, ".md"));
-      const oldStyle = entry.style;
-      entry.file = newFile;
-      entry.style = newStyle;
-      entry.pinnedAt = now;
-      entry.rotateAfterDays = randomRotateAfterDays();
-      entry.nickname = null;
-      if (entry.repoId) {
-        entries = cascadeFamilyPersona(entries, entry.repoId, newFile, newStyle);
-      }
-      rotationNote = `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree's persona just auto-rotated from ${oldStyle} to ${newStyle} (its rotation window elapsed). Open this session in character as ${newStyle}, not ${oldStyle}.\n`;
-      appendLog(now, "rotate", { cwd, from: oldStyle, to: newStyle, file: newFile });
-    }
+    // Auto-rotation removed (2026-09-02, BinaryMisfit's own call): every
+    // domain now gets one stable, deliberately-chosen persona, permanently
+    // -- "the persona's work differently now," not a rotating flavor pool.
+    // The old mechanic (needsRotation/pickRotationTarget/
+    // isEligibleForOwnRotation, all deleted with this change) only ever
+    // fired inside this automatic SessionStart pick path, but that includes
+    // a `--resume` of an existing session -- a fresh SessionStart hook
+    // invocation, same as any other -- so a not-yet-forever-pinned worktree
+    // could have its persona silently swapped out from under a conversation
+    // that was already in progress. Real incident this traces back to,
+    // 2026-09-02: a resumed session (`--resume=3af73ea3...`) firing a fresh
+    // hook is exactly the shape of event that could trigger this.
 
     entries = dropStaleNicknames(entries);
     // Re-find `entry` -- cascadeFamilyPersona/dropStaleNicknames both return
@@ -1446,9 +1393,6 @@ module.exports = {
   randomRotateAfterDays,
   normalizeEntry,
   dropStaleNicknames,
-  isEligibleForOwnRotation,
-  needsRotation,
-  pickRotationTarget,
   cascadeFamilyPersona,
   resolveMaybePath,
   extractNicknameCandidates,
