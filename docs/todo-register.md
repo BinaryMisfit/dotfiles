@@ -32,19 +32,32 @@ the full policy and rationale.
 build needs is exactly what a self-heal/repair pass needs too; design the inventory-walk
 once, share it between both rather than duplicating it later.
 
-**v1 shipped 2026-09-02:** `uninstall.ps1` and `uninstall.sh` at the repo root — dry-run by
-default, tiered risk (managed files/dirs → one-time `run_once_*` side effects → SSH keys
-opt-in-only → installed packages never automated). Full scoping rationale in
-[ADR 0020](adr/0020-uninstall-script-scope-and-safety-defaults.md). Verified via dry-run on
-this Windows machine (real state) and a syntax-checked POSIX dry-run under git-bash — **not
-yet run for real on macOS or Linux**, and never run with `-Confirm`/`--confirm` anywhere.
+**v1 shipped 2026-09-02, rescoped same day:** `uninstall.ps1` and `uninstall.sh` at the
+repo root, dry-run by default. Scope corrected per BinaryMisfit's own explicit rule (see
+[ADR 0021](adr/0021-uninstall-reverses-everything-except-bootstrap.md), superseding
+ADR 0020's original package exclusion): the **only** permanent exclusion is what
+`bootstrap.ps1`/`bootstrap.sh` itself generates directly — chezmoi's own install/config,
+the age key, and the GitHub SSH key. Everything else, including the full winget/Homebrew/
+apt/npm package list and VS Code extensions, is reversed under a bare `-Confirm`/`--confirm`
+— no separate flag tier anymore. Two named, deliberate exceptions stay flagged rather than
+silent: `Git.Git`/`OpenJS.NodeJS.LTS`/`Python.Python.3.14` are removed but marked
+"commonly relied on by other software" in the output; Linux's `ca-certificates`/`curl`/
+`gnupg` are NOT auto-removed even under `--confirm`, printed as a manual-review item
+instead — real system-package risk, not config file removal.
+
+Verified via dry-run on this Windows machine (real state, including winget/npm package
+enumeration) and a syntax-checked POSIX dry-run under git-bash. **Not yet run for real on
+macOS or Linux, and never run with `-Confirm`/`--confirm` anywhere** — the stakes of that
+first real run are now materially higher than v1's, since it uninstalls actual dev tools,
+not just config files.
 
 **Next action:** Real `-Confirm` execution testing, ideally on a disposable/VM machine per
 platform, not this daily-driver machine. Cross-reference against
 [`docs/inventory-register.md`](inventory-register.md) periodically for drift, since the
-managed-file lists inside both scripts are hand-maintained, not generated from that doc.
-Coordinate with [TODO-4](#todo-4)'s non-Windows audit — real execution testing on
-macOS/Linux naturally belongs in that pass rather than duplicating the effort.
+managed-file/package lists inside both scripts are hand-maintained, not generated from that
+doc or from `run_onchange_install-tools.*.tmpl` directly. Coordinate with
+[TODO-4](#todo-4)'s non-Windows audit — real execution testing on macOS/Linux naturally
+belongs in that pass rather than duplicating the effort.
 
 ---
 

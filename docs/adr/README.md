@@ -26,3 +26,4 @@ enum, supersession rule).
 | [0018](0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) | This machine is the canonical source for the home-profile Claude Code config; all home-relevant skills get vendored, not just registers/decision-register | Decided |
 | [0019](0019-pick-persona-js-is-xls-owned-content.md) | `pick-persona.js` is xls-owned content, not this repo's own — a forced `chezmoi apply` briefly regressed a live fix before this was documented | Decided |
 | [0020](0020-uninstall-script-scope-and-safety-defaults.md) | Uninstall script scope and safety defaults: dry-run by default, tiered risk, package uninstalls never automated | Decided |
+| [0021](0021-uninstall-reverses-everything-except-bootstrap.md) | Uninstall reverses everything except what bootstrap runs — supersedes ADR 0020's package exclusion | Decided |

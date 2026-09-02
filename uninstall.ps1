@@ -1,20 +1,23 @@
 #!powershell
-# Reverses everything this repo's chezmoi source manages on a Windows machine,
-# leaving chezmoi itself, its config, and this repo checkout untouched. See
-# TODO-1 in docs/todo-register.md and ADR 0004 for the policy this implements.
+# Reverses everything this repo's chezmoi source manages on a Windows machine.
+# Rule, BinaryMisfit's own: the ONLY thing this script never touches is
+# whatever bootstrap.ps1 itself runs -- chezmoi's own install/config, the
+# age key, and the GitHub SSH key (bootstrap generates both directly).
+# Everything else this repo causes to exist on a machine gets reversed,
+# including installed packages. See TODO-1 in docs/todo-register.md and
+# ADR 0004/0020/0021 for the policy and its history.
 #
-# SAFE BY DEFAULT: prints a plan and touches nothing. Pass -Confirm to actually
-# remove files. SSH keys and installed packages are never touched automatically
-# -- see the "Risky / opt-in" and "Never touched" sections below.
+# SAFE BY DEFAULT: prints a plan and touches nothing until -Confirm is
+# passed. Once -Confirm is passed, this DOES uninstall real dev tools
+# (winget packages, npm globals) -- not just config files. Read the plan
+# before confirming.
 #
 # Usage:
-#   .\uninstall.ps1                      # dry run -- prints the plan only
-#   .\uninstall.ps1 -Confirm             # actually removes managed files
-#   .\uninstall.ps1 -Confirm -IncludeSSHKeys   # also removes the GitHub SSH key
+#   .\uninstall.ps1              # dry run -- prints the plan only
+#   .\uninstall.ps1 -Confirm     # actually removes everything listed
 
 param(
-    [switch]$Confirm,
-    [switch]$IncludeSSHKeys
+    [switch]$Confirm
 )
 
 $ErrorActionPreference = "Continue"
@@ -93,13 +96,29 @@ $OneTimeSideEffects = @(
     @{ Path = (Join-Path $env:LOCALAPPDATA "nvim"); Description = "nvim config junction (created by run_once_create_nvim_junction.ps1.tmpl)" }
 )
 
-# Category C: risky / opt-in only -- never removed unless -IncludeSSHKeys is
-# passed alongside -Confirm. A real credential, not just chezmoi-managed state.
-$SshKeyFiles = @(".ssh\id_ed25519_github", ".ssh\id_ed25519_github.pub")
+# Category C: winget packages -- mirrors run_onchange_install-tools.ps1.tmpl's
+# $Packages list exactly. Keep these two lists in sync by hand; there's no
+# shared source between a plain root script and a chezmoi .tmpl.
+$WingetPackages = @(
+    "Microsoft.PowerShell", "Git.Git", "sharkdp.bat", "sharkdp.fd", "junegunn.fzf",
+    "GitHub.cli", "jqlang.jq", "JesseDuffield.lazygit", "LuaLS.lua-language-server",
+    "Neovim.Neovim", "OpenJS.NodeJS.LTS", "Python.Python.3.14", "BurntSushi.ripgrep.MSVC",
+    "JohnnyMorganz.StyLua", "tree-sitter.tree-sitter-cli", "MikeFarah.yq", "Atuinsh.Atuin",
+    "JanDeDobbeleer.OhMyPosh", "koalaman.shellcheck", "mvdan.shfmt", "ajeetdsouza.zoxide"
+)
+$NpmGlobalPackages = @(
+    "@anthropic-ai/claude-code", "vscode-langservers-extracted", "yaml-language-server", "@github/copilot"
+)
+# Risk worth naming even though it proceeds: Git.Git, OpenJS.NodeJS.LTS, and
+# Python.Python.3.14 are commonly relied on by software with no relation to
+# this repo. Uninstalling them can break other things on this machine.
+$HighRiskPackages = @("Git.Git", "OpenJS.NodeJS.LTS", "Python.Python.3.14")
 
 Write-Host "=== binary-dotfiles uninstall (Windows) ===" -ForegroundColor Cyan
 if (-not $Confirm) {
     Write-Host "DRY RUN -- nothing will be removed. Pass -Confirm to actually uninstall.`n" -ForegroundColor Yellow
+} else {
+    Write-Host "-Confirm passed -- this WILL uninstall real dev tools (winget/npm), not just config files.`n" -ForegroundColor Red
 }
 
 Write-Host "`n--- Managed files ---"
@@ -143,31 +162,48 @@ foreach ($effect in $OneTimeSideEffects) {
     }
 }
 
-Write-Host "`n--- Risky / opt-in (SSH keys) ---"
-if ($IncludeSSHKeys) {
-    foreach ($rel in $SshKeyFiles) {
-        $full = Resolve-Home $rel
-        if (Test-Path $full) {
-            if ($Confirm) {
-                Write-Host "removing: $full"
-                Remove-Item -Force -Path $full -ErrorAction SilentlyContinue
-            } else {
-                Write-Host "would remove: $full"
-            }
+Write-Host "`n--- VS Code extensions ---"
+$extFile = Resolve-Home ".vscode\extensions.txt"
+$codeCmd = Get-Command code -ErrorAction SilentlyContinue
+if ((Test-Path $extFile) -and $codeCmd) {
+    foreach ($ext in (Get-Content $extFile | Where-Object { $_.Trim() -ne "" })) {
+        if ($Confirm) {
+            Write-Host "uninstalling extension: $ext"
+            & code --uninstall-extension $ext 2>$null | Out-Null
+        } else {
+            Write-Host "would uninstall extension: $ext"
         }
     }
-} else {
-    Write-Host "skipped ($($HomeDir)\.ssh\id_ed25519_github and .pub) -- pass -IncludeSSHKeys to remove. This key may still be registered with GitHub; removing it locally does not revoke it there."
+} elseif (Test-Path $extFile) {
+    Write-Host "extensions.txt exists but 'code' CLI not on PATH -- skipping extension uninstall"
 }
 
-Write-Host "`n--- Never touched by this script ---"
-Write-Host "chezmoi.exe itself, chezmoi's own config (~/.config/chezmoi), the ~/.local/share/chezmoi source clone, this repo checkout, .claude/settings.local.json, .claude/persona-registry.json, .claude/projects/** (session history), .claude/memory/**."
+Write-Host "`n--- winget packages ---" -ForegroundColor $(if ($Confirm) { "Red" } else { "White" })
+foreach ($pkg in $WingetPackages) {
+    $riskNote = if ($HighRiskPackages -contains $pkg) { " [commonly relied on by other software]" } else { "" }
+    if ($Confirm) {
+        Write-Host "uninstalling: $pkg$riskNote"
+        winget uninstall --id $pkg --silent --accept-source-agreements 2>$null | Out-Null
+    } else {
+        Write-Host "would uninstall: $pkg$riskNote"
+    }
+}
 
-Write-Host "`n--- Not automated: installed packages ---"
-Write-Host "run_onchange_install-tools.ps1.tmpl installed dev tools via winget. This script does NOT uninstall them -- reversing package installs can affect software unrelated to this dotfiles setup. Review the tool list at run_onchange_install-tools.ps1.tmpl and 'winget uninstall <id>' manually for anything you actually want removed."
+Write-Host "`n--- npm global packages ---"
+foreach ($pkg in $NpmGlobalPackages) {
+    if ($Confirm) {
+        Write-Host "uninstalling: $pkg"
+        npm uninstall -g $pkg 2>$null | Out-Null
+    } else {
+        Write-Host "would uninstall: $pkg"
+    }
+}
+
+Write-Host "`n--- Never touched by this script (bootstrap.ps1's own domain) ---"
+Write-Host "chezmoi.exe itself and its own config/state (~/.config/chezmoi/), the ~/.local/share/chezmoi source clone, this repo checkout, the age key (~/.config/age/key.txt), the GitHub SSH key (~/.ssh/id_ed25519_github + .pub) -- bootstrap.ps1 generates the chezmoi setup and both keys directly, so reversing them is bootstrap's own domain, not this script's. Also never touched: .claude/settings.local.json, .claude/persona-registry.json, .claude/projects/** (session history), .claude/memory/** -- none of these are chezmoi-managed at all."
 
 if (-not $Confirm) {
-    Write-Host "`nDry run complete. Re-run with -Confirm to actually remove the files listed above." -ForegroundColor Yellow
+    Write-Host "`nDry run complete. Re-run with -Confirm to actually remove everything listed above, including winget/npm packages." -ForegroundColor Yellow
 } else {
     Write-Host "`nUninstall complete." -ForegroundColor Green
 }
