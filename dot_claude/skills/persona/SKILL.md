@@ -172,26 +172,26 @@ This never touches an entry with no `sessionName` on file at all (that worktree 
 self-registered this session — not evidence it's dead) or a worktree whose directory is already
 gone from disk (that's still `--clean`'s separate job).
 
-## Auto-rotation and permanent pins (added 2026-08-30)
+## Permanent pins (added 2026-08-30, auto-rotation removed 2026-09-02)
 
-A worktree's persona is no longer pinned forever by default. Every SessionStart,
-`pick-persona.js` checks whether that entry's 2–4 day rotation window (rolled once per
-assignment, not re-rolled per check) has elapsed since its last assignment — if so, it
-swaps to a genuinely different persona on its own and says so in the session's
-`additionalContext` (open that session in character as the NEW persona, not the old one).
-Only the root of a worktree family (the earliest-assigned member) rotates independently;
-every other family member only ever changes via cascade, when the root — or any member
-that gets manually switched — actually changes. Rotation freely lands on a persona
-already live elsewhere; that's normal and resolved via nickname like any other collision,
-not something rotation avoids.
+**Every domain now gets one stable, deliberately-chosen persona, permanently — not a
+pool that rotates on its own.** `/persona --pin-forever [<path>]` is the explicit,
+human-only action that creates this; no path targets the current worktree. Relay
+`pick-persona.js --pin-forever`'s own confirmation. `/persona --unpin-forever [<path>]`
+reverses it.
 
-**The only way an entry becomes genuinely immune to this — a real, permanent pin — is
-`/persona --pin-forever [<path>]`, an explicit, human-only action.** No automatic path
-(a fresh pick, a rotation, a manual switch, a cascade) ever creates one. Relay
-`pick-persona.js --pin-forever`'s own confirmation; no path targets the current worktree.
-`/persona --unpin-forever [<path>]` reverses it — back to normal rotation, clock starting
-fresh from that moment (not retroactive to whenever it was originally assigned). A
-forever-pinned entry shows the literal string `"Perm"` (or `"Fixed"`) in `--list`'s
+An entry that's never been explicitly pinned isn't in danger of drifting on its own —
+the auto-rotation mechanic that used to swap an un-pinned worktree's persona every 2-4
+days is gone (removed 2026-09-02, BinaryMisfit's own call: "the persona's work
+differently now," a stable per-domain identity, not a rotating flavor). It had a real
+failure mode worth remembering even though the mechanism itself is deleted: it could
+fire on a `--resume` of an already-in-progress session, not just a brand-new one, since
+that's still a fresh `SessionStart` hook invocation — meaning a conversation already
+underway could have its persona silently swapped out from under it. Forever-pinning
+every domain's root worktree is what makes that permanently impossible now, not
+incidental to it.
+
+A forever-pinned entry shows the literal string `"Perm"` (or `"Fixed"`) in `--list`'s
 "Pinned" column instead of a date — deliberately human-legible in the raw registry file,
 not a separate flag to cross-reference.
 
@@ -213,8 +213,8 @@ tracked in the registry, or a genuinely new/unrelated repo — `pick-persona.js`
 two apart via `git rev-parse --git-common-dir` (identical across every worktree of one
 repo, different for every unrelated one, `null` for a cwd that isn't a git repo at all —
 a legitimate case, e.g. `c:\users\diago`). A new worktree sibling **inherits its family's
-CURRENT persona automatically** — whatever the family has most recently rotated or
-switched to, not necessarily whatever the root started with — it is the same character
+CURRENT persona automatically** — whatever the family has most recently switched to, not
+necessarily whatever the root started with — it is the same character
 showing up in a second physical location of the same project, not a fresh random pick. A
 genuinely new repo still random-picks from the diversity pool as before. **This does not
 change nickname collision logic** — two entries sharing a persona still need one
