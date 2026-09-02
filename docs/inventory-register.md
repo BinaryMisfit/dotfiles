@@ -106,7 +106,7 @@ both profiles, with content gated individually instead of one blanket switch.
 | `rules/home/preferences.instructions.md` | `~/.claude/rules/home/` | Home | Preferred-name + work-priority-tier instructions, captured from live state |
 | `scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Home | The persona-picker script the `SessionStart` hook runs (path corrected 2026-08-31, see [ADR 0017](adr/0017-fix-pick-persona-hook-path-mismatch.md) — the old `home/scripts/` path deployed to the wrong, unused location) |
 | `output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Home | Persona output-styles |
-| `skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/` | `~/.claude/skills/` | Home | Dev-session tooling — see ownership note below |
+| `skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit,fiction-export}/` | `~/.claude/skills/` | Home | Dev-session tooling — see ownership note below |
 | `executable_rate-limit-statusline-bridge.py.tmpl` | `~/.claude/` (executable) | — | Status line helper script |
 
 `run_once_after_restructure-claude-work-content.{sh,ps1}.tmpl` cleans up the old flat-path

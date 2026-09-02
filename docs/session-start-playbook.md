@@ -79,8 +79,9 @@ authorship belongs to `xls` (see CLAUDE.md's "Domain boundary" section,
 [ADR 0019](adr/0019-pick-persona-js-is-xls-owned-content.md)) —
 `rules/registers.instructions.md`, `skills/decision-register/`, the four persona
 `output-styles/{hailey,alexia,aphrodite,callie}.md`,
-`skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/`, and
-`scripts/executable_pick-persona.js` (deployed as `~/.claude/scripts/pick-persona.js`).
+`skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit,
+fiction-export}/`, and `scripts/executable_pick-persona.js` (deployed as
+`~/.claude/scripts/pick-persona.js`).
 `xls` syncs its own edits to this machine's live `~/.claude/` first; this repo's
 `dot_claude/` copies can silently drift behind that deployed artifact between sessions —
 `pick-persona.js` especially, since it's under active development there and this repo's

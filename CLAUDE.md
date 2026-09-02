@@ -133,9 +133,11 @@ persona `output-styles/*.md`, `skills/{session-start,scratchpad-check,persona,
 nsfw-comment-audit,security-audit}/`, and `scripts/pick-persona.js` (source-of-truth now
 lives at `claude-global/scripts/pick-persona.js` in `xls`, confirmed 2026-09-02 after this
 repo's own stale tracked copy briefly regressed a live nickname-collision fix — see
-[ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md)) today, and any future
-home-profile skill/rule that shows up under `~/.claude/` the same way, without needing a
-fresh ADR each time. When refreshing any of these, pull **only** from the deployed, final
+[ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md)), and
+`skills/fiction-export/` (built as a draft here 2026-09-02, handed to `xls` to own as
+`claude-global/skills/fiction-export/`, deployed live and vendored back same day) today,
+and any future home-profile skill/rule that shows up under `~/.claude/` the same way,
+without needing a fresh ADR each time. When refreshing any of these, pull **only** from the deployed, final
 copies under `~/.claude/`
 — never from `xls`'s own repo directly, in any form or path. `binary-dotfiles` must never
 depend on `xls`'s repo being present or checked out on a given machine at all — and
@@ -166,6 +168,7 @@ Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decisio
 | `dot_claude/output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Persona output-styles, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
 | `dot_claude/skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/` | `~/.claude/skills/` | Dev-session tooling, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
 | `dot_claude/scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Persona-registry hook script — xls-owned content (`claude-global/scripts/pick-persona.js`), same pull-only rule as the row above — see [ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md) |
+| `dot_claude/skills/fiction-export/` | `~/.claude/skills/fiction-export/` | Finds fiction/roleplay beats in a session transcript, exports raw to `D:\Downloads` staging for later archival in `x-lifestyle-research` — xls-owned content, built as a draft here 2026-09-02, adopted and now canonically owned at `claude-global/skills/fiction-export/` |
 | `AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json` | Windows Terminal settings | Full-file capture (same pattern as VS Code's `settings.json.tmpl`), Windows-only via `.chezmoiignore`. Assumes the Microsoft Store-packaged install (this machine's actual install); path changes if migrated to an unpackaged/winget install. `profiles.defaults.startingDirectory` explicitly set to `%USERPROFILE%` (this machine's user home) — makes explicit what was previously an implicit, unset default; root cause of a 2026-08-30 stray persona-registry pin at that same bare default (that specific symptom is now separately guarded against in `pick-persona.js` itself, so this is a general cleanliness fix, not an urgent one) |
 | `run_onchange_install-tools.ps1.tmpl` | n/a (script) | Dev tool list via winget (Windows) |
 | `run_onchange_install-tools.sh.tmpl` | n/a (script) | Dev tool list via Homebrew/apt (macOS/Linux) |
