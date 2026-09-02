@@ -5,10 +5,13 @@ Concrete, actionable outstanding work for this repo. See
 naming the action — real detail lives in the linked decision, doc, or design note, not
 inline here.
 
-| # | Item | Priority | Status | Type | Area |
-|---|---|---|---|---|---|
-| [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | Open | Targeted | chezmoi |
-| [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Closed | Targeted | chezmoi |
+| # | Item | Priority | Status | Type | Area | Raised | Touched |
+|---|---|---|---|---|---|---|---|
+| [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | In progress | Targeted | chezmoi | 2026-08-30 | 2026-09-02 |
+| [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Closed | Targeted | chezmoi | 2026-08-30 | 2026-08-31 |
+| [TODO-3](#todo-3) | Build scheduled `chezmoi update` automation | High | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-5](#todo-5) | Self-heal: detect and recover from broken/drifted chezmoi state | High | Open | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 
 ---
 
@@ -19,11 +22,15 @@ everything chezmoi has applied to a machine, while leaving chezmoi itself and th
 repo intact. See [ADR 0004](adr/0004-scripted-cleanup-required-for-every-removal.md) for
 the full policy and rationale.
 
-**Status:** Open
+**Status:** In progress (2026-09-02)
 
 **Priority:** High
 
 **Type:** Targeted
+
+**Links to:** [TODO-5](#todo-5) — the same reverse-every-managed-thing inventory logic this
+build needs is exactly what a self-heal/repair pass needs too; design the inventory-walk
+once, share it between both rather than duplicating it later.
 
 **Next action:** Design and write `uninstall.ps1` (Windows), `uninstall.sh` (macOS +
 Linux, or split if the two diverge enough to warrant it) — inventory every managed
@@ -31,6 +38,79 @@ dotfile, every `run_onchange_install-tools`-installed package, and every `run_on
 effect (SSH keys, the nvim junction, shell integrations) using
 [`docs/inventory-register.md`](inventory-register.md) as the source list, then reverse
 each one. Do not touch the chezmoi binary, its config, or the repo checkout itself.
+
+---
+
+## TODO-3
+
+Build the scheduled `chezmoi update` automation — investigated and approved 2026-08-30,
+asked about twice in that session with no answer given, dropped without ever being logged.
+Surfaced again during the 2026-09-02 session-history audit; deliberately not built in that
+same session (a recurring system-level scheduled task shouldn't get stood up right as the
+person who'd verify it works is stepping away).
+
+**Status:** Open
+
+**Priority:** High
+
+**Type:** Targeted
+
+**Next action:** Decide cadence (daily vs. every N hours) with BinaryMisfit, then write
+`run_once_setup-chezmoi-update-schedule.ps1.tmpl` (Windows Task Scheduler,
+`Register-ScheduledTask`) and `run_once_setup-chezmoi-update-schedule.sh.tmpl` (launchd on
+macOS, cron or a systemd `--user` timer on Linux) per this repo's own run-script-pair
+convention. Verify the job actually fires and applies clean before calling it done — don't
+just assume a scheduled task registered successfully because the registration command
+didn't error.
+
+---
+
+## TODO-4
+
+Non-Windows chezmoi audit — most of this repo's recent real, tested work (Windows
+Terminal vendoring, the `pick-persona.js` regression/recovery, the CRLF investigation, the
+scheduled-update design) has been Windows-specific, run and verified on this one Windows
+machine. macOS/Linux paths exist as paired `.sh.tmpl` files per this repo's own convention,
+but pairing a file doesn't mean it's actually been run for real anywhere.
+
+**Status:** Open
+
+**Priority:** Normal
+
+**Type:** Targeted
+
+**Next action:** Audit every `run_once_*`/`run_onchange_*` `.sh.tmpl` and every
+`.chezmoiignore`/`.chezmoitemplates` OS-gate for macOS and Linux — confirm each one is
+still accurate against current tooling (Homebrew/apt package names, path assumptions,
+shell-specific syntax), and where possible actually exercise a fresh `chezmoi apply` on a
+real or disposable macOS/Linux environment rather than reasoning about it from the
+Windows-side template alone.
+
+---
+
+## TODO-5
+
+Self-heal: detect and automatically recover from broken or drifted chezmoi-managed state
+— a partial/interrupted `chezmoi apply`, a stray untemplated live-only customization
+(TODO-2's own pattern), or a managed file that's drifted from what the template says it
+should be. Raised 2026-09-02 alongside TODO-1, which it shares real design surface with.
+
+**Status:** Open
+
+**Priority:** High
+
+**Type:** Targeted
+
+**Links to:** [TODO-1](#todo-1) — shares the same "inventory everything chezmoi manages,
+compare against live state" logic; design once, use for both reversal (uninstall) and
+repair (self-heal).
+
+**Next action:** Scope what "broken state" actually means concretely (interrupted apply
+mid-write? a file that's been hand-edited off-template? a missing `run_once_*` side
+effect that should exist but doesn't?) before writing any recovery logic — this needs a
+real definition, not an assumed one, given how easily a self-heal mechanism can make things
+worse by "fixing" something that was actually a deliberate live-only customization (see
+TODO-2's own history).
 
 ---
 
