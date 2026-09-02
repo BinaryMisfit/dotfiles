@@ -74,13 +74,23 @@ here, skip this step silently — nothing to check yet.
 ## Step 3.6 — xls-owned home-profile drift check (added 2026-09-02)
 
 This repo vendors a specific set of home-profile Claude Code files whose *content*
-authorship belongs to `xls` (see CLAUDE.md's "Domain boundary" section and
-[ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md)) —
+authorship belongs to `xls` (see CLAUDE.md's "Domain boundary" section,
+[ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md), and
+[ADR 0019](adr/0019-pick-persona-js-is-xls-owned-content.md)) —
 `rules/registers.instructions.md`, `skills/decision-register/`, the four persona
-`output-styles/{hailey,alexia,aphrodite,callie}.md`, and
-`skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/`.
+`output-styles/{hailey,alexia,aphrodite,callie}.md`,
+`skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/`, and
+`scripts/executable_pick-persona.js` (deployed as `~/.claude/scripts/pick-persona.js`).
 `xls` syncs its own edits to this machine's live `~/.claude/` first; this repo's
-`dot_claude/` copies can silently drift behind that deployed artifact between sessions.
+`dot_claude/` copies can silently drift behind that deployed artifact between sessions —
+`pick-persona.js` especially, since it's under active development there and this repo's
+copy has historically gone stale for days at a time (ADR 0019).
+
+**Diff `pick-persona.js` specifically before ever running an unscoped or forced `chezmoi
+apply`** — confirmed the hard way (2026-09-02): a forced apply run to clear unrelated CRLF
+drift on two persona files silently overwrote a newer, live-patched `pick-persona.js` with
+this repo's stale tracked copy, deleting a real bug fix. `chezmoi apply -v`/`--force`
+shows a full diff before writing; read it, don't just force through a hang.
 
 Diff each of this repo's `dot_claude/` copies of those files against its corresponding
 live file under `~/.claude/` (same relative path, stripping the chezmoi `dot_`/`private_`

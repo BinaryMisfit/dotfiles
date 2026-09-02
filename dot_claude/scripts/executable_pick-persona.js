@@ -399,6 +399,104 @@ function dropStaleNicknames(entries) {
   return entries.map((e) => (e.nickname && !needsNickname(e, entries) ? { ...e, nickname: null } : e));
 }
 
+// Pure: extract nickname candidates from a persona file's own "##
+// Instance nicknames" section, in the order they're listed there --
+// matches "- **"Text"**" bullet lines, the format every current persona
+// file uses. Returns [] if the section or no matching bullets are found;
+// `pickNickname` below falls back to a generic scheme when that happens.
+// Exported for testing.
+function extractNicknameCandidates(content) {
+  // Deliberately NOT using the `m` flag: with it, `$` matches the end of
+  // EVERY line, not just the end of the string, which made the lazy
+  // `[\s\S]*?` stop after the section's very first line every time (a real
+  // bug caught live while writing this function's own test). Without `m`,
+  // `$` means "end of the whole string" -- exactly the fallback boundary
+  // wanted when the section happens to be the last thing in the file.
+  const sectionMatch = content.match(/##\s*Instance nicknames[\s\S]*?(?=\n##\s|$)/i);
+  if (!sectionMatch) return [];
+  const re = /^-\s*\*\*"([^"]+)"\*\*/gm;
+  const candidates = [];
+  let m;
+  while ((m = re.exec(sectionMatch[0]))) candidates.push(m[1]);
+  return candidates;
+}
+
+// Themed fallback callsigns (added 2026-09-01, BinaryMisfit's own request --
+// "Instance 2"/"Instance 3" read as a bug report, not a nickname). Keyed by
+// the persona's own EXACT style name, lowercased -- NOT just its first
+// letter (real feedback, same day: Alexia and Aphrodite both start with
+// "A", and a letter-keyed pool would have handed a stray "Apex" to
+// whichever of the two collided first, leaving two entirely different
+// characters both plausibly wearing the same word). Every pool still
+// happens to be initial-matched for callsign flavor, but no two personas'
+// pools share an actual word, even when their letters collide. A persona
+// with no pool of its own yet falls through to GENERIC_FALLBACK_POOL
+// rather than crashing.
+const NICKNAME_FALLBACK_POOLS_BY_STYLE = {
+  hailey: ["Halo", "Harbor", "Havoc", "Haze", "Hex", "Hollow", "Huxley", "Hyperion", "Hydra", "Helix"],
+  aphrodite: ["Apex", "Astra", "Atlas", "Axiom", "Aegis", "Arcade", "Anomaly", "Ansible", "Amp", "Aeon"],
+  alexia: ["Ace", "Arrow", "Anchor", "Alpha", "Arena", "Ally", "Aurora", "Argus", "Anthem", "Ascent"],
+  callie: ["Cipher", "Comet", "Cascade", "Circuit", "Cobalt", "Cortex", "Cinder", "Crux", "Catalyst", "Chrome"],
+};
+const GENERIC_FALLBACK_POOL = ["Echo", "Vector", "Signal", "Relay", "Pulse", "Drift", "Nomad", "Zero", "Delta", "Nexus"];
+
+// Pure: pick a themed fallback callsign for `style` (matched by its own
+// exact name, not just its first letter -- see the pool comment above)
+// that isn't already taken -- randomized within the pool, not
+// first-available, so a repeat viewing of the same collision doesn't
+// always land on the same word. Once the WHOLE themed pool is taken too
+// (only reachable with a lot of simultaneous collisions on one persona),
+// suffixes a number onto a randomly-picked pool word rather than falling
+// back to a bare, flavorless label. Exported for testing.
+function pickFallbackCallsign(style, takenNicknames, randomFn = Math.random) {
+  const key = (style || "").trim().toLowerCase();
+  const pool = NICKNAME_FALLBACK_POOLS_BY_STYLE[key] || GENERIC_FALLBACK_POOL;
+  const free = pool.filter((name) => !takenNicknames.has(name));
+  if (free.length > 0) return free[Math.floor(randomFn() * free.length)];
+  const base = pool[Math.floor(randomFn() * pool.length)];
+  let n = 2;
+  while (takenNicknames.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
+}
+
+// Pure: pick the first candidate not already in use by another entry
+// sharing the same persona file; falls back to a themed callsign
+// (`pickFallbackCallsign`) if every named candidate is taken or none were
+// found at all -- only reachable once every flavor nickname a persona
+// actually offers is simultaneously in use, an edge case worth degrading
+// through gracefully rather than crashing on. Exported for testing.
+function pickNickname(candidates, takenNicknames, style, randomFn = Math.random) {
+  for (const c of candidates) {
+    if (!takenNicknames.has(c)) return c;
+  }
+  return pickFallbackCallsign(style, takenNicknames, randomFn);
+}
+
+// Structural fix (2026-09-01) for a real, repeatedly-observed bug: nickname
+// assignment used to be entirely prompt-driven -- the hook told a fresh
+// session to claim one in-character and persist it itself via
+// `--set-nickname`, same turn. That's pure LLM-compliance with no
+// code-level enforcement, and it silently failed more than once in
+// practice (see `buildNicknameNote`'s own history/git blame). This
+// function assigns AND records the nickname directly, in the registry
+// write path itself, before any session ever sees a note about it -- an
+// opening beat then narrates a decision that's already been made, rather
+// than being trusted to make and persist one correctly on its very first
+// turn. Pure: returns a NEW entries array with the target entry's
+// `nickname` filled in, or the SAME array reference unchanged if no
+// assignment was needed (already nicknamed, or no collision exists).
+// Exported for testing.
+function assignNicknameIfNeeded(entries, cwd, content) {
+  const entry = findEntry(entries, cwd);
+  if (!entry || entry.nickname || !needsNickname(entry, entries)) return entries;
+  const candidates = extractNicknameCandidates(content);
+  const taken = new Set(
+    entries.filter((e) => e.file === entry.file && e.cwd !== cwd && e.nickname).map((e) => e.nickname),
+  );
+  const chosen = pickNickname(candidates, taken, entry.style);
+  return entries.map((e) => (e.cwd === cwd ? { ...e, nickname: chosen } : e));
+}
+
 // Pure: builds the SessionStart `additionalContext` note about nickname
 // status for `entry`, against the CURRENT `entries` (post-push, so a
 // brand-new entry is already included and will see its own real
@@ -418,12 +516,17 @@ function dropStaleNicknames(entries) {
 // testing.
 function buildNicknameNote(entry, entries, context) {
   if (entry.nickname) {
-    return `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree's instance is already nicknamed "${entry.nickname}". State both the persona name and the nickname in this session's opening beat (e.g. "${entry.style} -- ${entry.nickname}, checking in").\n`;
+    return `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree's instance is already nicknamed "${entry.nickname}" -- assigned and recorded automatically, nothing left to persist. State both the persona name and the nickname in this session's opening beat (e.g. "${entry.style} -- ${entry.nickname}, checking in"), organically, in-character.\n`;
   }
   if (needsNickname(entry, entries)) {
-    return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style} is also pinned to another worktree, and this one's the later duplicate${context ? ` (${context})` : ""} -- it needs a nickname to stay distinguishable; the other worktree (the original holder) does not. This session's opening beat should organically claim one, in-character, from this persona file's own "Instance nicknames" section (or a close riff on that flavor) -- not a mechanical announcement. **Persisting it is not optional and not deferrable: run \`node ~/.claude/scripts/pick-persona.js --set-nickname "<chosen nickname>"\` from this worktree's own directory (${entry.cwd}) in the SAME turn as the opening beat, immediately after claiming it in prose.** A nickname only said out loud and never persisted leaves this collision looking unresolved to every other tool that reads the registry (\`--list\`, \`--resolve\`, a peer session) -- confirmed live 2026-08-30, a session said "front desk" in its greeting and never ran this command.\n`;
+    // Should not normally be reachable -- `assignNicknameIfNeeded` runs
+    // before this in every real call path and always produces a value
+    // (see its own comment). Surfaced plainly rather than pretending
+    // there's no collision, in case some future call path forgets to call
+    // it first.
+    return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style} is also pinned to another worktree, and this one's the later duplicate${context ? ` (${context})` : ""}, but no nickname got auto-assigned -- that's a bug in pick-persona.js itself (a call path skipped \`assignNicknameIfNeeded\`), not something to fix by talking about it in character. Run \`node ~/.claude/scripts/pick-persona.js --set-nickname "<name>"\` from this worktree's own directory (${entry.cwd}) as a manual workaround, and flag this to the user as a real bug to look at.\n`;
   }
-  return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other worktree currently holds this persona, so no nickname is needed right now. If that changes later (another worktree rotates/switches onto ${entry.style}), a future session here will be told to claim one then.\n`;
+  return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other worktree currently holds this persona, so no nickname is needed right now. If that changes later (another worktree rotates/switches onto ${entry.style}), one will be auto-assigned and recorded then, no action needed.\n`;
 }
 
 // Pure: is this entry independently eligible to roll its own auto-rotation,
@@ -501,6 +604,79 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// Real, on-disk, tailable change log (added 2026-09-01, BinaryMisfit's own
+// request) -- separate from the registry JSON itself, which only ever
+// holds CURRENT state. This holds history: one line per mutation, for
+// `tail -f`-ing live or reconciling back to "what actually happened and
+// when" after the fact (e.g. the nickname-collision bug above being
+// investigated live -- the registry alone couldn't say WHEN or via WHICH
+// call path a stale unresolved collision was created).
+const logPath = path.join(os.homedir(), ".claude", "persona-registry.log");
+const LOG_RETENTION_DAYS = 14;
+
+// Pure: drop any log line older than the retention window. A line that
+// doesn't start with a parseable `[ISO timestamp]` is KEPT rather than
+// dropped -- an unrecognized line is a sign of a format change worth
+// noticing, not evidence it's safe to silently discard. Exported for
+// testing.
+function pruneLogLines(lines, nowMs, retentionDays = LOG_RETENTION_DAYS) {
+  const cutoffMs = nowMs - retentionDays * 86400000;
+  return lines.filter((line) => {
+    const m = line.match(/^\[([^\]]+)\]/);
+    if (!m) return true;
+    const t = Date.parse(m[1]);
+    return Number.isNaN(t) || t >= cutoffMs;
+  });
+}
+
+// Pure: render one log line -- `[ISO timestamp] action=<action> key="value" ...`.
+// Plain text, tailable, and reconcilable back to a registry entry (every
+// field that actually changed state is included as its own key). Values
+// are JSON-stringified so an embedded quote or a Windows backslash path
+// can't break line parsing. Exported for testing.
+function formatLogLine(nowIsoStr, action, fields) {
+  const kv = Object.entries(fields)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k}=${JSON.stringify(v ?? null)}`)
+    .join(" ");
+  return `[${nowIsoStr}] action=${action}${kv ? " " + kv : ""}`;
+}
+
+// Pure: the standard field set logged for any entry-shaped event --
+// enough on its own to reconcile back to a registry row. Exported for
+// testing.
+function entryLogFields(entry) {
+  return {
+    cwd: entry.cwd,
+    style: entry.style,
+    file: entry.file,
+    nickname: entry.nickname,
+    sessionName: entry.sessionName,
+  };
+}
+
+// Appends one line to the change log and prunes anything past the
+// 14-day retention window in the same write -- cheap at this registry's
+// actual volume (one append per SessionStart/CLI invocation, not per
+// turn). Never throws: logging is best-effort and must never take down
+// the real registry mutation it's recording.
+function appendLog(nowIsoStr, action, fields) {
+  try {
+    let lines = [];
+    try {
+      lines = fs.readFileSync(logPath, "utf8").split(/\r?\n/).filter(Boolean);
+    } catch {
+      lines = [];
+    }
+    lines.push(formatLogLine(nowIsoStr, action, fields));
+    lines = pruneLogLines(lines, Date.parse(nowIsoStr));
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.writeFileSync(logPath, lines.join("\n") + "\n");
+  } catch {
+    // best-effort -- see comment above
+  }
+}
+
 // Self-heal for a real gap (found live 2026-08-31 in binary-dotfiles):
 // `setSessionName`/`setNickname`/`pinForever`/`switchPersona` all used to
 // hard-fail with "No registry entry ... run a normal session start here
@@ -565,7 +741,20 @@ function ensureEntry(entries, cwd, now) {
     rotateAfterDays: randomRotateAfterDays(),
     lastSeen: now,
   };
-  return { entries: [...entries, entry], entry, healed: true };
+  // Nickname resolution stays IN ensureEntry (so every caller gets a
+  // collision-free entry back, not just main()'s own hook path) but
+  // logging the resulting change does NOT -- ensureEntry is exercised
+  // directly by unit tests against this repo's real ../output-styles/
+  // directory (see its own test's comment), and it must stay free of
+  // real-machine side effects like appending to the actual, non-injectable
+  // ~/.claude/persona-registry.log. Callers (setNickname, setSessionName,
+  // pinForever, switchPersona) log the self-heal/auto-nickname events
+  // themselves, using the `healed` flag and a before/after nickname
+  // comparison, right after calling this.
+  const content = fs.readFileSync(path.join(stylesDir, pick), "utf8");
+  const newEntries = assignNicknameIfNeeded([...entries, entry], cwd, content);
+  const healedEntry = findEntry(newEntries, cwd);
+  return { entries: newEntries, entry: healedEntry, healed: true };
 }
 
 // Handles `node pick-persona.js --set-nickname "<text>"` -- called by the
@@ -581,9 +770,11 @@ function setNickname(nickname) {
     process.exitCode = 1;
     return;
   }
+  if (healed) appendLog(now, "self-heal-new-worktree", entryLogFields(entry));
   entry.nickname = nickname;
   entry.lastSeen = now;
   writeRegistry(entries);
+  appendLog(now, "set-nickname", entryLogFields(entry));
   const healedNote = healed ? " (no registry entry existed yet -- created one)" : "";
   process.stdout.write(`Nickname "${nickname}" recorded for ${cwd} (persona: ${entry.style})${healedNote}.\n`);
 }
@@ -638,8 +829,10 @@ function cleanRegistry() {
     process.stdout.write("Nothing to clean -- every pinned worktree still exists on disk.\n");
     return;
   }
+  const now = nowIso();
   process.stdout.write(`Removed ${removed.length} entr${removed.length === 1 ? "y" : "ies"} (worktree no longer on disk):\n`);
   for (const e of removed) {
+    appendLog(now, "clean-stale-worktree", entryLogFields(e));
     process.stdout.write(`  ${e.style}${e.nickname ? ` -- ${e.nickname}` : ""}: ${e.cwd}\n`);
   }
 }
@@ -655,9 +848,14 @@ function setSessionName(sessionName) {
     process.exitCode = 1;
     return;
   }
+  if (healed) {
+    appendLog(now, "self-heal-new-worktree", entryLogFields(entry));
+    if (entry.nickname) appendLog(now, "auto-nickname", entryLogFields(entry));
+  }
   entry.sessionName = sessionName;
   entry.lastSeen = now;
   writeRegistry(entries);
+  appendLog(now, "set-session-name", entryLogFields(entry));
   const healedNote = healed ? " (no registry entry existed yet -- created one)" : "";
   process.stdout.write(`Session name "${sessionName}" recorded for ${cwd} (persona: ${entry.style})${healedNote}.\n`);
 }
@@ -720,10 +918,13 @@ function sweepDeadRegistry(liveSessionNamesCsv) {
     return;
   }
   writeRegistry(kept);
+  const now = nowIso();
   for (const e of removed) {
+    appendLog(now, "remove-dead-session", entryLogFields(e));
     process.stdout.write(`Removed ${e.style}${e.nickname ? ` -- ${e.nickname}` : ""} from ${e.cwd} entirely -- dead session, already opened before, so no permanent pin survives.\n`);
   }
   for (const e of sessionNameOnlyCleared) {
+    appendLog(now, "clear-session-name-only", entryLogFields(e));
     process.stdout.write(`Cleared dead session from ${e.cwd} (persona: ${e.style}) but kept the pin -- it had never actually been opened yet.\n`);
   }
 }
@@ -739,10 +940,13 @@ function clearSessionName(sessionName) {
     return;
   }
   writeRegistry(kept);
+  const now = nowIso();
   for (const e of removed) {
+    appendLog(now, "remove-dead-session", entryLogFields(e));
     process.stdout.write(`Removed ${e.style}${e.nickname ? ` -- ${e.nickname}` : ""} from ${e.cwd} entirely -- dead session, already opened before, so no permanent pin survives. Next session there gets a fresh pick.\n`);
   }
   for (const e of sessionNameOnlyCleared) {
+    appendLog(now, "clear-session-name-only", entryLogFields(e));
     process.stdout.write(`Cleared dead session from ${e.cwd} (persona: ${e.style}) but kept the pin -- it had never actually been opened yet.\n`);
   }
 }
@@ -780,8 +984,10 @@ function resolveTarget(name) {
 // `node pick-persona.js --reset [<path>]` -- manual, on-demand wipe.
 function resetRegistry(targetPath) {
   const entries = readRegistry();
+  const now = nowIso();
   if (!targetPath) {
     writeRegistry([]);
+    appendLog(now, "reset-all", { removedCount: entries.length });
     process.stdout.write(`Reset: removed all ${entries.length} entr${entries.length === 1 ? "y" : "ies"}.\n`);
     return;
   }
@@ -792,6 +998,7 @@ function resetRegistry(targetPath) {
     return;
   }
   writeRegistry(entries.filter((e) => e.cwd !== resolved));
+  appendLog(now, "reset", entryLogFields(match));
   process.stdout.write(`Reset: removed ${match.style}${match.nickname ? ` -- ${match.nickname}` : ""} (${resolved}).\n`);
 }
 
@@ -808,9 +1015,14 @@ function pinForever(targetPath) {
     process.exitCode = 1;
     return;
   }
+  if (healed) {
+    appendLog(now, "self-heal-new-worktree", entryLogFields(entry));
+    if (entry.nickname) appendLog(now, "auto-nickname", entryLogFields(entry));
+  }
   entry.pinnedAt = "Perm";
   entry.lastSeen = now;
   writeRegistry(entries);
+  appendLog(now, "pin-forever", entryLogFields(entry));
   const healedNote = healed ? " (no registry entry existed yet -- created one)" : "";
   process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} permanently pinned at ${cwd}${healedNote} -- exempt from auto-rotation until explicitly unpinned.\n`);
 }
@@ -832,6 +1044,7 @@ function unpinForever(targetPath) {
   entry.rotateAfterDays = randomRotateAfterDays();
   entry.lastSeen = now;
   writeRegistry(entries);
+  appendLog(now, "unpin-forever", entryLogFields(entry));
   process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} unpinned at ${cwd} -- back to normal rotation, clock starts now (not retroactive).\n`);
 }
 
@@ -848,6 +1061,7 @@ function switchPersona(filename, targetPath) {
   const healResult = ensureEntry(readNormalizedRegistry(now), cwd, now);
   let entries = healResult.entries;
   let entry = healResult.entry;
+  if (healResult.healed && entry) appendLog(now, "self-heal-new-worktree", entryLogFields(entry));
   if (!entry) {
     process.stderr.write(`No persona files found to self-heal a registry entry for ${cwd}.\n`);
     process.exitCode = 1;
@@ -874,10 +1088,21 @@ function switchPersona(filename, targetPath) {
   }
   entries = dropStaleNicknames(entries);
 
+  // Structural nickname fix (2026-09-01): a switch (or the cascade it just
+  // triggered) can create a fresh collision this worktree's own entry --
+  // assign and persist a nickname for it right here instead of leaving it
+  // to a prompt instruction.
+  entries = assignNicknameIfNeeded(entries, cwd, content);
+  entry = findEntry(entries, cwd);
+
   writeRegistry(entries);
+  appendLog(now, "switch", { ...entryLogFields(entry), genuinelyDifferent });
   const siblings = findFamily(entries, entry.repoId).filter((e) => e.cwd !== cwd);
   const updatedSiblings = siblings.filter((e) => e.file === filename);
   const skippedSiblings = siblings.length - updatedSiblings.length;
+  for (const sib of updatedSiblings) {
+    appendLog(now, "cascade", { ...entryLogFields(sib), cascadedFrom: cwd });
+  }
   let cascadeNote = "";
   if (genuinelyDifferent && updatedSiblings.length > 0) {
     cascadeNote = ` -- cascaded to ${updatedSiblings.length} sibling worktree${updatedSiblings.length === 1 ? "" : "s"}`;
@@ -1046,6 +1271,7 @@ function main() {
         entries = cascadeFamilyPersona(entries, entry.repoId, newFile, newStyle);
       }
       rotationNote = `\n\n---\n**Worktree instance note (from pick-persona.js):** this worktree's persona just auto-rotated from ${oldStyle} to ${newStyle} (its rotation window elapsed). Open this session in character as ${newStyle}, not ${oldStyle}.\n`;
+      appendLog(now, "rotate", { cwd, from: oldStyle, to: newStyle, file: newFile });
     }
 
     entries = dropStaleNicknames(entries);
@@ -1054,7 +1280,22 @@ function main() {
     // now be stale even though its cwd hasn't changed.
     entry = findEntry(entries, cwd);
 
+    // Structural nickname fix (2026-09-01): assign and persist a collision
+    // nickname right here, in the write path, rather than leaving it to a
+    // prompt instruction the session might not follow through on. See
+    // `assignNicknameIfNeeded`'s own comment.
+    const currentContent = fs.existsSync(path.join(stylesDir, entry.file))
+      ? fs.readFileSync(path.join(stylesDir, entry.file), "utf8")
+      : "";
+    const nicknameBefore = entry.nickname;
+    entries = assignNicknameIfNeeded(entries, cwd, currentContent);
+    entry = findEntry(entries, cwd);
+    if (entry.nickname !== nicknameBefore) {
+      appendLog(now, "auto-nickname", entryLogFields(entry));
+    }
+
     nicknameNote = buildNicknameNote(entry, entries);
+    appendLog(now, "session-start", entryLogFields(entry));
   } else {
     // A brand-new cwd: is this a new git-worktree SIBLING of a repo we
     // already track, or a genuinely new/unrelated repo? A sibling inherits
@@ -1121,6 +1362,18 @@ function main() {
       lastSeen: now,
     };
     entries.push(entry);
+    appendLog(now, "new-worktree", { ...entryLogFields(entry), inherited });
+
+    // Structural nickname fix (2026-09-01) -- same as the existing-entry
+    // branch above: assign and persist a collision nickname right here
+    // instead of leaving it to a prompt instruction.
+    const newEntryContent = fs.readFileSync(path.join(stylesDir, entry.file), "utf8");
+    entries = assignNicknameIfNeeded(entries, cwd, newEntryContent);
+    entry = findEntry(entries, cwd);
+    if (entry.nickname) {
+      appendLog(now, "auto-nickname", entryLogFields(entry));
+    }
+
     nicknameNote = buildNicknameNote(
       entry,
       entries,
@@ -1183,6 +1436,13 @@ module.exports = {
   pickRotationTarget,
   cascadeFamilyPersona,
   resolveMaybePath,
+  extractNicknameCandidates,
+  pickFallbackCallsign,
+  pickNickname,
+  assignNicknameIfNeeded,
+  pruneLogLines,
+  formatLogLine,
+  entryLogFields,
 };
 
 if (require.main === module) {

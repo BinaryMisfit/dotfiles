@@ -129,10 +129,14 @@ real work on them happens. Hailey syncs her changes to this machine's `~/.claude
 own sync script; `binary-dotfiles` picks up that deployed artifact and distributes it to
 every other machine. Any change routes back to her source — never edited here directly.
 This covers `rules/registers.instructions.md`, `skills/decision-register/`, the four
-persona `output-styles/*.md`, and `skills/{session-start,scratchpad-check,persona,
-nsfw-comment-audit,security-audit}/` today, and any future home-profile skill/rule that
-shows up under `~/.claude/` the same way, without needing a fresh ADR each time. When
-refreshing any of these, pull **only** from the deployed, final copies under `~/.claude/`
+persona `output-styles/*.md`, `skills/{session-start,scratchpad-check,persona,
+nsfw-comment-audit,security-audit}/`, and `scripts/pick-persona.js` (source-of-truth now
+lives at `claude-global/scripts/pick-persona.js` in `xls`, confirmed 2026-09-02 after this
+repo's own stale tracked copy briefly regressed a live nickname-collision fix — see
+[ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md)) today, and any future
+home-profile skill/rule that shows up under `~/.claude/` the same way, without needing a
+fresh ADR each time. When refreshing any of these, pull **only** from the deployed, final
+copies under `~/.claude/`
 — never from `xls`'s own repo directly, in any form or path. `binary-dotfiles` must never
 depend on `xls`'s repo being present or checked out on a given machine at all — and
 content authorship deferred to `xls` is not the same thing as `xls` (or a peer session
@@ -161,6 +165,7 @@ Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decisio
 | `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config (work profile only) |
 | `dot_claude/output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Persona output-styles, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
 | `dot_claude/skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/` | `~/.claude/skills/` | Dev-session tooling, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
+| `dot_claude/scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Persona-registry hook script — xls-owned content (`claude-global/scripts/pick-persona.js`), same pull-only rule as the row above — see [ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md) |
 | `run_onchange_install-tools.ps1.tmpl` | n/a (script) | Dev tool list via winget (Windows) |
 | `run_onchange_install-tools.sh.tmpl` | n/a (script) | Dev tool list via Homebrew/apt (macOS/Linux) |
 | `.chezmoitemplates/vscode/settings.json.tmpl` | VS Code settings | Rendered per profile |
