@@ -27,6 +27,38 @@ fi
 [[ -r "$HOME/.config/shell/helpers.zsh" ]] && source "$HOME/.config/shell/helpers.zsh"
 
 # -----------------------------------------------------------------------------
+# Persistent ssh-agent for the GitHub key (run_once_setup-github-ssh.sh.tmpl
+# only registers it once, inline, in that script's own short-lived process --
+# it doesn't survive to a new shell or a reboot on its own). Reuses one agent
+# across shells/tabs via a saved env file instead of spawning a fresh agent
+# (and losing the loaded key) every time a new shell starts.
+# -----------------------------------------------------------------------------
+SSH_AGENT_ENV="$HOME/.ssh/agent.env"
+SSH_GITHUB_KEY="$HOME/.ssh/id_ed25519_github"
+
+if [[ -f "$SSH_AGENT_ENV" ]]; then
+  source "$SSH_AGENT_ENV" >/dev/null
+fi
+
+ssh-add -l >/dev/null 2>&1
+ssh_agent_status=$?
+
+# Exit code 2 = no agent reachable at all; exit code 1 = agent reachable but
+# no keys loaded yet; exit code 0 = already has keys, nothing to do. Only a
+# real 2 means "start a fresh one" -- ssh-add's own status, captured before
+# any negation, since `!`/`if` don't preserve which nonzero code it was.
+if [[ $ssh_agent_status -eq 2 ]]; then
+  ssh-agent -s > "$SSH_AGENT_ENV"
+  source "$SSH_AGENT_ENV" >/dev/null
+fi
+
+if [[ $ssh_agent_status -ne 0 ]]; then
+  [[ -f "$SSH_GITHUB_KEY" ]] && ssh-add "$SSH_GITHUB_KEY" >/dev/null 2>&1
+fi
+
+unset ssh_agent_status
+
+# -----------------------------------------------------------------------------
 # PATH
 # Priority model:
 #   1. user-local tools

@@ -32,12 +32,16 @@ info "repo: $REPO"
 # --------------------------------------------------
 # base deps
 # --------------------------------------------------
-if command -v apt-get >/dev/null 2>&1; then
-  if ! command -v git >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
-    section "base deps"
-    info "installing git/curl"
+if ! command -v git >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+  section "base deps"
+  info "installing git/curl"
+  if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update -y
     sudo apt-get install -y git curl ca-certificates
+  elif command -v brew >/dev/null 2>&1; then
+    brew install git curl
+  else
+    die "no supported package manager found for git/curl (expected apt-get or brew)"
   fi
 fi
 
