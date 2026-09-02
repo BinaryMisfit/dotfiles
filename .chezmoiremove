@@ -11,9 +11,9 @@
 .copilot/instructions/gitflow.instructions.md
 .copilot/instructions/tooling.instructions.md
 .copilot/skills/**/test*
-.claude/rules/k1ra.instuctions.md
-.claude/rules/commits.instuctions.md
-.claude/rules/skills.instuctions.md
+.claude/rules/k1ra.instructions.md
+.claude/rules/commits.instructions.md
+.claude/rules/skills.instructions.md
 mise.toml
 .config/mise/
 
