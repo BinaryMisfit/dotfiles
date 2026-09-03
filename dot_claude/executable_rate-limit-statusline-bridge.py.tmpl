@@ -95,6 +95,28 @@ def _compact_model(raw):
     return name
 
 
+def _persona_safe(text):
+    """Return True if text is safe to display: alphanumeric, dash, space, dot only."""
+    if not text or len(text) > 40:
+        return False
+    if not text[0].isalnum():
+        return False
+    return all(c.isalnum() or c in "-. " for c in text)
+
+
+def _persona(raw):
+    """Extract the live output-style/persona name for display only. Never forwarded."""
+    if not isinstance(raw, dict):
+        return None
+    style = raw.get("output_style")
+    if not isinstance(style, dict):
+        return None
+    name = style.get("name")
+    if not isinstance(name, str) or not _persona_safe(name):
+        return None
+    return name
+
+
 def _quota_parts(raw):
     """Return display strings for quota availability, e.g. ['5h 87%', '7d 94%']."""
     if not isinstance(raw, dict):
@@ -121,6 +143,9 @@ def _status_text(raw):
     directory = os.path.basename(os.getcwd()) or os.getcwd()
     base = f"{user}@{host} {directory}"
     suffix = []
+    persona = _persona(raw)
+    if persona:
+        suffix.append(persona)
     model = _compact_model(raw)
     if model:
         suffix.append(model)
