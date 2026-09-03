@@ -11,7 +11,7 @@ inline here.
 | [TODO-2](#todo-2) | Capture 3 live-only customizations, then complete the paused first chezmoi apply on this machine | High | Closed | Targeted | chezmoi | 2026-08-30 | 2026-08-31 |
 | [TODO-3](#todo-3) | Build scheduled `chezmoi update` automation | High | Closed | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
-| [TODO-5](#todo-5) | Self-heal: detect and recover from broken/drifted chezmoi state | High | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-5](#todo-5) | Self-heal: detect and recover from broken/drifted chezmoi state | High | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-03 |
 
 ---
 
@@ -177,12 +177,23 @@ faked, needs real research into chezmoi's own state tracking (`chezmoistate.bolt
 Ran the Windows script for real — it caught two genuine drifted files (both pulled and
 applied in the same pass) — and syntax-checked the POSIX side under git-bash.
 
-**Next action:** Decide the fourth tier's real trigger (what % drift, what "stale" means
-in months) and whether it's ever automatic or always human-confirmed — given uninstall's
-own package-removal scope, leaning toward "always confirmed, never automatic" but that's
-BinaryMisfit's call. Research interrupted-apply detection for real rather than guessing.
-Decide whether/how this gets scheduled (daily alongside TODO-3's check?) once repair
-action exists — a detection-only report has less urgency to schedule than TODO-3's did.
+**Progress 2026-09-03:** Interrupted-apply detection researched for real (not guessed) —
+`chezmoi state dump`/`chezmoistate.boltdb` don't distinguish an interrupted apply from
+ordinary unapplied drift; the only mechanism that actually answers the question is a
+sentinel marker set/cleared by chezmoi's own native `hooks.apply.pre`/`hooks.apply.post`
+config (confirmed against the real docs, not memory). [ADR 0023](adr/0023-scripted-toml-yaml-writes-are-additive-only.md)
+settles the design blocker this raised — the installer script has to write into the
+user's local `chezmoi.toml`/`.yaml`, additive-only, halting on any real key collision
+rather than guessing. **The hooks installer itself is still unbuilt** — design is
+unblocked, code doesn't exist yet.
+
+**Next action:** Build the `run_once` hooks-installer script per ADR 0023's rule. Separately,
+decide the fourth tier's real trigger (what % drift, what "stale" means in months) and
+whether it's ever automatic or always human-confirmed — given uninstall's own
+package-removal scope, leaning toward "always confirmed, never automatic" but that's
+BinaryMisfit's call. Decide whether/how this gets scheduled (daily alongside TODO-3's
+check?) once repair action exists — a detection-only report has less urgency to schedule
+than TODO-3's did.
 
 ---
 
