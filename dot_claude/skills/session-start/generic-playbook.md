@@ -87,6 +87,20 @@ alone never triggers. Concretely: call `ListAgents`, read this session's own nam
 --set-session-name "<name>"` from this repo's root. Skip only if the global persona system
 isn't installed (same condition as the greeting above).
 
+**Also sweep dead peer links off the SAME `ListAgents` call, every run (added 2026-09-03,
+BinaryMisfit's own call, part of that day's persona-system cleanup pass).** Every registry
+entry's `sessionName` is only ever true while a real process is alive, and nothing
+proactively notices one dying -- Claude Code has a real `SessionStart` hook but no symmetric
+exit hook, so the only way this gets noticed at all is something asking. Rather than leaving
+that entirely to `/persona --sweep` run by hand (real, but easy to forget, and stale entries
+accumulate silently in the meantime), this step now runs it automatically as a free
+byproduct of the `ListAgents` call it's already making one line above: join every live
+peer's name from that same result with commas (or pass `""` if there are none), then run
+`node ~/.claude/scripts/pick-persona.js --sweep-dead "<comma-separated live names>"` from
+this repo's root. Relay its output only if it actually removed or cleared something --
+"nothing stale, nothing to report" needs no line of its own. Skip only if the global persona
+system isn't installed (same condition as the greeting above).
+
 ## Step 1.1 — Day-state note (continuity)
 
 **Deliberately NOT part of the automatic `SessionStart` hook (2026-09-03, BinaryMisfit's
