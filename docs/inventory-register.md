@@ -157,7 +157,7 @@ running. Both are gone now — see [ADR 0008](adr/0008-interactive-bootstrap-and
 | `.chezmoiremove` | Profile-aware forced removal list — strips `~/.codex/` entirely, `~/.copilot/` on non-work profiles, and the granular common/work/home Claude paths on the non-matching profile (fixed 2026-08-30, see [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md)) |
 | `.gitattributes` | Forces LF line endings on shell/config/text file types |
 | `.gitignore` | Standard ignores (node_modules, `__pycache__`, `.env`, venv, dist/build) |
-| `.vscode/settings.json` | This repo's own workspace settings (not a chezmoi target) — `*.tmpl` → go-template syntax highlighting, autofetch |
+| `.vscode/` | Untracked (2026-09-03, BinaryMisfit's direct call — standard practice not to track editor workspace state) and gitignored. Still present locally with the same `*.tmpl` → go-template syntax highlighting + autofetch settings, just no longer version-controlled — not a chezmoi target either way |
 | `.claude/settings.local.json` | This repo's own local Claude Code permission overrides (not a chezmoi target, explicitly excluded in `.chezmoiignore` as runtime-only state) |
 
 ## Documentation & registers
