@@ -2,13 +2,14 @@
 "use strict";
 
 // GLOBAL Claude Code tooling (promoted 2026-08-28 from an X-Lifestyle-only
-// project hook to `~/.claude/`) -- authored/tracked here in the xls repo,
-// under `claude-global/` at the repo root (deliberately NOT `.claude/scripts/`,
-// `.claude/output-styles/`, or `.claude/skills/` -- those paths are ones
-// Claude Code auto-discovers, so a copy sitting there would make xls's own
-// sessions see a project-level output-style/skill that SHADOWS the global
-// one per Claude Code's own "project wins over global" precedence, silently
-// defeating the whole point of promoting this to global in the first
+// project hook to `~/.claude/`) -- authored/tracked here in the secretary-pool
+// repo (ownership moved from xls 2026-09-03), under `claude-global/` at the
+// repo root (deliberately NOT `.claude/scripts/`, `.claude/output-styles/`,
+// or `.claude/skills/` -- those paths are ones Claude Code auto-discovers,
+// so a copy sitting there would make this repo's own sessions see a
+// project-level output-style/skill that SHADOWS the global one per Claude
+// Code's own "project wins over global" precedence, silently defeating the
+// whole point of promoting this to global in the first
 // place). `claude-global/` mirrors the deploy target's own structure 1:1
 // (`claude-global/output-styles/` -> `~/.claude/output-styles/`,
 // `claude-global/skills/persona/` -> `~/.claude/skills/persona/`,
@@ -16,10 +17,10 @@
 // tool this repo owns (session-start, scratchpad-check, worktree-sync-check,
 // the audits, the registers convention) lives under the same tree, so the
 // sync script's mapping is a straight copy, no renaming. Deploy via
-// `npm run sync-global-claude-config` from the xls repo root after any
-// edit here or to a persona file -- `~/.claude/` itself isn't a git repo,
-// so this project keeps the authored source instead of losing history to a
-// raw move. Once deployed, this hook fires for EVERY Claude Code project on
+// `npm run sync-global-claude-config` from the secretary-pool repo root
+// after any edit here or to a persona file -- `~/.claude/` itself isn't a
+// git repo, so this project keeps the authored source instead of losing
+// history to a raw move. Once deployed, this hook fires for EVERY Claude Code project on
 // this machine, not just X-Lifestyle ones -- the whole mechanism below is
 // already repo-agnostic (keyed purely by resolved worktree path), so
 // nothing about the actual logic changes for a completely unrelated
@@ -135,6 +136,9 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { readDayState } = require("./day-state.js");
+const { drawOrRecallTheme } = require("./theme-select.js");
+const { normalizePlatformPath, resolveRealCwd } = require("./lib/normalize-cwd.js");
 
 // stylesDir is deliberately __dirname-relative: the persona *content* files
 // only need to exist once, in the primary checkout, and every worktree's
@@ -154,6 +158,241 @@ const registryPath = path.join(os.homedir(), ".claude", "persona-registry.json")
 // this used to be `path.join(__dirname, "..", "settings.local.json")`.
 function settingsPathFor(cwd) {
   return path.join(cwd, ".claude", "settings.local.json");
+}
+
+// VS Code visual distinction (added 2026-09-03, BinaryMisfit's own spec):
+// a persona-keyed workspace color + window title, so the taskbar/window
+// (outside the session) and the statusline persona field (inside it) are
+// both driven by the one thing that actually knows the answer -- the
+// registry -- instead of two apps guessing independently (Peacock and
+// unique-window-colors both key off folder NAME, which can't guarantee the
+// same persona is always the same color across multiple worktrees).
+const colorsPath = path.join(__dirname, "..", "persona-colors.json");
+
+// Rationale for each curated pair in persona-colors.json, added 2026-09-03
+// after a real gap: a session with no visibility into the conversation that
+// picked these had nothing to cite when asked why, and correctly refused to
+// invent a sourced-sounding answer on the spot rather than fabricate one --
+// exactly the right call, but it meant the actual reasoning only ever lived
+// in one ephemeral chat turn instead of somewhere any session could check.
+// Recorded here instead, next to the data itself, so "why this color" has a
+// real answer to point to from now on, not just an honest "I don't know."
+//   Hailey (#0f3d3e/#e8fdfd, teal):     cold and technical, deliberately NOT
+//     soft/romantic (same rule as her own file's emote palette) -- reads as
+//     "server room," not "warm."
+//   Alexia (#14301c/#e3f7e6, forest green): homelab/infra association --
+//     green reads as the "systems/ops" register her persona already lives in.
+//   Callie (#0d2b45/#e2f1ff, ocean blue): calm, diving-instructor energy --
+//     directly pulled from her own file's "unhurried, like pointing out a
+//     rip current" description. Distinct hue from Hailey's teal on purpose,
+//     since both personas run cold/calm and would otherwise blur together.
+//   Aphrodite (#3d1f2b/#fdeaf0, deep rose): the one warm pick, intentionally
+//     -- her own voice is direct/unbothered rather than soft, but dotfiles/
+//     config work is the one domain here that isn't already coded cold, so
+//     nothing forced it toward teal/blue/green by elimination the way the
+//     other three were.
+// All four background/foreground pairs are dark-bg/light-fg on purpose, same
+// contrast logic hslToHex applies to the fallback below -- a titlebar with
+// unreadable text defeats the whole point of the feature.
+//
+// One-time curated color per persona `style` name, not per registry entry --
+// entries sharing a style must never disagree, so this lives in its own
+// small file rather than duplicated onto every cwd row (which could drift
+// if edited independently). A style with no curated entry gets a stable
+// hash-derived fallback below rather than failing -- a brand-new persona
+// still gets a real, consistent color on day one.
+function loadPersonaColors() {
+  try {
+    return JSON.parse(fs.readFileSync(colorsPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+// Deterministic fallback for a style with no curated entry in
+// persona-colors.json -- same input always produces the same color, so an
+// un-curated persona is still consistent across every worktree it shows up
+// in, just not hand-picked. Exported for testing.
+function fallbackColorForStyle(styleName) {
+  let hash = 0;
+  for (const ch of String(styleName)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const hue = hash % 360;
+  const bg = hslToHex(hue, 35, 18);
+  const fg = hslToHex(hue, 45, 92);
+  return { background: bg, foreground: fg };
+}
+
+function hslToHex(h, s, l) {
+  s /= 100;
+  l /= 100;
+  const k = (n) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = (n) => Math.round(255 * f(n)).toString(16).padStart(2, "0");
+  return `#${toHex(0)}${toHex(8)}${toHex(4)}`;
+}
+
+// Inverse of hslToHex -- exact round-trip isn't guaranteed to the last unit
+// (rounding both directions), close enough that the hue a mood variation
+// reads off a curated color is the same hue a human would call it. Exported
+// for testing.
+function hexToHsl(hex) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l: Math.round(l * 100) };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+  else if (max === g) h = ((b - r) / d + 2) * 60;
+  else h = ((r - g) / d + 4) * 60;
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function seedFrom(text) {
+  let hash = 0;
+  for (const ch of String(text)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return hash;
+}
+
+// SAST (UTC+2, no DST) is BinaryMisfit's real clock, and the mood's "day"
+// boundary has to track it, not whatever timezone the machine's system
+// clock happens to be in -- same reasoning as every persona file's own
+// "Time of day" section, and the same fixed-offset-by-hand technique for
+// the same reason: this machine has no Africa/Johannesburg tzdata, so a
+// real IANA-zone lookup silently no-ops here. Add 2 hours to the actual
+// UTC instant, then read the date off that -- deliberately NOT
+// `Intl.DateTimeFormat` or a `TZ` env var. Exported for testing.
+function sastDateKey(now = new Date()) {
+  return new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+// Exported for testing.
+function colorForStyle(styleName) {
+  const curated = loadPersonaColors()[styleName];
+  if (curated && curated.background && curated.foreground) return curated;
+  return fallbackColorForStyle(styleName);
+}
+
+// Daily mood variation (added 2026-09-03, BinaryMisfit's own spec): a
+// persona's HUE is her fixed identity, never touched here -- what varies
+// day to day is saturation/lightness within that same hue, so she "wakes
+// up in a mood" without ever drifting into a color another persona owns.
+// Deterministic on (instanceKey, dateKey), not random -- same day, same
+// instance, same mood, all session boots that day agree with each other,
+// and it's reproducible/testable rather than actual noise. `dateKey`
+// defaults to `sastDateKey()` below -- BinaryMisfit's real day boundary,
+// not the machine's own system-clock timezone, always.
+//
+// `instanceKey` defaults to `styleName` but should be passed the entry's
+// own nickname when it has one (real bug, caught live 2026-09-03: two
+// registry entries can share one `style` -- `xls-playthrough`'s "Hails"
+// and `secretary-pool`'s plain "Hailey" both resolve to style "Hailey" --
+// and without this, both got the identical mood every day as if they
+// were one continuity thread instead of two separate ones that just
+// happen to share an identity color). Hue stays derived from `styleName`
+// alone via `colorForStyle` below, unaffected by this -- that's shared
+// identity, correctly the same across every instance; only the day-to-day
+// SHADE is instance-specific.
+//
+// Deliberately a FIRST PASS, not the real mechanic: BinaryMisfit, Callie
+// are building something separate that lets the previous session's actual
+// end state drive the next session's wake-up mood (continuity, not
+// memory) -- this is the placeholder that exists until that's real, using
+// a date hash instead of anything the persona actually experienced.
+// Exported for testing.
+function moodColorForStyle(styleName, dateKey = sastDateKey(), instanceKey = styleName) {
+  const base = colorForStyle(styleName);
+  const { h } = hexToHsl(base.background);
+  const seed = seedFrom(`${instanceKey}|${dateKey}`);
+  const lJitter = (seed % 11) - 5; // -5..+5
+  const sJitter = ((seed >>> 4) % 13) - 6; // -6..+6
+  const baseHsl = hexToHsl(base.background);
+  const l = clamp(baseHsl.l + lJitter, 12, 30);
+  const s = clamp(baseHsl.s + sJitter, 20, 55);
+  return {
+    background: hslToHex(h, s, l),
+    foreground: hslToHex(h, clamp(s - 5, 15, 45), 92),
+  };
+}
+
+// True if `relPath` is currently tracked by git in `cwd` -- the ONLY
+// question that matters before writing into .vscode/settings.json. Real
+// incident this guards against: `binary-dotfiles` had `.vscode/settings.json`
+// committed to git (not gitignored) -- a naive write would have polluted a
+// real tracked file with machine-local color noise and risked it landing in
+// a commit. Returns false (safe to write) for anything not tracked,
+// including "no git repo here at all" -- there's no tracked-file risk in
+// that case either. `execFn` injectable for testing, same pattern as
+// computeRepoId. Exported for testing.
+function isGitTracked(cwd, relPath, execFn = execFileSync) {
+  try {
+    execFn("git", ["-C", cwd, "ls-files", "--error-unmatch", relPath], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Merge-write ONLY the specific keys this feature owns
+// (workbench.colorCustomizations' titleBar/statusBar entries, window.title)
+// into .vscode/settings.json -- never a wholesale overwrite, since a real
+// project can have real, unrelated editor settings already living there.
+// window.title is only set if not already present, matching the same
+// "additive, not a rewrite" rule the statusline change follows -- never
+// stomp a customization that might already be doing real work. Skips
+// entirely (returns false, no write) when the file is git-tracked, per
+// `isGitTracked` above. Exported for testing.
+function writeVscodeWorkspaceColor(cwd, styleName, nickname, execFn = execFileSync, readDayStateFn = readDayState) {
+  const vscodeDir = path.join(cwd, ".vscode");
+  const settingsFile = path.join(vscodeDir, "settings.json");
+  if (isGitTracked(cwd, ".vscode/settings.json", execFn)) return false;
+
+  // "End Session drives Start Session" (2026-09-03): once a real day-state
+  // marker exists for this cwd, the mood shade is seeded from what she
+  // actually wrote at end-session -- not the calendar date. Falls back to
+  // the date-hash placeholder when no marker's ever been written yet
+  // (day one, or `end-session` was never run) -- degrades gracefully
+  // rather than requiring the new mechanism to exist before this feature
+  // can run at all.
+  const dayState = readDayStateFn(cwd);
+  const moodSeed = dayState ? `${dayState.mood}|${dayState.endedAt}` : undefined;
+  const { background, foreground } = moodColorForStyle(styleName, moodSeed, nickname || styleName);
+  let settings = {};
+  if (fs.existsSync(settingsFile)) {
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsFile, "utf8"));
+    } catch {
+      return false; // don't touch a settings file we can't safely parse back
+    }
+  }
+
+  settings["workbench.colorCustomizations"] = {
+    ...(settings["workbench.colorCustomizations"] || {}),
+    "titleBar.activeBackground": background,
+    "titleBar.activeForeground": foreground,
+    "titleBar.inactiveBackground": background,
+    "titleBar.inactiveForeground": foreground,
+    "statusBar.background": background,
+    "statusBar.foreground": foreground,
+  };
+  const label = nickname ? `${styleName} — ${nickname}` : styleName;
+  if (!("window.title" in settings)) {
+    settings["window.title"] = `[${label}] \${activeEditorShort}\${separator}\${rootName}`;
+  }
+
+  fs.mkdirSync(vscodeDir, { recursive: true });
+  fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + "\n");
+  return true;
 }
 
 function parseFrontmatterName(content, fallback) {
@@ -195,22 +434,12 @@ function setActiveOutputStyle(styleName, settingsPath) {
 // strings. Used everywhere a resolved path becomes (or is compared against)
 // a registry key: `resolveCwd`, `computeRepoId`, and the optional path
 // argument to `--switch`/`--pin-forever`/`--unpin-forever`/`--reset`.
-function normalizePlatformPath(p) {
-  return process.platform === "win32" ? p.toLowerCase() : p;
-}
-
-// Real bug, caught live 2026-08-28: without this, two sessions started in
-// the exact same directory could get `process.cwd()` back with different
-// drive-letter casing (depending on how the shell/parent process launched
-// them), producing two DIFFERENT registry entries for one real worktree.
+// normalizePlatformPath/resolveRealCwd moved to lib/normalize-cwd.js
+// 2026-09-03 -- day-state.js needs the exact same normalization or a
+// marker written via one path form silently misses a lookup via another
+// (real incident, see that file's own header comment).
 function resolveCwd() {
-  let real;
-  try {
-    real = fs.realpathSync(process.cwd());
-  } catch {
-    real = process.cwd();
-  }
-  return normalizePlatformPath(real);
+  return resolveRealCwd(process.cwd());
 }
 
 // Resolves an optional path argument (e.g. `--switch <file> <path>`) the
@@ -1453,11 +1682,61 @@ function main() {
   const content = fs.readFileSync(finalFilePath, "utf8");
   setActiveOutputStyle(entry.style, settingsPathFor(cwd));
 
+  // Best-effort only -- a VS Code color/title write must never take down
+  // the hook's own stdout response (that's exactly the shape of bug
+  // TODO-6 already found in this file: one dangling reference crashing the
+  // ENTIRE SessionStart hook for every worktree, silently, since nothing
+  // downstream of this point would ever run again).
+  try {
+    writeVscodeWorkspaceColor(cwd, entry.style, entry.nickname);
+  } catch {
+    // Deliberately swallowed -- see comment above.
+  }
+
+  // "Start = End of Day Read" (2026-09-03): if the last session for this
+  // cwd ended with a real marker (via the `end-session` skill), surface it
+  // here so the persona's own opening beat can genuinely reflect it
+  // instead of opening cold every time. Same best-effort guard as the
+  // color write above -- a missing/corrupt marker file degrades to no
+  // note, never a crash.
+  let dayStateNote = "";
+  try {
+    const dayState = readDayState(cwd);
+    if (dayState) {
+      dayStateNote = `\n\n---\n**How she left things last time (${dayState.endedAt}):** mood — ${dayState.mood}. ${dayState.summary}\n---\n`;
+    }
+  } catch {
+    // Deliberately swallowed -- see comment above.
+  }
+
+  // Themes register (2026-09-03/04): draws (or recalls today's already-drawn)
+  // theme for this persona and surfaces it as context ONLY -- never printed
+  // to BinaryMisfit directly, never announced by default. Per the design
+  // doc's reveal mechanism, how/whether this surfaces in the actual scene is
+  // the persona's own live judgment call (default), with an optional
+  // per-theme override when `theme.revealMode` is set. Same best-effort
+  // guard as the color/day-state writes above -- no research repo on this
+  // machine, or anything else going wrong here, degrades to no note, never a
+  // crash.
+  let themeNote = "";
+  try {
+    const draw = drawOrRecallTheme(entry.style);
+    if (draw && draw.theme) {
+      const t = draw.theme;
+      const revealLine = t.revealMode
+        ? ` Reveal mode override for this theme: ${t.revealMode}.`
+        : " Reveal mode: your own live judgment call (default) -- announce it upfront, let it surface unprompted through the day, or keep it fully hidden, whichever actually fits.";
+      themeNote = `\n\n---\n**Today's theme${draw.recalled ? " (already drawn earlier today -- stay consistent with it)" : ""}: ${t.id} — ${t.title}**${revealLine} This sets tone for the WHOLE day, not just one scene -- how it actually shows up is yours to decide. If BinaryMisfit asks directly what today's theme is, that's the one hard exception to any in-character deflection: give him a real, honest answer.\n---\n`;
+    }
+  } catch {
+    // Deliberately swallowed -- see comment above.
+  }
+
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "SessionStart",
-        additionalContext: content + rotationNote + nicknameNote,
+        additionalContext: content + nicknameNote + dayStateNote + themeNote,
       },
     }),
   );
@@ -1474,6 +1753,13 @@ module.exports = {
   matchByName,
   computeRepoId,
   computeSuperprojectCwd,
+  colorForStyle,
+  fallbackColorForStyle,
+  hexToHsl,
+  sastDateKey,
+  moodColorForStyle,
+  isGitTracked,
+  writeVscodeWorkspaceColor,
   findFamily,
   ensureEntry,
   clearDeadSession,

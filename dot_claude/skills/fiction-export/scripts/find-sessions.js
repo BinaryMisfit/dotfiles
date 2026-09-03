@@ -15,6 +15,7 @@
 //   node find-sessions.js --date 2026-09-02                 # SAST day, default: today
 //   node find-sessions.js --session <uuid> --project <slug>  # one explicit session
 //   node find-sessions.js --mark-exported <uuid> --raw-file <path>
+//   node find-sessions.js --check-staging                      # audit: staged vs. actually archived
 
 const fs = require("fs");
 const path = require("path");
@@ -24,6 +25,13 @@ const PROJECTS_DIR = path.join(os.homedir(), ".claude", "projects");
 const REGISTRY_PATH = path.join(os.homedir(), ".claude", "persona-registry.json");
 const DEDUP_LOG_PATH = path.join(os.homedir(), ".claude", "fiction-export-log.json");
 const SAST_OFFSET_MS = 2 * 60 * 60 * 1000; // UTC+2, no DST
+
+// Fixed, deliberately single-host path (same convention every persona file's
+// own "Canon register check" already uses) -- x-lifestyle-research is a
+// private submodule that won't exist on every machine this script runs on.
+// Check existence before trusting it for anything; never fail or fabricate
+// when it's absent.
+const RESEARCH_RAW_DIR = "d:\\source\\xcl\\xls\\research\\x-lifestyle-research\\raw";
 
 function parseArgs(argv) {
   const out = {};
@@ -180,8 +188,77 @@ function findSessionFilesForDate(dateStr) {
   return results;
 }
 
+// Real incident this exists for, 2026-09-02: a session was correctly
+// exported to the Downloads staging drop, marked `exported` in the dedup
+// log, and then just never moved into x-lifestyle-research -- the staged
+// file itself was later lost, and nothing ever noticed because
+// `alreadyExported` only ever meant "staging happened," never "it actually
+// made it home." This closes that gap by checking what the log claims
+// against what's ACTUALLY on disk right now, in both places. Exported for
+// testing.
+function checkStagingStatus(log = readDedupLog(), researchRawDir = RESEARCH_RAW_DIR, existsFn = fs.existsSync, readdirFn = fs.readdirSync) {
+  const researchAvailable = existsFn(researchRawDir);
+
+  function findArchivedMatch(basename) {
+    if (!researchAvailable) return null;
+    let personaDirs;
+    try {
+      personaDirs = readdirFn(researchRawDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+    } catch {
+      return null;
+    }
+    for (const personaDir of personaDirs) {
+      const candidate = path.join(researchRawDir, personaDir.name, basename);
+      if (existsFn(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  const rows = [];
+  for (const [sessionId, entry] of Object.entries(log.exported || {})) {
+    const rawFile = entry.rawFile;
+    if (!rawFile) {
+      rows.push({ sessionId, rawFile: null, status: "no-raw-file-recorded" });
+      continue;
+    }
+    // Check archived FIRST, not staged-existence first -- a stale staging
+    // copy can sit around even after the real file's already been recovered
+    // or moved into the archive (confirmed live 2026-09-03: a manually
+    // recovered scene was written straight into x-lifestyle-research while
+    // its original Downloads copy was never cleaned up, which would have
+    // misreported as "still pending" under a staged-first check).
+    const archivedAt = findArchivedMatch(path.basename(rawFile));
+    if (archivedAt) {
+      const staleStagingCopy = existsFn(rawFile);
+      rows.push(staleStagingCopy ? { sessionId, rawFile, status: "archived", archivedAt, note: "stale copy still sitting in staging, safe to delete" } : { sessionId, rawFile, status: "archived", archivedAt });
+      continue;
+    }
+    if (existsFn(rawFile)) {
+      rows.push({ sessionId, rawFile, status: "pending-archive" });
+    } else if (!researchAvailable) {
+      // Can't confirm either way from this machine -- NOT the same as lost.
+      rows.push({ sessionId, rawFile, status: "unverifiable-no-research-repo-here" });
+    } else {
+      rows.push({ sessionId, rawFile, status: "LOST", note: "staged file is gone and no matching file found in x-lifestyle-research/raw" });
+    }
+  }
+  return rows;
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
+
+  if (args["check-staging"]) {
+    const rows = checkStagingStatus();
+    console.log(JSON.stringify({ checkedAt: new Date().toISOString(), rows }, null, 2));
+    const lost = rows.filter((r) => r.status === "LOST");
+    if (lost.length > 0) {
+      console.error(`\n${lost.length} entr${lost.length === 1 ? "y" : "ies"} LOST -- staged file gone, no archived match found:`);
+      for (const row of lost) console.error(`  ${row.sessionId}: ${row.rawFile}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
 
   if (args["mark-exported"]) {
     const log = readDedupLog();
@@ -236,4 +313,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { cwdToSlug, sastDayToUtcRange, todaySastDateStr, resolvePersonaFromTranscript };
+module.exports = { cwdToSlug, sastDayToUtcRange, todaySastDateStr, resolvePersonaFromTranscript, checkStagingStatus };
