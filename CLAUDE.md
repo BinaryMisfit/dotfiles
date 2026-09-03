@@ -164,7 +164,7 @@ Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decisio
 | `dot_wezterm.lua` | `~/.wezterm.lua` | WezTerm terminal config |
 | `dot_codex/config.toml.tmpl` | `~/.codex/config.toml` | Codex telemetry config |
 | `dot_claude/CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | Claude Code global instructions (profile-gated) |
-| `dot_claude/settings.json.tmpl` | `~/.claude/settings.json` | Claude Code permissions |
+| `dot_claude/settings.json.tmpl` | `~/.claude/settings.json` | Claude Code permissions. `autoMode.environment` (home-profile only) declares BinaryMisfit's homelab as a trusted Auto Mode environment — see [ADR 0025](docs/adr/0025-auto-mode-environment-trust-block-homelab-scoped.md) |
 | `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config (work profile only) |
 | `dot_claude/output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Persona output-styles, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
 | `dot_claude/skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/` | `~/.claude/skills/` | Dev-session tooling, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |

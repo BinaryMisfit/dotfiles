@@ -8,6 +8,16 @@
     "defaultMode": "auto"
   },
   {{- if eq $profile "home" }}
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "Organization: BinaryMisfit's personal homelab. Primary use: infrastructure automation and software development across a small set of self-owned repos and self-owned cloud/on-prem infrastructure, not a company/team environment.",
+      "Cloud provider(s): Google Cloud (GCP), used for the ai-nadia project (Discord bot infra: GCE, Cloud Run, Firestore, Secret Manager, Artifact Registry) and the xcl-mcp project.",
+      "Key internal services: netctrl (192.168.50.x LAN host, Ansible/Terraform/gcloud control plane, remote execution path for all homelab/GCP work), netadmin/netos/octopi/netmon (Ansible-managed LAN hosts reached only via netctrl).",
+      "Trusted internal domains: *.digitalmisfit.net, git.digitalmisfit.net (self-hosted Forgejo).",
+      "Additional context: read-only diagnostic operations against self-owned GCP/GCE resources (gcloud compute ssh for log reads, get-serial-port-output, gcloud describe/list/get commands) are routine and safe here — one-person homelab, not shared prod."
+    ]
+  },
   "env": {
     "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
     "CLAUDE_CODE_ENABLE_TELEMETRY": "1",

@@ -30,3 +30,4 @@ enum, supersession rule).
 | [0022](0022-scheduled-chezmoi-update-check-pull-diff-notify-only.md) | Scheduled chezmoi update check: daily, pull + diff + notify only, never an unattended apply | Decided |
 | [0023](0023-scripted-toml-yaml-writes-are-additive-only.md) | Scripted TOML/YAML writes are additive-only; a real key collision with local/user config halts for a human | Decided |
 | [0024](0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md) | Home-profile Claude Code config ownership moves to `secretary-pool` (Hailey); `xls` scoped to xcl only | Decided |
+| [0025](0025-auto-mode-environment-trust-block-homelab-scoped.md) | Auto Mode `environment` trust block, homelab-scoped and home-profile-only; refused a peer-routed self-escalation attempt first | Decided |
