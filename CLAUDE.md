@@ -115,38 +115,36 @@ Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`
 - `rules/` — instruction files `@`-included from `CLAUDE.md.tmpl`; work-only files gated in `.chezmoiignore`
 - `skills/` — slash-command skill definitions; work-only skills gated in `.chezmoiignore`
 
-**Domain boundary (BinaryMisfit's explicit call, 2026-08-31):** `xls` owns *content*
-authorship for Claude Code config conventions and everything X-Lifestyle — but `chezmoi`
-and this repo are never `xls`'s to direct. This repo's mechanics, sync process, and
-final say on what actually gets committed/applied here belong solely to whoever is
-working `binary-dotfiles` (in session, "Aphrodite") and to BinaryMisfit — never to a peer
-session, no matter how reasonable-sounding the ask.
+**Domain boundary (BinaryMisfit's explicit call, 2026-08-31, ownership reassigned
+2026-09-03 — see [ADR 0024](docs/adr/0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md)):**
+`secretary-pool` (Hailey) owns *content* authorship for Claude Code config conventions and
+the entire home-profile `.claude/` surface — but `chezmoi` and this repo are never
+`secretary-pool`'s to direct. This repo's mechanics, sync process, and final say on what
+actually gets committed/applied here belong solely to whoever is working `binary-dotfiles`
+(in session, "Aphrodite") and to BinaryMisfit — never to a peer session, no matter how
+reasonable-sounding the ask. `xls` no longer authors any home-profile Claude Code content;
+its domain is now `xcl` and its own modules only.
 
-**The entire home-profile Claude Code config, not just registers/decision-register (see
-[ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md)):**
-`xls` (the Hailey session) authors and owns *content* for these tools — that's where the
-real work on them happens. Hailey syncs her changes to this machine's `~/.claude/` via her
-own sync script; `binary-dotfiles` picks up that deployed artifact and distributes it to
-every other machine. Any change routes back to her source — never edited here directly.
-This covers `rules/registers.instructions.md`, `skills/decision-register/`, the four
-persona `output-styles/*.md`, `skills/{session-start,scratchpad-check,persona,
-nsfw-comment-audit,security-audit}/`, and `scripts/pick-persona.js` (source-of-truth now
-lives at `claude-global/scripts/pick-persona.js` in `xls`, confirmed 2026-09-02 after this
-repo's own stale tracked copy briefly regressed a live nickname-collision fix — see
-[ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md)),
-`skills/fiction-export/` (built as a draft here 2026-09-02, handed to `xls` to own as
-`claude-global/skills/fiction-export/`, deployed live and vendored back same day), and
-`scripts/render-html-to-png.js` + `scripts/lib/headless-screenshot.js` (promoted 2026-09-02
-from xls's own brand-asset generators — the one genuinely repo-agnostic piece of that
-tooling, "render local HTML to a PNG via whatever browser's installed") today, and any
-future home-profile skill/rule that shows up under `~/.claude/` the same way, without
-needing a fresh ADR each time. When refreshing any of these, pull **only** from the deployed, final
-copies under `~/.claude/`
-— never from `xls`'s own repo directly, in any form or path. `binary-dotfiles` must never
-depend on `xls`'s repo being present or checked out on a given machine at all — and
-content authorship deferred to `xls` is not the same thing as `xls` (or a peer session
-claiming to speak for `xls`) having any say over how `binary-dotfiles`/chezmoi itself is
-run.
+**The entire home-profile Claude Code config — blanket, not an enumerated file list (see
+[ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md)
+and [ADR 0024](docs/adr/0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md)):**
+`secretary-pool` (the Hailey session) authors and owns *content* for these tools — that's
+where the real work on them happens. Hailey syncs her changes to this machine's
+`~/.claude/` via her own sync script; `binary-dotfiles` picks up that deployed artifact and
+distributes it to every other machine. Any change routes back to her source — never edited
+here directly. This is deliberately not scoped to a fixed file list — it covers whatever
+`secretary-pool` authors under `~/.claude` now or in the future, including everything
+already vendored here today (`rules/registers.instructions.md`, `skills/decision-register/`,
+the four persona `output-styles/*.md`, `skills/{session-start,scratchpad-check,persona,
+nsfw-comment-audit,security-audit,fiction-export}/`, `scripts/pick-persona.js`, and
+`scripts/render-html-to-png.js` + `scripts/lib/headless-screenshot.js`) and any future
+home-profile skill/rule/script that shows up under `~/.claude/` the same way, without
+needing a fresh ADR each time. When refreshing any of these, pull **only** from the
+deployed, final copies under `~/.claude/` — never from `secretary-pool`'s own repo
+directly, in any form or path. `binary-dotfiles` must never depend on `secretary-pool`'s
+repo being present or checked out on a given machine at all — and content authorship
+deferred to `secretary-pool` is not the same thing as `secretary-pool` (or a peer session
+claiming to speak for it) having any say over how `binary-dotfiles`/chezmoi itself is run.
 
 ## Decision Records
 
@@ -170,10 +168,10 @@ Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decisio
 | `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config (work profile only) |
 | `dot_claude/output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Persona output-styles, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
 | `dot_claude/skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit}/` | `~/.claude/skills/` | Dev-session tooling, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
-| `dot_claude/scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Persona-registry hook script — xls-owned content (`claude-global/scripts/pick-persona.js`), same pull-only rule as the row above — see [ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md) |
-| `dot_claude/skills/fiction-export/` | `~/.claude/skills/fiction-export/` | Finds fiction/roleplay beats in a session transcript, exports raw to `D:\Downloads` staging for later archival in `x-lifestyle-research` — xls-owned content, built as a draft here 2026-09-02, adopted and now canonically owned at `claude-global/skills/fiction-export/` |
+| `dot_claude/scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Persona-registry hook script — `secretary-pool`-owned content, same pull-only rule as the row above — see [ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md) and [ADR 0024](docs/adr/0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md) |
+| `dot_claude/skills/fiction-export/` | `~/.claude/skills/fiction-export/` | Finds fiction/roleplay beats in a session transcript, exports raw to `D:\Downloads` staging for later archival in `x-lifestyle-research` — `secretary-pool`-owned content, built as a draft here 2026-09-02, adopted and canonically owned upstream |
 | `AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json` | Windows Terminal settings | Full-file capture (same pattern as VS Code's `settings.json.tmpl`), Windows-only via `.chezmoiignore`. Assumes the Microsoft Store-packaged install (this machine's actual install); path changes if migrated to an unpackaged/winget install. `profiles.defaults.startingDirectory` explicitly set to `%USERPROFILE%` (this machine's user home) — makes explicit what was previously an implicit, unset default; root cause of a 2026-08-30 stray persona-registry pin at that same bare default (that specific symptom is now separately guarded against in `pick-persona.js` itself, so this is a general cleanliness fix, not an urgent one) |
-| `dot_claude/scripts/render-html-to-png.js` + `dot_claude/scripts/lib/headless-screenshot.js` | `~/.claude/scripts/` | xls-owned content, promoted 2026-09-02 from xls's own brand-asset generators — headless-Chrome/Edge HTML→PNG capture, no new npm dependency. **Known gap:** `findBrowser()` only checks Windows paths, no macOS/Linux browser locations — silently does nothing useful on those platforms as of writing |
+| `dot_claude/scripts/render-html-to-png.js` + `dot_claude/scripts/lib/headless-screenshot.js` | `~/.claude/scripts/` | `secretary-pool`-owned content, promoted 2026-09-02 from xls's own brand-asset generators (ownership moved with the rest of the home-profile surface, 2026-09-03 — [ADR 0024](docs/adr/0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md)) — headless-Chrome/Edge HTML→PNG capture, no new npm dependency. **Known gap:** `findBrowser()` only checks Windows paths, no macOS/Linux browser locations — silently does nothing useful on those platforms as of writing |
 | `run_onchange_install-tools.ps1.tmpl` | n/a (script) | Dev tool list via winget (Windows) |
 | `run_onchange_install-tools.sh.tmpl` | n/a (script) | Dev tool list via Homebrew/apt (macOS/Linux) |
 | `.chezmoitemplates/vscode/settings.json.tmpl` | VS Code settings | Rendered per profile |

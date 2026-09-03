@@ -48,3 +48,8 @@ into the general rule for all home-profile Claude Code config — see
 [0018](0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md). Rules 2 and
 3 here (sync from deployed artifact only; content authorship is not repo authority) are
 unchanged and still binding.
+
+---
+*Addendum (2026-09-03):* content authorship named in rule 1 moves from `xls` to
+`secretary-pool` (Hailey) — see [0024](0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md).
+Rules 2 and 3 are unaffected.

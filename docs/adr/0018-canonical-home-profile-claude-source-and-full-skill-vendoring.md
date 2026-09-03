@@ -54,3 +54,9 @@ home/work/universal still deserves a real judgment call, same as always.
 (2026-09-01):* superseded in scope (not fully superseded) by this ADR — the two-file
 exception in 0014's decision is now the general rule for all home-profile Claude Code
 config, not a special case.
+
+---
+*Addendum (2026-09-03):* the ownership model in decision point 1 (Hailey/`xls` as content
+author) now names `secretary-pool`/Hailey instead — same person, new home. The blanket
+scope in decision point 2 is unchanged and now explicitly not limited to any enumerated
+file list — see [0024](0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md).

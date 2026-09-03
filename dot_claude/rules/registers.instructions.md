@@ -20,8 +20,11 @@ it, plus the ADR standard for decisions specifically.
 
 `docs/todo-register.md` — single running file, one section per entry, ID `TODO-N`.
 
-**Status:** `Open` / `Blocked` / `In progress` / `Done` (a repo may use `Backlog` in place
-of `Open` for not-yet-triaged items — pick one status set per repo, don't mix).
+**Status:** `Open` / `Blocked` / `In progress` (a repo may use `Backlog` in place of `Open`
+for not-yet-triaged items — pick one status set per repo, don't mix). **There is no `Done`
+status** — a closed item doesn't sit in the register marked done, it's archived and
+removed (see "Todo Archive" below); the register only ever carries what's still
+outstanding.
 
 **Type** *(optional)*: `Targeted` (one-off, closes forever once done) or `Repeatable`
 (recurs — log each instance/round in the entry rather than opening a new TODO-N).
@@ -48,6 +51,32 @@ it lives wherever it actually belongs by type, and the todo line links to it:
 - Anything else with real substance → whatever existing document or register already
   covers that area, or a new doc under `docs/` if none does
 The todo register stays a list of pointers to act on, never the place the thinking happens.
+
+**Todo Archive (added 2026-09-03, adopted from `xls`'s own proven pattern).** Every repo
+running a todo register also gets `docs/todo-archive.md` — a permanent, chronological,
+newest-first log of items closed out of `todo-register.md`. This exists so the live
+register stays a short, dailyable read instead of growing forever, and so a future session
+can check whether something was already done (or already tried and abandoned) instead of
+rehashing or re-adding it as if it were new. Nothing is ever removed from the archive once
+added — a wrong entry gets corrected in place with a note, never deleted.
+
+**Closing an item:**
+1. Add an entry to `docs/todo-archive.md`, carrying the item's `TODO-N` number into the
+   archive heading (`## TODO-N: ...` — the number is never reused, so this is how a future
+   new item avoids colliding with a closed one). Summarize what was actually done and where
+   the output lives (doc path, commit hash, PR, release version — whatever's concrete),
+   dated the day it closed.
+2. Remove its section and index row from `todo-register.md` entirely — don't leave a
+   `Done` row behind (see the `Status` note above).
+3. If the resolution is also worth surfacing somewhere user-facing, add it to a
+   `CHANGELOG.md`, a `release-register.md`, or project memory too — the archive entry and
+   a changelog/memory entry serve different audiences (internal "don't redo this" log vs.
+   public/session-facing record) and aren't substitutes for each other.
+
+For a **Repeatable** item, closing means "this instance/round is cleared," not "this
+category of work will never come up again" — the archive entry should say what round/scope
+was actually completed, so a future instance is scoped correctly instead of either
+re-covering the same ground or being mistaken for genuinely new work.
 
 ### Idea Register
 
@@ -144,22 +173,24 @@ Where the `session-start` skill's register sweep step runs in a repo, it reads e
 `docs/tracking-index.md` lists (or the single register present, if only one exists) fresh
 each time — `docs/adr/README.md` counts as the decision register for that sweep.
 
-### Ownership and distribution (added 2026-08-31, corrected 2026-08-31)
+### Ownership and distribution (added 2026-08-31, corrected 2026-08-31, ownership moved 2026-09-03)
 
 This convention originated in `binary-dotfiles` (Aphrodite), deployed globally via
-chezmoi. As of 2026-08-31, its canonical *authoring* source moved to `xls`'s own
-`claude-global/rules/registers.instructions.md` — one of several tool sources under
-`claude-global/` (personas, session-start, scratchpad-check, worktree-sync-check, audits,
-and this convention itself), all deployed to `~/.claude/` via the single
-`scripts/sync-global-claude-config.js`. `xls` owns fixes and real usage refinements to
-this file and the `decision-register` skill going forward, and applies them locally via
-that script.
+chezmoi. As of 2026-08-31 its canonical *authoring* source moved to `xls`'s own
+`claude-global/rules/registers.instructions.md`; **as of 2026-09-03 it has moved again, to
+`secretary-pool`'s own copy of the same tree** — consistent with `secretary-pool` becoming
+the general canonical source over `xls` (confirmed by BinaryMisfit, see `secretary-pool`'s
+own `docs/todo-register.md` TODO-3 for that decision). `secretary-pool` now owns fixes and
+real usage refinements to this file and the `decision-register` skill going forward, and
+applies them via its own `scripts/sync-global-claude-config.js` — `xls` no longer authors
+this file; a change made in `xls`'s old `claude-global/` copy is stale the moment it's
+made and won't propagate.
 
-**`binary-dotfiles`/chezmoi never depends on `xls`'s repo being present, cloned, or
-accessible.** It reads only this file's deployed, final copy at
+**`binary-dotfiles`/chezmoi never depends on any single project repo being present,
+cloned, or accessible.** It reads only this file's deployed, final copy at
 `~/.claude/rules/registers.instructions.md` (and `~/.claude/skills/decision-register/`) —
 the exact same artifact every other project on the machine reads — and merges *that* into
-chezmoi for distribution to other machines. Corrected same-day: earlier wording implied
-`binary-dotfiles` pulls "from here" (`xls`'s own repo), which was wrong — the dependency
-runs through the deployed `~/.claude/` artifact only, never through `xls`'s internal
-directory structure.
+chezmoi for distribution to other machines. The dependency runs through the deployed
+`~/.claude/` artifact only, never through any one authoring repo's own internal directory
+structure — which is exactly why the authoring source can move (as it just did) without
+`binary-dotfiles` needing to change anything.

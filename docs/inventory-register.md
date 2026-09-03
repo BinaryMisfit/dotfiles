@@ -115,13 +115,15 @@ both profiles, with content gated individually instead of one blanket switch.
 rule files and (on non-work profiles) the now-gated work skills/output-style, per
 [ADR 0004](adr/0004-scripted-cleanup-required-for-every-removal.md).
 
-**Ownership of the Home-bucket Claude Code content, per [ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md):**
-`xls` (the Hailey session) authors and owns the content source for these files. This
-machine's `~/.claude/` is where her own sync script deploys them; this repo picks up that
-deployed artifact — never `xls`'s internal repo layout — and distributes it to every other
-machine via `chezmoi apply`. Any content change routes back to her source, never edited
-here directly. This machine is the canonical source for the whole home-profile surface,
-not just the two files ADR 0014 originally carved out.
+**Ownership of the Home-bucket Claude Code content, per [ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md)
+and [ADR 0024](adr/0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md):**
+`secretary-pool` (the Hailey session) authors and owns the content source for these files —
+`xls` no longer does; its domain is now `xcl` and its own modules only. This machine's
+`~/.claude/` is where her own sync script deploys them; this repo picks up that deployed
+artifact — never `secretary-pool`'s internal repo layout — and distributes it to every
+other machine via `chezmoi apply`. Any content change routes back to her source, never
+edited here directly. This machine is the canonical source for the whole home-profile
+surface, blanket, not an enumerated file list.
 
 ## GitHub Copilot (`dot_copilot/`) — undocumented until now
 

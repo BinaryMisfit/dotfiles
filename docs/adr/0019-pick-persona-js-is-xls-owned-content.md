@@ -47,3 +47,10 @@ by reading the file directly out of `xls`'s own git history at its current HEAD
 (`d:\source\xcl\xls\claude-global\scripts\pick-persona.js`) — no functionality was
 permanently lost, but it was a close call specifically because this repo had no backup of
 the live file before the forced apply overwrote it.
+
+---
+*Addendum (2026-09-03):* `pick-persona.js`'s canonical source moves with the rest of the
+home-profile surface to `secretary-pool`'s own tree — see
+[0024](0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md). The caution
+this ADR establishes (diff `pick-persona.js` specifically before any wide or forced
+`chezmoi apply`) still applies unchanged, just against the new source.

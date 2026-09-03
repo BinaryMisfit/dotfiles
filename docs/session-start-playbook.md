@@ -71,18 +71,23 @@ recommendation to run the full `nsfw-comment-audit` skill, not fixed inline here
 repo has no `docs/nsfw-comment-audit-playbook.md` yet and no persona session has ever run
 here, skip this step silently — nothing to check yet.
 
-## Step 3.6 — xls-owned home-profile drift check (added 2026-09-02)
+## Step 3.6 — secretary-pool-owned home-profile drift check (added 2026-09-02, ownership reassigned 2026-09-03)
 
-This repo vendors a specific set of home-profile Claude Code files whose *content*
-authorship belongs to `xls` (see CLAUDE.md's "Domain boundary" section,
-[ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md), and
-[ADR 0019](adr/0019-pick-persona-js-is-xls-owned-content.md)) —
-`rules/registers.instructions.md`, `skills/decision-register/`, the four persona
+This repo vendors the home-profile Claude Code config whose *content* authorship belongs
+to `secretary-pool` (Hailey) — see CLAUDE.md's "Domain boundary" section,
+[ADR 0018](adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md),
+[ADR 0019](adr/0019-pick-persona-js-is-xls-owned-content.md), and
+[ADR 0024](adr/0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md) — a
+blanket grant, not an enumerated file list: `rules/registers.instructions.md`,
+`skills/decision-register/`, the four persona
 `output-styles/{hailey,alexia,aphrodite,callie}.md`,
 `skills/{session-start,scratchpad-check,persona,nsfw-comment-audit,security-audit,
-fiction-export}/`, and `scripts/executable_pick-persona.js` (deployed as
-`~/.claude/scripts/pick-persona.js`).
-`xls` syncs its own edits to this machine's live `~/.claude/` first; this repo's
+fiction-export}/`, `scripts/executable_pick-persona.js` (deployed as
+`~/.claude/scripts/pick-persona.js`), `scripts/render-html-to-png.js` +
+`scripts/lib/headless-screenshot.js`, and anything else `secretary-pool` authors under
+`~/.claude` going forward, without needing a fresh ADR each time a new file shows up.
+`xls`'s domain is now `xcl` and its own modules only — no longer a source for this check.
+`secretary-pool` syncs its own edits to this machine's live `~/.claude/` first; this repo's
 `dot_claude/` copies can silently drift behind that deployed artifact between sessions —
 `pick-persona.js` especially, since it's under active development there and this repo's
 copy has historically gone stale for days at a time (ADR 0019).
@@ -101,12 +106,17 @@ everything else in this repo flows the opposite direction (repo → `~/.claude/`
 `chezmoi apply`). If any file actually changed, stage just those files, commit (a plain,
 factual message naming which file(s) synced and why), and push directly to `main` per this
 repo's own branching/push policy — no PR, no confirmation needed for this specific,
-narrowly-scoped sync, since it only ever pulls in `xls`'s own already-published content
-into files `xls` already owns. If nothing drifted, say so plainly and skip the commit.
+narrowly-scoped sync, since it only ever pulls in `secretary-pool`'s own already-published
+content into files `secretary-pool` already owns. If nothing drifted, say so plainly and
+skip the commit.
 
-**Never widen this beyond the exact file list above without a fresh decision** — this
-step's whole safety rests on knowing precisely which files run in this direction; treating
-any other `dot_claude/` file the same way would silently invert this repo's normal
+**This direction (live `~/.claude/` → this repo) applies only to files genuinely authored
+by `secretary-pool` under the home-profile surface — not to any other `dot_claude/` file.**
+The file list above is illustrative of what's vendored today, not an exhaustive gate per
+ADR 0024's blanket grant — but "blanket" still means "authored by secretary-pool," not
+"anything found different under `~/.claude/`." A file this repo itself authors (this
+playbook, `CLAUDE.md`, the ADRs, anything chezmoi-mechanics-specific) never flows this
+direction; treating it the same way would silently invert this repo's normal
 chezmoi-apply flow for it.
 
 ## Step 4 — Register/todo sweep

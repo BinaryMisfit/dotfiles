@@ -28,3 +28,5 @@ enum, supersession rule).
 | [0020](0020-uninstall-script-scope-and-safety-defaults.md) | Uninstall script scope and safety defaults: dry-run by default, tiered risk, package uninstalls never automated | Decided |
 | [0021](0021-uninstall-reverses-everything-except-bootstrap.md) | Uninstall reverses everything except what bootstrap runs — supersedes ADR 0020's package exclusion | Decided |
 | [0022](0022-scheduled-chezmoi-update-check-pull-diff-notify-only.md) | Scheduled chezmoi update check: daily, pull + diff + notify only, never an unattended apply | Decided |
+| [0023](0023-scripted-toml-yaml-writes-are-additive-only.md) | Scripted TOML/YAML writes are additive-only; a real key collision with local/user config halts for a human | Decided |
+| [0024](0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md) | Home-profile Claude Code config ownership moves to `secretary-pool` (Hailey); `xls` scoped to xcl only | Decided |
