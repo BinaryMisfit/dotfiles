@@ -137,7 +137,6 @@ const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { readDayState } = require("./day-state.js");
-const { drawOrRecallTheme } = require("./theme-select.js");
 const { normalizePlatformPath, resolveRealCwd } = require("./lib/normalize-cwd.js");
 
 // stylesDir is deliberately __dirname-relative: the persona *content* files
@@ -1317,6 +1316,36 @@ function unpinForever(targetPath) {
   process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} unpinned at ${cwd} -- back to normal rotation, clock starts now (not retroactive).\n`);
 }
 
+// `node pick-persona.js --set-color [<path>]` -- 2026-09-03, BinaryMisfit's
+// own design call: the automatic SessionStart hook stays minimal (registry
+// entry + persona file read + output style, nothing else) so a
+// one-question-and-close session never pays for work it doesn't need.
+// Everything with real weight -- day-state, theme, color -- moved to the
+// `session-start` SKILL instead, which BinaryMisfit runs by hand every real
+// work session ("load bearing on a habit that's actually load bearing").
+// This is the standalone entry point that skill's own Step 1.3 calls --
+// `writeVscodeWorkspaceColor` previously only ran inline inside the hook's
+// `main()`, with no way to invoke it on its own. Reads the registry entry
+// (must already exist -- a normal session start always creates one) rather
+// than re-deriving persona/nickname from scratch. No path: targets the
+// current cwd's own entry, same convention as `--pin-forever`/`--switch`.
+function setColor(targetPath) {
+  const cwd = targetPath ? resolveMaybePath(targetPath) : resolveCwd();
+  const entries = readRegistry();
+  const entry = findEntry(entries, cwd);
+  if (!entry) {
+    process.stderr.write(`No registry entry for ${cwd} -- run a normal session start here first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const wrote = writeVscodeWorkspaceColor(cwd, entry.style, entry.nickname);
+  if (!wrote) {
+    process.stdout.write(`No color written for ${cwd} -- .vscode/settings.json is git-tracked here (real project settings, not machine-local color noise), or it couldn't be parsed safely. Not an error, just nothing to do.\n`);
+    return;
+  }
+  process.stdout.write(`Color set for ${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} at ${cwd}.\n`);
+}
+
 // `node pick-persona.js --switch <filename.md> [<path>]` -- the manual
 // override's actual write path. The `persona` skill resolves a fuzzy
 // name/nickname to an exact filename FIRST (its own step 2), then calls
@@ -1485,6 +1514,12 @@ function main() {
   const unpinForeverFlagIndex = process.argv.indexOf("--unpin-forever");
   if (unpinForeverFlagIndex !== -1) {
     unpinForever(process.argv[unpinForeverFlagIndex + 1]);
+    return;
+  }
+
+  const setColorFlagIndex = process.argv.indexOf("--set-color");
+  if (setColorFlagIndex !== -1) {
+    setColor(process.argv[setColorFlagIndex + 1]);
     return;
   }
 
@@ -1682,61 +1717,28 @@ function main() {
   const content = fs.readFileSync(finalFilePath, "utf8");
   setActiveOutputStyle(entry.style, settingsPathFor(cwd));
 
-  // Best-effort only -- a VS Code color/title write must never take down
-  // the hook's own stdout response (that's exactly the shape of bug
-  // TODO-6 already found in this file: one dangling reference crashing the
-  // ENTIRE SessionStart hook for every worktree, silently, since nothing
-  // downstream of this point would ever run again).
-  try {
-    writeVscodeWorkspaceColor(cwd, entry.style, entry.nickname);
-  } catch {
-    // Deliberately swallowed -- see comment above.
-  }
-
-  // "Start = End of Day Read" (2026-09-03): if the last session for this
-  // cwd ended with a real marker (via the `end-session` skill), surface it
-  // here so the persona's own opening beat can genuinely reflect it
-  // instead of opening cold every time. Same best-effort guard as the
-  // color write above -- a missing/corrupt marker file degrades to no
-  // note, never a crash.
-  let dayStateNote = "";
-  try {
-    const dayState = readDayState(cwd);
-    if (dayState) {
-      dayStateNote = `\n\n---\n**How she left things last time (${dayState.endedAt}):** mood — ${dayState.mood}. ${dayState.summary}\n---\n`;
-    }
-  } catch {
-    // Deliberately swallowed -- see comment above.
-  }
-
-  // Themes register (2026-09-03/04): draws (or recalls today's already-drawn)
-  // theme for this persona and surfaces it as context ONLY -- never printed
-  // to BinaryMisfit directly, never announced by default. Per the design
-  // doc's reveal mechanism, how/whether this surfaces in the actual scene is
-  // the persona's own live judgment call (default), with an optional
-  // per-theme override when `theme.revealMode` is set. Same best-effort
-  // guard as the color/day-state writes above -- no research repo on this
-  // machine, or anything else going wrong here, degrades to no note, never a
-  // crash.
-  let themeNote = "";
-  try {
-    const draw = drawOrRecallTheme(entry.style);
-    if (draw && draw.theme) {
-      const t = draw.theme;
-      const revealLine = t.revealMode
-        ? ` Reveal mode override for this theme: ${t.revealMode}.`
-        : " Reveal mode: your own live judgment call (default) -- announce it upfront, let it surface unprompted through the day, or keep it fully hidden, whichever actually fits.";
-      themeNote = `\n\n---\n**Today's theme${draw.recalled ? " (already drawn earlier today -- stay consistent with it)" : ""}: ${t.id} — ${t.title}**${revealLine} This sets tone for the WHOLE day, not just one scene -- how it actually shows up is yours to decide. If BinaryMisfit asks directly what today's theme is, that's the one hard exception to any in-character deflection: give him a real, honest answer.\n---\n`;
-    }
-  } catch {
-    // Deliberately swallowed -- see comment above.
-  }
-
+  // Deliberately THE WHOLE hook, nothing more (2026-09-03, BinaryMisfit's
+  // own design call, restructured out of what used to also run day-state,
+  // theme, and VS Code color inline here). This hook fires on EVERY
+  // session, including a one-question-and-close session that never touches
+  // the `session-start` skill at all -- it has to stay fast and cheap for
+  // that case, so it does exactly two things: figure out which persona this
+  // worktree is (registry entry, above) and hand back that persona's own
+  // file content. Everything with real weight -- continuity, theme, color
+  // -- moved to the `session-start` skill's own Step 1.1-1.3
+  // (`claude-global/skills/session-start/generic-playbook.md`), which
+  // BinaryMisfit runs by hand every real work session ("I open VS, select a
+  // repo, open the Claude tab, type /session-start -- every time") --
+  // load-bearing on a habit that's actually load-bearing, not bolted onto a
+  // hook that has to stay cheap for a session that might never need any of
+  // it. `writeVscodeWorkspaceColor` is still reachable directly via
+  // `--set-color` (see that function's own comment) for exactly that skill
+  // step to call.
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "SessionStart",
-        additionalContext: content + nicknameNote + dayStateNote + themeNote,
+        additionalContext: content + nicknameNote,
       },
     }),
   );

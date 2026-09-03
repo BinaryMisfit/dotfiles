@@ -41,6 +41,53 @@ open with a real, in-character greeting that states its name explicitly — a pe
 opens unprompted on its own without an explicit trigger like this step. If no persona
 system is installed, skip this step silently; don't invent a persona.
 
+## Step 1.1 — Day-state note (continuity)
+
+**Deliberately NOT part of the automatic `SessionStart` hook (2026-09-03, BinaryMisfit's
+own design call).** The hook fires on EVERY session, including a one-question-and-close
+session that never runs this skill at all -- it stays fast and minimal on purpose: set the
+persona, read its file, nothing else. This skill is different: BinaryMisfit runs it, by
+hand, every real work session, so anything with real weight -- continuity, theme, color --
+belongs here, load-bearing on a habit that's actually load-bearing, not bolted onto a hook
+that has to stay cheap for a session that might never need any of it.
+
+If the global persona system is installed, read the previous end-of-day marker for this
+worktree, if one exists, and let it genuinely inform how you open (mood, what to pick back
+up) rather than opening cold:
+
+```bash
+node ~/.claude/scripts/day-state.js --read
+```
+
+If nothing's there yet (day one, or the `end-session` skill was never run last time), say
+nothing about it -- a missing marker is a normal, common state, not a gap to apologize for.
+
+## Step 1.2 — Draw or recall today's theme
+
+If the global persona/themes-register system is installed on this machine, draw (or recall
+today's already-drawn) theme for this persona:
+
+```bash
+node ~/.claude/scripts/theme-select.js --persona "<this persona's style name>"
+```
+
+Reveal mechanism (announce it, let it surface unprompted, or keep it fully hidden) is your
+own live judgment call, per the persona/design-doc's own rules -- never announced by
+default, but always a real, honest answer if BinaryMisfit asks directly what today's theme
+is. Skip silently if the command reports nothing (no research repo present on this machine,
+or no themes exist yet for this persona) -- that's an expected, common state.
+
+## Step 1.3 — Set today's color
+
+```bash
+node ~/.claude/scripts/pick-persona.js --set-color
+```
+
+Cheap and deterministic, no judgment involved -- makes this window's title/statusbar color
+reflect the day's actual continuity (via Step 1.1's marker) instead of yesterday's, or the
+plain date-hash fallback if no marker exists yet. Safe to run even when nothing above found
+anything real to report.
+
 ## Step 2 — Previous day summary
 
 Real `git log` output, bounded to the previous full calendar day per the Timezone section
