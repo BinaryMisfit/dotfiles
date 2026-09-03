@@ -44,12 +44,33 @@ foreach ($effect in $expectedEffects) {
 }
 
 # --- Tier: interrupted apply ---
-# NOT YET IMPLEMENTED. Detecting a genuinely half-applied state (vs. just
-# normal pending drift) needs real research into chezmoi's own state
-# tracking (chezmoistate.boltdb / `chezmoi state dump`) rather than a
-# guessed heuristic -- flagging honestly as open, not faking a check.
+# Implemented 2026-09-03 (TODO-5 / ADR 0023). chezmoi's own state tracking
+# (chezmoistate.boltdb / `chezmoi state dump`) can't distinguish a genuinely
+# interrupted apply from ordinary unapplied drift -- researched for real,
+# not guessed. The actual answer is a sentinel marker set by chezmoi's
+# native hooks.apply.pre and cleared by hooks.apply.post (see
+# run_once_configure-chezmoi-apply-hooks.ps1.tmpl): if the marker exists
+# right now, a previous `chezmoi apply` started and never finished (killed,
+# crashed, machine rebooted mid-apply).
 Write-Host "`n--- Interrupted-apply detection ---"
-Write-Host "not yet implemented -- needs research into chezmoi's own state tracking before a real check can be written"
+$MarkerPath = Join-Path $HOME ".chezmoi-apply-in-progress"
+$ConfigCandidates = @(
+    (Join-Path $HOME ".config\chezmoi\chezmoi.yaml"),
+    (Join-Path $HOME ".config\chezmoi\chezmoi.yml"),
+    (Join-Path $HOME ".config\chezmoi\chezmoi.toml"),
+    (Join-Path $HOME ".config\chezmoi\chezmoi.json")
+)
+$ConfigFile = $ConfigCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+$HooksConfigured = $ConfigFile -and (Select-String -Path $ConfigFile -Pattern "chezmoi-apply-marker" -Quiet)
+
+if (-not $HooksConfigured) {
+    Write-Host "detection not active -- apply hooks aren't configured yet (run_once_configure-chezmoi-apply-hooks hasn't run, or its own real collision with an existing 'hooks' key is still unresolved)"
+} elseif (Test-Path $MarkerPath) {
+    Write-Host "INTERRUPTED APPLY: marker found at $MarkerPath -- a previous 'chezmoi apply' started and never completed" -ForegroundColor Red
+    $issues += "interrupted apply: marker present at $MarkerPath"
+} else {
+    Write-Host "clean -- no interrupted apply detected"
+}
 
 Write-Host "`n=== Summary ==="
 if ($issues.Count -eq 0) {

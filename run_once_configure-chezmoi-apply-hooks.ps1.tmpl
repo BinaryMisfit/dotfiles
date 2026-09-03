@@ -1,0 +1,80 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!powershell
+# TODO-5 (docs/todo-register.md) / ADR 0023: additive-only, halts on a real
+# collision rather than guessing. Configures chezmoi's own native
+# hooks.apply.pre/post so chezmoi-apply-marker.ps1 can set/clear a sentinel
+# marker (~/.chezmoi-apply-in-progress) around every real `chezmoi apply` --
+# the interrupted-apply detection piece TODO-5's self-heal check was
+# missing. ADR 0023's own research: chezmoi's state tracking
+# (chezmoistate.boltdb / `chezmoi state dump`) can't distinguish a genuinely
+# interrupted apply from ordinary unapplied drift; this marker is the only
+# mechanism that actually answers the question.
+$ErrorActionPreference = "Stop"
+
+$ConfigDir = Join-Path $HOME ".config\chezmoi"
+$Candidates = @(
+    @{ Path = (Join-Path $ConfigDir "chezmoi.yaml"); Format = "yaml" }
+    @{ Path = (Join-Path $ConfigDir "chezmoi.yml"); Format = "yaml" }
+    @{ Path = (Join-Path $ConfigDir "chezmoi.toml"); Format = "toml" }
+    @{ Path = (Join-Path $ConfigDir "chezmoi.json"); Format = "json" }
+)
+$Config = $Candidates | Where-Object { Test-Path $_.Path } | Select-Object -First 1
+
+if (-not $Config) {
+    Write-Host "==> no chezmoi config file found under $ConfigDir -- skipping hooks setup (nothing to configure yet)"
+    exit 0
+}
+
+$Content = Get-Content -Raw -Path $Config.Path
+
+# Idempotency / our-own-prior-write check, not just "did run_once already
+# run" -- a config file could be hand-copied between machines, or this
+# script re-run manually. Finding our own marker token means the hooks are
+# already ours; nothing to do.
+if ($Content -match [regex]::Escape("chezmoi-apply-marker")) {
+    Write-Host "==> apply hooks already configured (found in $($Config.Path)), skipping"
+    exit 0
+}
+
+# Real collision per ADR 0023: something else already defines `hooks` in
+# this config. Never overwrite a key we don't own -- halt (non-fatally) and
+# tell the human, don't guess at a merge.
+if ($Content -match "(?m)^\s*hooks\s*:" -or $Content -match "(?m)^\s*\[hooks\.apply") {
+    Write-Warning "$($Config.Path) already defines its own 'hooks' -- not touching it. Add the apply.pre/post block for the interrupted-apply marker manually if you want TODO-5's self-heal check to work; see ADR 0023 (docs/adr/0023-scripted-toml-yaml-writes-are-additive-only.md)."
+    exit 0
+}
+
+$MarkerScript = ("{{ .chezmoi.homeDir }}/.scripts/chezmoi-apply-marker.ps1") -replace '\\', '/'
+
+if ($Config.Format -eq "yaml") {
+    $Block = @"
+
+hooks:
+  apply:
+    pre:
+      command: "powershell"
+      args: ["-NoProfile", "-File", "$MarkerScript", "set"]
+    post:
+      command: "powershell"
+      args: ["-NoProfile", "-File", "$MarkerScript", "clear"]
+"@
+} elseif ($Config.Format -eq "toml") {
+    $Block = @"
+
+[hooks.apply.pre]
+command = "powershell"
+args = ["-NoProfile", "-File", "$MarkerScript", "set"]
+
+[hooks.apply.post]
+command = "powershell"
+args = ["-NoProfile", "-File", "$MarkerScript", "clear"]
+"@
+} else {
+    Write-Warning "$($Config.Path) is JSON -- additive hooks insertion for JSON configs isn't implemented yet (known gap, low priority since no config here uses it). Add the apply.pre/post block manually; see ADR 0023."
+    exit 0
+}
+
+Add-Content -Path $Config.Path -Value $Block
+Write-Host "==> added apply.pre/post hooks (interrupted-apply marker) to $($Config.Path)"
+Write-Host "==> takes effect on the NEXT 'chezmoi apply' -- config is read once at the start of this one"
+{{ end -}}

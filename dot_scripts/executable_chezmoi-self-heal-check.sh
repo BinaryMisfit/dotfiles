@@ -60,11 +60,33 @@ else
 fi
 
 # --- Tier: interrupted apply ---
-# NOT YET IMPLEMENTED. Same as the Windows side -- needs real research into
-# chezmoi's own state tracking before a real check can be written.
+# Implemented 2026-09-03 (TODO-5 / ADR 0023). chezmoi's own state tracking
+# (chezmoistate.boltdb / `chezmoi state dump`) can't distinguish a genuinely
+# interrupted apply from ordinary unapplied drift -- researched for real,
+# not guessed. The actual answer is a sentinel marker set by chezmoi's
+# native hooks.apply.pre and cleared by hooks.apply.post (see
+# run_once_configure-chezmoi-apply-hooks.sh.tmpl): if the marker exists
+# right now, a previous `chezmoi apply` started and never finished (killed,
+# crashed, machine rebooted mid-apply).
 echo
 echo "--- Interrupted-apply detection ---"
-echo "not yet implemented -- needs research into chezmoi's own state tracking before a real check can be written"
+marker_path="$HOME/.chezmoi-apply-in-progress"
+config_file=""
+for candidate in "$HOME/.config/chezmoi/chezmoi.yaml" "$HOME/.config/chezmoi/chezmoi.yml" "$HOME/.config/chezmoi/chezmoi.toml" "$HOME/.config/chezmoi/chezmoi.json"; do
+    if [ -f "$candidate" ]; then
+        config_file="$candidate"
+        break
+    fi
+done
+
+if [ -z "$config_file" ] || ! grep -q "chezmoi-apply-marker" "$config_file" 2>/dev/null; then
+    echo "detection not active -- apply hooks aren't configured yet (run_once_configure-chezmoi-apply-hooks hasn't run, or its own real collision with an existing 'hooks' key is still unresolved)"
+elif [ -f "$marker_path" ]; then
+    echo "INTERRUPTED APPLY: marker found at $marker_path -- a previous 'chezmoi apply' started and never completed"
+    issues+=("interrupted apply: marker present at $marker_path")
+else
+    echo "clean -- no interrupted apply detected"
+fi
 
 echo
 echo "=== Summary ==="

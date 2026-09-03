@@ -1,0 +1,82 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/usr/bin/env bash
+# TODO-5 (docs/todo-register.md) / ADR 0023: additive-only, halts on a real
+# collision rather than guessing. Configures chezmoi's own native
+# hooks.apply.pre/post so chezmoi-apply-marker.sh can set/clear a sentinel
+# marker (~/.chezmoi-apply-in-progress) around every real `chezmoi apply` --
+# the interrupted-apply detection piece TODO-5's self-heal check was
+# missing. ADR 0023's own research: chezmoi's state tracking
+# (chezmoistate.boltdb / `chezmoi state dump`) can't distinguish a genuinely
+# interrupted apply from ordinary unapplied drift; this marker is the only
+# mechanism that actually answers the question.
+set -eu
+
+config_dir="$HOME/.config/chezmoi"
+config_path=""
+config_format=""
+
+for candidate in "chezmoi.yaml:yaml" "chezmoi.yml:yaml" "chezmoi.toml:toml" "chezmoi.json:json"; do
+    file="${candidate%%:*}"
+    fmt="${candidate##*:}"
+    if [ -f "$config_dir/$file" ]; then
+        config_path="$config_dir/$file"
+        config_format="$fmt"
+        break
+    fi
+done
+
+if [ -z "$config_path" ]; then
+    echo "==> no chezmoi config file found under $config_dir -- skipping hooks setup (nothing to configure yet)"
+    exit 0
+fi
+
+# Idempotency / our-own-prior-write check, not just "did run_once already
+# run" -- a config file could be hand-copied between machines, or this
+# script re-run manually. Finding our own marker token means the hooks are
+# already ours; nothing to do.
+if grep -q "chezmoi-apply-marker" "$config_path" 2>/dev/null; then
+    echo "==> apply hooks already configured (found in $config_path), skipping"
+    exit 0
+fi
+
+# Real collision per ADR 0023: something else already defines `hooks` in
+# this config. Never overwrite a key we don't own -- halt (non-fatally) and
+# tell the human, don't guess at a merge.
+if grep -qE '^[[:space:]]*hooks[[:space:]]*:' "$config_path" 2>/dev/null || grep -q '\[hooks\.apply' "$config_path" 2>/dev/null; then
+    echo "==> WARNING: $config_path already defines its own 'hooks' -- not touching it. Add the apply.pre/post block for the interrupted-apply marker manually if you want TODO-5's self-heal check to work; see ADR 0023 (docs/adr/0023-scripted-toml-yaml-writes-are-additive-only.md)." >&2
+    exit 0
+fi
+
+marker_script="{{ .chezmoi.homeDir }}/.scripts/chezmoi-apply-marker.sh"
+
+if [ "$config_format" = "yaml" ]; then
+    cat >>"$config_path" <<EOF
+
+hooks:
+  apply:
+    pre:
+      command: "$marker_script"
+      args: ["set"]
+    post:
+      command: "$marker_script"
+      args: ["clear"]
+EOF
+elif [ "$config_format" = "toml" ]; then
+    cat >>"$config_path" <<EOF
+
+[hooks.apply.pre]
+command = "$marker_script"
+args = ["set"]
+
+[hooks.apply.post]
+command = "$marker_script"
+args = ["clear"]
+EOF
+else
+    echo "==> WARNING: $config_path is JSON -- additive hooks insertion for JSON configs isn't implemented yet (known gap, low priority since no config here uses it). Add the apply.pre/post block manually; see ADR 0023." >&2
+    exit 0
+fi
+
+echo "==> added apply.pre/post hooks (interrupted-apply marker) to $config_path"
+echo "==> takes effect on the NEXT 'chezmoi apply' -- config is read once at the start of this one"
+{{ end -}}

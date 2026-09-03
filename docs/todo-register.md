@@ -184,16 +184,35 @@ sentinel marker set/cleared by chezmoi's own native `hooks.apply.pre`/`hooks.app
 config (confirmed against the real docs, not memory). [ADR 0023](adr/0023-scripted-toml-yaml-writes-are-additive-only.md)
 settles the design blocker this raised — the installer script has to write into the
 user's local `chezmoi.toml`/`.yaml`, additive-only, halting on any real key collision
-rather than guessing. **The hooks installer itself is still unbuilt** — design is
-unblocked, code doesn't exist yet.
+rather than guessing.
 
-**Next action:** Build the `run_once` hooks-installer script per ADR 0023's rule. Separately,
-decide the fourth tier's real trigger (what % drift, what "stale" means in months) and
-whether it's ever automatic or always human-confirmed — given uninstall's own
-package-removal scope, leaning toward "always confirmed, never automatic" but that's
-BinaryMisfit's call. Decide whether/how this gets scheduled (daily alongside TODO-3's
-check?) once repair action exists — a detection-only report has less urgency to schedule
-than TODO-3's did.
+**Built and tested 2026-09-03:** `run_once_configure-chezmoi-apply-hooks.{ps1,sh}.tmpl`
+(the additive-only hooks installer) and `dot_scripts/chezmoi-apply-marker.{ps1,sh}`
+(sets/clears `~/.chezmoi-apply-in-progress`). Tested against real copies of this machine's
+own `chezmoi.yaml`, never the live file directly: a fresh append, a re-run against its own
+prior output (idempotent, correctly no-ops), a genuine foreign `hooks:` collision (correctly
+halts without touching the file), and the TOML format path — all four passed. One real bug
+caught by testing and fixed before landing: the idempotency check was matching a string
+(`chezmoi-apply-in-progress`, the marker *file* name) that never actually appears in the
+written config — only the marker *script's* path does — so a second run misread its own
+prior write as a foreign collision. Safe outcome either way (never overwrites), but wrong
+and noisy; fixed to check for the right string. `chezmoi-self-heal-check.{ps1,sh}`'s
+interrupted-apply tier is also now real (was a stub) — reads the marker if hooks are
+configured, honestly reports "detection not active" if they aren't yet. Ran the Windows
+self-heal check for real against live state: correctly reports hooks aren't configured yet
+(the installer hasn't actually run against the real `chezmoi.yaml`, only tested copies).
+
+**The installer hasn't executed against the real machine yet** — that happens on the next
+real `chezmoi apply`, same review-the-diff-first discipline as any other apply. Detection
+goes live the run after that (hooks are read once at the start of an apply, so the run that
+adds them can't also be watched by them).
+
+**Next action:** Run a real `chezmoi apply` to let the hooks installer fire for real, then
+confirm the self-heal check reports "clean" instead of "not active." Separately, decide the
+fourth tier's real trigger (what % drift, what "stale" means in months) and whether it's
+ever automatic or always human-confirmed — given uninstall's own package-removal scope,
+leaning toward "always confirmed, never automatic" but that's BinaryMisfit's call. Decide
+whether/how this gets scheduled (daily alongside TODO-3's check?) once repair action exists.
 
 ---
 
