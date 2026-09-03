@@ -556,6 +556,24 @@ function isForeverPinned(entry) {
   return entry.pinnedAt === "Perm" || entry.pinnedAt === "Fixed";
 }
 
+// Added 2026-09-03, BinaryMisfit's own call, same day as the needsNickname
+// reversal above -- that reversal correctly surfaced a real collision
+// (secretary-pool's Hailey vs. xls-playthrough's, both Perm, both sharing
+// hailey.md) but resolved it by raw `firstPinnedAt` order, which handed the
+// plain name to whichever one happened to pin first chronologically.
+// BinaryMisfit's actual intent isn't chronological, it's a deliberate
+// per-domain designation ("Alexia perm for infra... you perm here...
+// Callie perm for xls") -- his own words, stated directly, not a race.
+// `primary` is that designation: a boolean, independent of pin timestamp,
+// set only by explicit human action (`--set-primary`, same shape as
+// `--pin-forever`), that always wins the plain unnicknamed name over any
+// non-primary rival sharing the same persona file, regardless of who
+// pinned first. Requires the entry already be forever-pinned -- a
+// canonical domain anchor that could still rotate away makes no sense.
+function isPrimary(entry) {
+  return entry.primary === true;
+}
+
 // Pure: the small random rotation window, 2-4 days inclusive, rolled once
 // per assignment and held stable -- "small random but still a random," not
 // re-rolled on every check. Exported for testing.
@@ -592,34 +610,47 @@ function readNormalizedRegistry(nowIsoStr) {
   return readRegistry().map((e) => normalizeEntry(e, nowIsoStr));
 }
 
-// Pure: does this entry need a nickname? Only true when some OTHER entry
-// holds the SAME persona (`file`) with an EARLIER `firstPinnedAt` -- i.e.
-// this worktree is a later duplicate of a persona already claimed
-// elsewhere. Uses `firstPinnedAt` (immutable), not `pinnedAt` (which now
-// resets on every rotation/switch and would otherwise scramble precedence
-// over time) -- falls back to `pinnedAt` only for an entry that somehow
-// still lacks `firstPinnedAt` (shouldn't happen post-`normalizeEntry`, kept
-// defensive). The first-ever holder of a persona never needs a nickname, no
-// matter how many sessions or rotations it racks up -- nicknames exist
-// purely to resolve a collision, not to reward tenure.
+// Pure: does this entry need a nickname? True when some OTHER entry holds
+// the SAME persona (`file`) with an EARLIER `firstPinnedAt` -- i.e. this
+// worktree is a later duplicate of a persona already claimed elsewhere.
+// Uses `firstPinnedAt` (immutable), not `pinnedAt` (which now resets on
+// every rotation/switch and would otherwise scramble precedence over time)
+// -- falls back to `pinnedAt` only for an entry that somehow still lacks
+// `firstPinnedAt` (shouldn't happen post-`normalizeEntry`, kept defensive).
+// The first-ever holder of a persona never needs a nickname, no matter how
+// many sessions or rotations it racks up -- nicknames exist purely to
+// resolve a collision, not to reward tenure.
 //
-// A forever-pinned (`isForeverPinned`) PARTNER never counts as the collision
-// -- a `Perm` claim on a name is a closed, settled fact (BinaryMisfit's own
-// framing: "blocked, not forced"), not a live rival some fresh worktree
-// needs to dodge around. So a brand-new entry sharing that persona doesn't
-// need a nickname at all just because a `Perm` entry got there first; it's
-// simply Hailey (or whoever), no disambiguation required, the same as if
-// that Perm entry didn't exist. The Perm entry's OWN name stays permanently
-// blocked from reuse regardless (see `assignNicknameIfNeeded`'s `taken` set,
-// which filters on any held nickname with no Perm exception -- that part
-// was never broken). The `entry` being checked is NOT exempted by its own
-// Perm status, only a PARTNER's is -- a forever-pinned entry that's a later
-// duplicate of a still-live, non-Perm holder still needs to disambiguate
-// from it. Exported for testing.
+// REVERSED 2026-09-03 (BinaryMisfit's own call, superseding the 2026-08-30
+// design this replaces): a forever-pinned PARTNER now counts as a collision
+// same as any other live entry -- Perm status is no longer taken into
+// account when deciding whether some OTHER entry needs a nickname. The
+// prior version exempted a Perm partner entirely ("blocked, not forced" --
+// a Perm claim closes the NAME, but isn't a live rival a fresh worktree
+// needs to dodge). That broke down for exactly the case it was never tested
+// against: Callie, Perm'd at `xls`'s root, with real git-worktree children
+// of that same family also live at the same time. The first non-Perm child
+// correctly avoided a nickname against the Perm root (nothing else was live
+// yet) -- but the moment a SECOND non-Perm child showed up, it collided with
+// the FIRST child instead (which isn't Perm), while the Perm root and that
+// first child both sat there as plain, identical "Callie" -- genuinely
+// indistinguishable for `SendMessage`/`--resolve`, two live sessions with
+// no way to address either one specifically. Perm still means exactly what
+// it always meant -- the NAME stays permanently blocked from reuse (see
+// `assignNicknameIfNeeded`'s `taken` set, unaffected by this change) -- it
+// just no longer buys a later duplicate an exemption from disambiguating.
+// Extended 2026-09-03 for `primary` (see `isPrimary` above): a primary
+// entry never needs a nickname, full stop, regardless of chronology -- and
+// a primary entry always counts as a rival for anyone else sharing its
+// persona file, even one that pinned earlier. Primary overrides the
+// chronological tiebreak entirely; among two non-primary entries, the
+// original `firstPinnedAt` ordering still applies unchanged.
+// Exported for testing.
 function needsNickname(entry, allEntries) {
+  if (isPrimary(entry)) return false;
   const anchor = (e) => e.firstPinnedAt ?? e.pinnedAt;
   return allEntries.some(
-    (e) => e.cwd !== entry.cwd && e.file === entry.file && !isForeverPinned(e) && anchor(e) < anchor(entry),
+    (e) => e.cwd !== entry.cwd && e.file === entry.file && (isPrimary(e) || anchor(e) < anchor(entry)),
   );
 }
 
@@ -795,7 +826,10 @@ function buildNicknameNote(entry, entries, context) {
     // it first.
     return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style} is also pinned to another worktree, and this one's the later duplicate${context ? ` (${context})` : ""}, but no nickname got auto-assigned -- that's a bug in pick-persona.js itself (a call path skipped \`assignNicknameIfNeeded\`), not something to fix by talking about it in character. Run \`node ~/.claude/scripts/pick-persona.js --set-nickname "<name>"\` from this worktree's own directory (${entry.cwd}) as a manual workaround, and flag this to the user as a real bug to look at.\n`;
   }
-  return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other LIVE worktree is currently competing for this persona (a forever-pinned holder elsewhere doesn't count -- its name stays permanently blocked from reuse, but it's not a rival this worktree needs to disambiguate from), so no nickname is needed right now. If that changes later (another non-Perm worktree rotates/switches onto ${entry.style}), one will be auto-assigned and recorded then, no action needed.\n`;
+  if (isPrimary(entry)) {
+    return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- this worktree is the designated primary domain anchor for this persona, so it's always the plain, unnicknamed name, regardless of any other live or Perm holder elsewhere. No action needed, and this never changes on its own -- only \`--unset-primary\`, run deliberately, would.\n`;
+  }
+  return `\n\n---\n**Worktree instance note (from pick-persona.js):** ${entry.style}${context ? ` (${context})` : ""} -- no other LIVE worktree is currently competing for this persona (Perm status alone no longer exempts a partner from counting, as of 2026-09-03 -- only a designated \`primary\` anchor does that; this is a genuine "nobody else is live" state, not a Perm-holder being ignored), so no nickname is needed right now. If that changes later (another worktree rotates/switches onto ${entry.style}, Perm or not), one will be auto-assigned and recorded then, no action needed.\n`;
 }
 
 
@@ -878,13 +912,15 @@ function formatLogLine(nowIsoStr, action, fields) {
 // enough on its own to reconcile back to a registry row. Exported for
 // testing.
 function entryLogFields(entry) {
-  return {
+  const fields = {
     cwd: entry.cwd,
     style: entry.style,
     file: entry.file,
     nickname: entry.nickname,
     sessionName: entry.sessionName,
   };
+  if (entry.primary === true) fields.primary = true;
+  return fields;
 }
 
 // Appends one line to the change log and prunes anything past the
@@ -1069,7 +1105,8 @@ function listRegistry() {
     const sessionCell = e.sessionName || "*(not self-registered)*";
     const siblings = findFamily(entries, e.repoId).filter((s) => s.cwd !== e.cwd);
     const familyCell = siblings.length > 0 ? `${siblings.length} sibling${siblings.length === 1 ? "" : "s"}` : "--";
-    process.stdout.write(`| ${personaCell} | ${e.cwd} | ${sessionCell} | ${familyCell} | ${e.pinnedAt} | ${e.lastSeen} |\n`);
+    const pinnedCell = isPrimary(e) ? `${e.pinnedAt} (Primary)` : e.pinnedAt;
+    process.stdout.write(`| ${personaCell} | ${e.cwd} | ${sessionCell} | ${familyCell} | ${pinnedCell} | ${e.lastSeen} |\n`);
     if (!e.nickname && needsNickname(e, entries)) unresolved.push(e);
   }
   if (unresolved.length > 0) {
@@ -1316,6 +1353,78 @@ function unpinForever(targetPath) {
   process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} unpinned at ${cwd} -- back to normal rotation, clock starts now (not retroactive).\n`);
 }
 
+// `node pick-persona.js --set-primary [<path>]` -- added 2026-09-03,
+// BinaryMisfit's own call (see `isPrimary`'s own comment for the full
+// incident). The ONLY way an entry becomes the canonical, always-unnicknamed
+// domain anchor for its persona -- no automatic path ever sets this, same
+// deliberate-human-only shape as `--pin-forever`. Requires the entry
+// already be forever-pinned first (refuses otherwise, with a clear pointer
+// to run `--pin-forever` first) -- a canonical anchor that could still
+// rotate away doesn't make sense. Also refuses if some OTHER live entry is
+// already primary for the SAME persona file -- only one canonical anchor
+// per character, a deliberate single-holder invariant, not something to
+// silently allow drifting into two. Clears any existing nickname on this
+// entry directly (a primary entry never needs one going forward, so a
+// leftover one from before this call is immediately stale). No path:
+// targets the current cwd's own entry.
+function setPrimary(targetPath) {
+  const cwd = targetPath ? resolveMaybePath(targetPath) : resolveCwd();
+  const now = nowIso();
+  const entries = readNormalizedRegistry(now);
+  const entry = findEntry(entries, cwd);
+  if (!entry) {
+    process.stderr.write(`No registry entry for ${cwd} -- run a normal session start here first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  if (!isForeverPinned(entry)) {
+    process.stderr.write(`${entry.style} at ${cwd} isn't forever-pinned yet -- run --pin-forever first, then --set-primary.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const existingPrimary = entries.find((e) => e.cwd !== cwd && e.file === entry.file && isPrimary(e));
+  if (existingPrimary) {
+    process.stderr.write(`${entry.style} already has a primary anchor at ${existingPrimary.cwd} -- run --unset-primary there first if this should move.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  const previousNickname = entry.nickname;
+  entry.primary = true;
+  entry.nickname = null;
+  entry.lastSeen = now;
+  writeRegistry(entries);
+  appendLog(now, "set-primary", { ...entryLogFields(entry), previousNickname });
+  const nicknameNote = previousNickname ? ` (cleared its previous nickname "${previousNickname}" -- no longer needed)` : "";
+  process.stdout.write(`${entry.style} is now the primary domain anchor at ${cwd}${nicknameNote} -- always the plain, unnicknamed name, regardless of pin order.\n`);
+}
+
+// `node pick-persona.js --unset-primary [<path>]` -- reverses --set-primary.
+// The entry stays forever-pinned (this only touches `primary`, not
+// `pinnedAt`); it just goes back to competing for the plain name on normal
+// `firstPinnedAt` terms like everything else. Does NOT auto-assign a
+// nickname here even if one is now needed -- that happens naturally the
+// next time anything touches the registry, same as any other collision.
+function unsetPrimary(targetPath) {
+  const cwd = targetPath ? resolveMaybePath(targetPath) : resolveCwd();
+  const now = nowIso();
+  const entries = readNormalizedRegistry(now);
+  const entry = findEntry(entries, cwd);
+  if (!entry) {
+    process.stderr.write(`No registry entry for ${cwd} -- run a normal session start here first.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  if (!isPrimary(entry)) {
+    process.stdout.write(`${entry.style} at ${cwd} isn't primary -- nothing to unset.\n`);
+    return;
+  }
+  entry.primary = false;
+  entry.lastSeen = now;
+  writeRegistry(entries);
+  appendLog(now, "unset-primary", entryLogFields(entry));
+  process.stdout.write(`${entry.style} is no longer the primary anchor at ${cwd} -- back to normal firstPinnedAt-order collision rules.\n`);
+}
+
 // `node pick-persona.js --set-color [<path>]` -- 2026-09-03, BinaryMisfit's
 // own design call: the automatic SessionStart hook stays minimal (registry
 // entry + persona file read + output style, nothing else) so a
@@ -1514,6 +1623,18 @@ function main() {
   const unpinForeverFlagIndex = process.argv.indexOf("--unpin-forever");
   if (unpinForeverFlagIndex !== -1) {
     unpinForever(process.argv[unpinForeverFlagIndex + 1]);
+    return;
+  }
+
+  const setPrimaryFlagIndex = process.argv.indexOf("--set-primary");
+  if (setPrimaryFlagIndex !== -1) {
+    setPrimary(process.argv[setPrimaryFlagIndex + 1]);
+    return;
+  }
+
+  const unsetPrimaryFlagIndex = process.argv.indexOf("--unset-primary");
+  if (unsetPrimaryFlagIndex !== -1) {
+    unsetPrimary(process.argv[unsetPrimaryFlagIndex + 1]);
     return;
   }
 
@@ -1767,6 +1888,7 @@ module.exports = {
   clearDeadSession,
   sweepDeadSessions,
   isForeverPinned,
+  isPrimary,
   randomRotateAfterDays,
   normalizeEntry,
   dropStaleNicknames,
