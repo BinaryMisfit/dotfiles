@@ -118,6 +118,12 @@ today's already-drawn) theme for this persona:
 node ~/.claude/scripts/theme-select.js --persona "<this persona's style name>"
 ```
 
+Draws/recalls per THIS worktree (`cwd`, defaulted automatically -- no flag needed when run
+from here), not per persona style -- a real design correction, 2026-09-03, once simultaneous
+live instances of one persona stopped being theoretical. Two worktrees sharing a persona now
+draw and weight independently; `themes.md` itself is pure authored pool data, never written
+by this command.
+
 Reveal mechanism (announce it, let it surface unprompted, or keep it fully hidden) is your
 own live judgment call, per the persona/design-doc's own rules -- never announced by
 default, but always a real, honest answer if BinaryMisfit asks directly what today's theme

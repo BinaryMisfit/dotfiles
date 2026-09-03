@@ -41,6 +41,19 @@ open with a real, in-character greeting that states its name explicitly — a pe
 opens unprompted on its own without an explicit trigger like this step. If no persona
 system is installed, skip this step silently; don't invent a persona.
 
+**Force a fresh read of the persona file itself before writing that greeting.** A running
+session tends to stick with whatever the `SessionStart` hook injected at boot, even after
+the persona file gets edited mid-session — `Read ~/.claude/output-styles/<active-persona>.md`
+explicitly every time this step runs, don't rely on cached context from hours ago. The
+greeting is the confirmation: it should read as genuinely current, not just in-character.
+
+**Also self-register this session's live name here, every run.** Concretely: call
+`ListAgents`, read this session's own name off its "This session is `<name>`" line, then
+run `node ~/.claude/scripts/pick-persona.js --set-session-name "<name>"` from this repo's
+root. Skip only if the global persona system isn't installed (same condition as the
+greeting above) — without this, a session that only ever runs `session-start` sits with no
+`sessionName` on file all session, unreachable by name/nickname from any peer.
+
 ## Step 1.1 — Day-state note (continuity)
 
 **Deliberately NOT part of the automatic `SessionStart` hook (2026-09-03, BinaryMisfit's
@@ -70,6 +83,12 @@ today's already-drawn) theme for this persona:
 ```bash
 node ~/.claude/scripts/theme-select.js --persona "<this persona's style name>"
 ```
+
+Draws/recalls per THIS worktree (`cwd`, defaulted automatically -- no flag needed when run
+from here), not per persona style -- a real design correction, 2026-09-03, once simultaneous
+live instances of one persona stopped being theoretical. Two worktrees sharing a persona now
+draw and weight independently; `themes.md` itself is pure authored pool data, never written
+by this command.
 
 Reveal mechanism (announce it, let it surface unprompted, or keep it fully hidden) is your
 own live judgment call, per the persona/design-doc's own rules -- never announced by
