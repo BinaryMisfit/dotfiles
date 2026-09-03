@@ -158,7 +158,8 @@ should be. Raised 2026-09-02 alongside TODO-1, which it shares real design surfa
 compare against live state" logic; design once, use for both reversal (uninstall) and
 repair (self-heal).
 
-**Status:** In progress (2026-09-02) — detection half built, repair action still undecided
+**Status:** In progress (2026-09-03) — all three detection tiers built, tested, and
+verified live; only the fourth tier's design decision remains
 
 **Scope, confirmed by BinaryMisfit:** three tiers picked (drift / missing `run_once` side
 effect / interrupted apply), plus his own fourth idea — if drift is severe or the machine's
@@ -202,17 +203,28 @@ configured, honestly reports "detection not active" if they aren't yet. Ran the 
 self-heal check for real against live state: correctly reports hooks aren't configured yet
 (the installer hasn't actually run against the real `chezmoi.yaml`, only tested copies).
 
-**The installer hasn't executed against the real machine yet** — that happens on the next
-real `chezmoi apply`, same review-the-diff-first discipline as any other apply. Detection
-goes live the run after that (hooks are read once at the start of an apply, so the run that
-adds them can't also be watched by them).
+**Landed for real, 2026-09-03, same day:** ran `chezmoi apply` on this machine — the
+installer fired, appended the `hooks.apply.pre`/`post` block into the real
+`~/.config/chezmoi/chezmoi.yaml` (verified: only the hooks block added, `encryption`/
+`age`/`update`/`data` untouched), and a second `chezmoi apply` right after confirmed the
+whole loop works silently end to end — marker set, marker cleared, exit 0, no hang, no
+error. Re-ran `chezmoi-self-heal-check.ps1` against live state one more time: it now
+reports **"clean -- no interrupted apply detected"** instead of "not active." Detection is
+genuinely live, not just built.
 
-**Next action:** Run a real `chezmoi apply` to let the hooks installer fire for real, then
-confirm the self-heal check reports "clean" instead of "not active." Separately, decide the
-fourth tier's real trigger (what % drift, what "stale" means in months) and whether it's
-ever automatic or always human-confirmed — given uninstall's own package-removal scope,
-leaning toward "always confirmed, never automatic" but that's BinaryMisfit's call. Decide
-whether/how this gets scheduled (daily alongside TODO-3's check?) once repair action exists.
+One more real drift caught in the same pass, worth recording honestly: `pick-persona.js`
+had moved again while this installer was being built (a `primary`/`isPrimary` domain-anchor
+feature) — pulled before applying, so nothing live got destroyed.
+
+**Status:** Detection (all three tiers, including interrupted-apply) is fully built, tested,
+and verified live. Only the fourth self-heal tier (rebuild offer) remains undecided —
+downgrading this from "In progress" is BinaryMisfit's call once he weighs in on that.
+
+**Next action:** Decide the fourth tier's real trigger (what % drift, what "stale" means in
+months) and whether it's ever automatic or always human-confirmed — given uninstall's own
+package-removal scope, leaning toward "always confirmed, never automatic" but that's
+BinaryMisfit's call. Decide whether/how the self-heal check gets scheduled (daily alongside
+TODO-3's check?) now that all three built tiers are real.
 
 ---
 
