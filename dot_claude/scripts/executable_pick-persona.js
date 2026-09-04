@@ -1211,7 +1211,24 @@ function sweepDeadRegistry(liveSessionNamesCsv) {
     .map((s) => s.trim())
     .filter(Boolean);
   const entries = readRegistry();
-  const { entries: kept, removed, sessionNameOnlyCleared } = sweepDeadSessions(entries, liveNames);
+  // Real incident, 2026-09-04: ListAgents never lists the calling session
+  // itself, only its peers -- that's ListAgents' own documented behavior,
+  // not a bug in it. But session-start's own sweep step feeds ListAgents'
+  // peer list straight into --sweep-dead, which means the caller's own
+  // sessionName is *always* absent from `liveNames`, no matter how alive it
+  // genuinely is. Without this, sweep-dead concludes the calling session is
+  // dead and removes its own just-registered entry -- confirmed live twice
+  // in one night (Callie's `xls` entry lost its real firstPinnedAt and
+  // briefly self-healed as the wrong persona; Aphrodite's `binary-dotfiles`
+  // entry hit the identical 47ms-later removal). The calling process is
+  // definitionally alive at the moment it's making this very call, so its
+  // own cwd's current sessionName is always added to the live set here,
+  // regardless of what the caller passed in.
+  const selfEntry = findEntry(entries, resolveCwd());
+  const namesToTreatAsLive = selfEntry && selfEntry.sessionName
+    ? [...liveNames, selfEntry.sessionName]
+    : liveNames;
+  const { entries: kept, removed, sessionNameOnlyCleared } = sweepDeadSessions(entries, namesToTreatAsLive);
   if (removed.length === 0 && sessionNameOnlyCleared.length === 0) {
     process.stdout.write("Nothing to sweep -- every entry with a sessionName on file is still live.\n");
     return;
@@ -1647,6 +1664,24 @@ function main() {
     const maybePath = process.argv[switchFlagIndex + 2];
     const targetPath = maybePath && !maybePath.startsWith("--") ? maybePath : undefined;
     switchPersona(filename, targetPath);
+    return;
+  }
+
+  // Real incident, 2026-09-04: a plain diagnostic invocation with an
+  // unrecognized flag (`--help`, a typo, anything not matched above) used
+  // to fall straight through into the real SessionStart hook body below --
+  // silently mutating the registry (nulling this worktree's sessionName,
+  // potentially triggering a fresh persona pick) and printing hook JSON,
+  // even though nothing about the call was an actual SessionStart. A genuine
+  // hook invocation never passes extra argv at all (see this repo's own
+  // settings.json: `node ".../pick-persona.js"`, no arguments) -- so any
+  // argv present that didn't match one of the flags above is always a
+  // mistaken or diagnostic call, never a real hook firing, and must error
+  // instead of mutating anything.
+  const unrecognizedArgs = process.argv.slice(2);
+  if (unrecognizedArgs.length > 0) {
+    process.stderr.write(`Unrecognized argument(s): ${unrecognizedArgs.join(" ")}\n`);
+    process.exitCode = 1;
     return;
   }
 
