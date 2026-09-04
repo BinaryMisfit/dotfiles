@@ -24,7 +24,7 @@
 // (or end of file). Returns null if the persona has no section at all.
 // Exported for testing.
 function findPersonaSection(mdText, personaName) {
-  const headingRe = new RegExp(`^## ${personaName}\\s*$`, "m");
+  const headingRe = new RegExp(`^## ${personaName}\\s*$`, "im");
   const headingMatch = headingRe.exec(mdText);
   if (!headingMatch) return null;
   const start = headingMatch.index + headingMatch[0].length;
