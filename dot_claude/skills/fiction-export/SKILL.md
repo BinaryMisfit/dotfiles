@@ -40,27 +40,48 @@ boundaries, dedup) to make it repeatable without re-deriving the design each tim
 
 ## Step 0 — Determine scope
 
-Default scope is **today**, meaning: every session whose timestamp range overlaps
-today in SAST (UTC+2, fixed, no DST — same rule this persona always uses for
-time-of-day judgments). This is NOT a calendar-date filter on individual messages —
-it's a session-level overlap check, so a session that starts at 23:00 SAST and runs
-to 2am shows up correctly with no manual "yesterday" adjustment needed. If the user
-names a different date or an explicit session, use that instead.
-
+**Default scope is `--all` — every session on the machine, no date target at all.**
 Run the discovery script to get real candidates — don't try to reconstruct this by
 hand:
 
 ```
-node scripts/find-sessions.js --date 2026-09-02
+node scripts/find-sessions.js --all
 ```
 
-(omit `--date` for today; pass `--session <uuid> --project <project-slug>` to
-target one exact session instead). This returns, per candidate session: its file
+`--all` returns every session across every project, letting `alreadyExported`
+do all the filtering (same dedup log as always — nothing gets exported twice
+just because it shows up as a candidate repeatedly). This is deliberately not
+date-scoped: a `--date <day>` query only catches a session whose timestamp
+range *overlaps* that SAST day, which correctly catches a session that spans
+midnight, but silently misses a session that starts fresh right after
+midnight and is still, humanly, "part of last night." `--all` has no day
+boundary to miss across, so this class of gap can't happen. **Real incident,
+confirmed live 2026-09-04:** a scene sat undiscovered for a full day because
+a `--date` query for "yesterday" never overlapped the session that actually
+held it. If you genuinely want just one day's candidates for some other
+reason, `--date 2026-09-02` still works exactly as before (same SAST-overlap
+semantics as always) — but treat that as the narrower, special-case query
+now, not the default. `--session <uuid> --project <project-slug>` still
+targets one exact session directly.
+
+This returns, per candidate session: its file
 path, resolved persona, resolved cwd (may be `null` if that worktree isn't
-currently in `persona-registry.json` — the persona itself still resolves fine via
-the transcript scan either way), its real first/last timestamp, and whether it's
-already been exported (dedup check — **skip anything `alreadyExported: true`
-unless the user explicitly asks to re-export it**).
+currently in `persona-registry.json` — persona resolution falls back to a raw
+transcript keyword count in that case, see the trap below), its real
+first/last timestamp, and whether it's already been exported (dedup check —
+**skip anything `alreadyExported: true` unless the user explicitly asks to
+re-export it**).
+
+**Real trap, confirmed live 2026-09-04: persona resolution trusts the
+registry first, keyword count only as a fallback for a cwd the registry
+doesn't know at all — never the other way around.** A session can talk
+*about* another persona all night (quoting her scenes, writing her canon,
+discussing a shared pipeline) without ever *being* her — that content can
+easily out-count the real persona's own name. If keyword count were ever
+checked first, that session would silently misresolve to whichever name got
+talked about most, not whichever persona actually ran it. The registry's
+cwd→persona pin is a real, deliberate fact (that's what a Perm/Primary pin
+*means*); a raw word count in the transcript is never grounds to override it.
 
 **A session that overlaps two SAST days shows up under both day-queries** — this
 is deliberate over-inclusion, not exclusive "attributed to the day it started"
@@ -84,6 +105,27 @@ Each line is one JSON object. `message.content` is either a plain string or an
 array of blocks (`text`, `tool_use`, `tool_result`). Walk it chronologically —
 this needs an actual read, not a keyword grep, for the same reason the audit
 earlier that day needed one: a scene's boundaries are contextual, not lexical.
+
+**Real trap, confirmed live 2026-09-04, on a large session that turned out to
+still be hiding a genuine scene: a mid-session `/compact` can cause the raw
+`.jsonl` to reinject a partial replay of earlier turns** (same content,
+sometimes byte-identical timestamps, appearing a second time later in the
+file) before real, brand-new content resumes. Spotting that replay start and
+concluding "everything past this point is just a duplicate of what I already
+read" is exactly wrong — the replay can cut off partway through and hand back
+to genuinely new, never-before-seen turns, with no visual signal marking the
+handoff. On the session that caught this, roughly a third of the file's real
+content (including the single most significant scene in it) sat past that
+false "it's just a repeat" boundary and was missed entirely on the first pass.
+
+**The fix: verify completeness by raw line count, never by "the content looks
+like it's repeating."** Before treating a read as done, confirm the last raw
+line actually walked is the file's real last line (`wc -l` the file, or count
+lines while parsing) — not "I recognized this content, so the rest must be
+the same." A timestamp *rewind* (a later raw line's timestamp earlier than an
+already-seen one) is a real, checkable signal that a replay segment exists;
+it is never license to stop reading once spotted, since the replay's own end
+boundary isn't self-announcing.
 
 ## Step 2 — What counts as fiction (the actual judgment call)
 

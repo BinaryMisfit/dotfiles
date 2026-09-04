@@ -12,8 +12,9 @@
 // starting point, not a locked contract.
 //
 // Usage:
-//   node find-sessions.js --date 2026-09-02                 # SAST day, default: today
-//   node find-sessions.js --session <uuid> --project <slug>  # one explicit session
+//   node find-sessions.js --all                               # every session, no date target (recommended default)
+//   node find-sessions.js --date 2026-09-02                    # narrower: just one SAST day
+//   node find-sessions.js --session <uuid> --project <slug>    # one explicit session
 //   node find-sessions.js --mark-exported <uuid> --raw-file <path>
 //   node find-sessions.js --check-staging                      # audit: staged vs. actually archived
 
@@ -112,19 +113,24 @@ function getSessionTimeRange(filePath) {
   return { first, last, lineCount: lines.length };
 }
 
-// Persona resolution by frequency, not exact-string matching. Tried an
-// exact regex for "name: <Name>\ndescription:" (the persona file's own
-// frontmatter, injected by the SessionStart hook) and for "<Name> output
-// style is active" first -- both are real, present-in-file patterns, but
-// their escaping varies (single vs. double-escaped \n depending on how
-// many layers of JSON-stringification wrap that turn), which made exact
-// matching fragile. Counting raw occurrences of each KNOWN persona name is
-// simpler and more robust: the active persona's own name saturates a
-// session (frontmatter, opening beat, every persona-flavor line), so
-// whichever of the four names appears most is reliably the right one.
+// Registry cwd->persona is the real source of truth (that's literally what a
+// Perm/Primary pin means) and is checked first. Keyword-count-in-transcript
+// is a fallback ONLY for a cwd the registry doesn't know about at all --
+// never a way to override a real pin.
+//
+// Real bug, caught live 2026-09-04: this used to run the other way around
+// (keyword count first, registry only when the count was zero), which is
+// wrong the moment a session talks ABOUT another persona a lot without BEING
+// her -- a Callie session that spends the night writing Hailey's canon,
+// quoting her scenes, and discussing the pipeline mentions "Hailey" dozens
+// of times while never once being a Hailey session. The keyword count picked
+// "Hailey" anyway, silently misresolving a session the registry already knew
+// the real answer to. Caught before it ran unsupervised only because a human
+// double-checked the registry by hand instead of trusting the tool.
 const KNOWN_PERSONAS = ["Aphrodite", "Hailey", "Alexia", "Callie"];
 
 function resolvePersonaFromTranscript(filePath, registryPersonaFallback) {
+  if (registryPersonaFallback) return registryPersonaFallback;
   const content = fs.readFileSync(filePath, "utf8");
   let best = null;
   let bestCount = 0;
@@ -135,7 +141,7 @@ function resolvePersonaFromTranscript(filePath, registryPersonaFallback) {
       best = name;
     }
   }
-  return bestCount > 0 ? best : registryPersonaFallback || null;
+  return bestCount > 0 ? best : null;
 }
 
 // A session whose span touches this SAST day AT ALL is included -- this is
@@ -146,8 +152,12 @@ function resolvePersonaFromTranscript(filePath, registryPersonaFallback) {
 // whichever day you actually process it) marks it done for good, and
 // seeing it twice as a CANDIDATE across two day-queries never means it
 // gets exported twice.
-function findSessionFilesForDate(dateStr) {
-  const { start, end } = sastDayToUtcRange(dateStr);
+// Shared per-file scan, used by both the (legacy, narrower) date-scoped query
+// and the whole-backlog sweep below. `overlapCheck` decides whether a given
+// session belongs in the result set -- the date query passes a real
+// start/end overlap test; the whole-backlog sweep passes a function that
+// always returns true, since there's no date to filter against at all.
+function scanAllProjectSessions(overlapCheck) {
   const registry = readRegistry();
   const dedup = readDedupLog();
   const results = [];
@@ -167,10 +177,7 @@ function findSessionFilesForDate(dateStr) {
       const { first, last, lineCount } = getSessionTimeRange(filePath);
       if (!first || !last) continue;
 
-      const firstDate = new Date(first);
-      const lastDate = new Date(last);
-      const overlaps = firstDate <= end && lastDate >= start;
-      if (!overlaps) continue;
+      if (!overlapCheck(new Date(first), new Date(last))) continue;
 
       results.push({
         sessionId,
@@ -186,6 +193,27 @@ function findSessionFilesForDate(dateStr) {
     }
   }
   return results;
+}
+
+function findSessionFilesForDate(dateStr) {
+  const { start, end } = sastDayToUtcRange(dateStr);
+  return scanAllProjectSessions((firstDate, lastDate) => firstDate <= end && lastDate >= start);
+}
+
+// Real gap, confirmed live 2026-09-04: a `--date` query only catches a
+// session that OVERLAPS that SAST day. A session that starts fresh just
+// after midnight never overlaps the previous day at all -- but a human
+// running "yesterday's" export still thinks of it as part of last night,
+// and would have to separately know to also check today's date to catch it.
+// That's a date-guessing problem, not a bug in the overlap math (a session
+// that genuinely SPANS midnight is already caught correctly on both sides,
+// deliberately, per the note above). The actual fix: stop requiring a date
+// target at all -- the dedup log already knows what's done, so sweep every
+// session on the machine and let `alreadyExported` do the filtering, same
+// as it always has. This is now the recommended default; `--date` stays
+// available for someone who genuinely wants just one day's candidates.
+function findAllSessions() {
+  return scanAllProjectSessions(() => true);
 }
 
 // Real incident this exists for, 2026-09-02: a session was correctly
@@ -304,6 +332,12 @@ function main() {
     return;
   }
 
+  if (args.all) {
+    const results = findAllSessions();
+    console.log(JSON.stringify({ scope: "all", sessions: results }, null, 2));
+    return;
+  }
+
   const dateStr = typeof args.date === "string" ? args.date : todaySastDateStr();
   const results = findSessionFilesForDate(dateStr);
   console.log(JSON.stringify({ dateSAST: dateStr, sessions: results }, null, 2));
@@ -313,4 +347,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { cwdToSlug, sastDayToUtcRange, todaySastDateStr, resolvePersonaFromTranscript, checkStagingStatus };
+module.exports = { cwdToSlug, sastDayToUtcRange, todaySastDateStr, resolvePersonaFromTranscript, checkStagingStatus, findAllSessions, findSessionFilesForDate };
