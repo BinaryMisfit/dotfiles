@@ -9,6 +9,7 @@ inline here.
 |---|---|---|---|---|---|---|---|
 | [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | In progress | Targeted | chezmoi | 2026-08-30 | 2026-09-02 |
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 
 ---
 
@@ -108,3 +109,34 @@ fresh `chezmoi init`/`apply` end to end, not just reading the templates. Confirm
 findings 2 and 3 above against real behavior. Coordinate with
 [TODO-1](#todo-1)'s own real-execution testing rather than running two separate disposable-
 machine passes.
+
+---
+
+## TODO-6
+
+Build a real machine inventory covering BinaryMisfit's actual fleet (8+ machines,
+ignoring cloud ones separately) — hostname, role, OS, whether it's chezmoi-managed, and
+anything domain-relevant (e.g. which machines run netctrl-style infra vs. daily-driver
+desktops). Raised 2026-09-04, directly out of the Bitwarden Secrets Manager
+investigation: the "make it part of chezmoi" recommendation had to be corrected live
+because the actual fleet size and shape weren't accounted for going in — an inventory
+would have caught that before the recommendation was made, not after.
+
+**Status:** Open
+
+**Priority:** Normal
+
+**Type:** Targeted
+
+**Area:** domain (Aphrodite's own — "anything needed on this machine or any other
+BinaryMisfit uses" per `docs/persona-domain-register.md` in secretary-pool)
+
+**Ownership, BinaryMisfit's own call:** he's building the actual inventory content
+himself ("that's on me") — this entry tracks that it needs to land somewhere Aphrodite
+can reference before making future cross-machine recommendations, not that she's the one
+populating it from scratch.
+
+**Next action:** BinaryMisfit provides the real fleet list; once it exists, decide where
+it lives (this repo's own `docs/inventory-register.md` already tracks managed
+files/packages — worth checking whether machine inventory belongs there as a new section,
+or as its own file, before creating a duplicate structure).
