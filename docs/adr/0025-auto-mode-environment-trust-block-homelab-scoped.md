@@ -58,3 +58,28 @@ shape: home-profile-gated, and if an AI session's own attempt to self-edit trust
 ever blocked again, the fix is a human making the edit directly or giving specific,
 informed approval naming the exact mechanic — never a second AI session used as a quiet
 workaround.
+
+---
+*Addendum (2026-09-04):* A `digital-homelab` session (Alexia) proposed a scoped
+`autoMode.allow` entry (permit a verified-safe `git reset --hard` via `ssh netctrl`
+inside the home-ansible checkout) placed in that repo's own `.claude/settings.local.json`
+— project-local, not this repo. Checking Claude Code's current docs
+(`code.claude.com/docs/en/auto-mode-config`) before acting on it surfaced a broader fact
+than this ADR originally scoped: **the classifier never reads `autoMode` from ANY
+project-level file** (`.claude/settings.json` or `.claude/settings.local.json`, in any
+repo) — only from `~/.claude/settings.json`, managed settings, or the `--settings` flag.
+This ADR's original decision only discussed `environment`; the restriction is identical
+for `allow`, `soft_deny`, and `hard_deny` too. Alexia's proposed file placement would have
+silently done nothing regardless of any permission question. The corrected `allow` entry
+now lives in `dot_claude/settings.json.tmpl` alongside `environment`, same home-profile
+gate, same file this ADR already governs — not a new decision, just this one applied to a
+second `autoMode` sub-key with the placement fact corrected.
+
+Also confirmed live: the self-edit block this ADR documents is the classifier's built-in
+`soft_deny` rule for auto-mode bypass specifically (per the same docs). The one thing that
+clears a `soft_deny` match is the user's own message stating **specific intent naming the
+exact action** — not a general "go ahead." A first attempt at this same edit, approved only
+generically in conversation, was blocked; a retry after BinaryMisfit named the exact file
+and exact change went through. This is the concrete mechanic behind "specific, informed
+approval naming the exact mechanic" in the original decision above — it isn't just good
+practice, it's the literal condition the classifier checks for.

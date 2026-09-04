@@ -16,6 +16,10 @@
       "Key internal services: netctrl (192.168.50.x LAN host, Ansible/Terraform/gcloud control plane, remote execution path for all homelab/GCP work), netadmin/netos/octopi/netmon (Ansible-managed LAN hosts reached only via netctrl).",
       "Trusted internal domains: *.digitalmisfit.net, git.digitalmisfit.net (self-hosted Forgejo).",
       "Additional context: read-only diagnostic operations against self-owned GCP/GCE resources (gcloud compute ssh for log reads, get-serial-port-output, gcloud describe/list/get commands) are routine and safe here — one-person homelab, not shared prod."
+    ],
+    "allow": [
+      "$defaults",
+      "Running `git reset --hard origin/<branch>`, or other git sync commands (fetch, checkout, pull), via `ssh netctrl` inside the `~/infra/ansible` checkout specifically (the home-ansible repo's real execution checkout), when the assistant has already run `git diff origin/<branch>` against every locally-modified tracked file in that checkout and confirmed each one is byte-identical to the target ref -- i.e. the reset provably discards zero real uncommitted work. Untracked files are never at risk from `git reset --hard` regardless. Does not cover a reset run without that diff-verification step first, and does not cover any other host or checkout."
     ]
   },
   "env": {
