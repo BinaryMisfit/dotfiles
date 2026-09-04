@@ -7,6 +7,47 @@ deleted.
 
 ---
 
+## TODO-5: Self-heal: detect and recover from broken/drifted chezmoi state
+
+**Closed:** 2026-09-04
+
+**Raised:** 2026-09-02, alongside TODO-1, sharing the same "inventory everything chezmoi
+manages, compare against live state" design surface.
+
+**Resolution:** All three real detection tiers shipped, tested, and — as of tonight —
+proven against a genuine live incident, not just a simulated one:
+
+1. **Drift detection** (`dot_scripts/chezmoi-self-heal-check.{ps1,sh}`, 2026-09-02) —
+   reuses TODO-3's pull+diff logic. Caught two genuinely drifted files for real on this
+   machine the day it was built.
+2. **Missing `run_once` side-effect detection** (same script, same day) — nvim junction,
+   GitHub SSH key, iTerm2 integration, the scheduled update job.
+3. **Interrupted-apply detection** (2026-09-03) — an additive-only `hooks.apply.pre`/
+   `post` installer ([ADR 0023](adr/0023-scripted-toml-yaml-writes-are-additive-only.md))
+   sets/clears a real sentinel marker (`~/.chezmoi-apply-in-progress`) around every
+   `chezmoi apply`. Researched properly first: `chezmoistate.boltdb` can't distinguish an
+   interrupted apply from ordinary drift, so a sentinel marker was the only real answer.
+   **Proven live 2026-09-04:** a `chezmoi apply` was deliberately killed mid-run during a
+   real session; the marker was found genuinely set, the self-heal check correctly
+   reported "INTERRUPTED APPLY," a full diff review confirmed nothing destructive was
+   pending, a clean re-apply completed, and a follow-up check confirmed "clean — no
+   interrupted apply detected." First real end-to-end validation of the mechanism this
+   entry built, not a synthetic test.
+
+**The undecided fourth tier — deliberately dropped, not built:** the original scope
+included BinaryMisfit's own idea for a fourth tier (offering a full uninstall→bootstrap
+→apply rebuild when drift is severe or a machine's gone stale for months). His own call,
+2026-09-04, closing this out: *"We solved the major problems. This was me
+over-engineering. If it gets that bad to need it, we have bigger problems to be honest."*
+Not deferred, not parked — a deliberate scope decision that three tiers is the right
+final shape, not a partial implementation waiting on a fourth.
+
+**Next action for anyone touching self-heal in the future:** none outstanding. If real
+practice ever proves the fourth tier genuinely needed after all, that's a fresh TODO with
+its own real incident behind it, not a reopening of this one.
+
+---
+
 ## TODO-3: Build scheduled `chezmoi update` automation
 
 **Closed:** 2026-09-02
