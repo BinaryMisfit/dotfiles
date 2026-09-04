@@ -1,14 +1,23 @@
 "use strict";
 
-// Pure parser/writer for research/x-lifestyle-research/themes.md's own
-// register format (see that file's own header for the field spec BinaryMisfit
-// and Callie settled on 2026-09-03: ID, Status, Repeat count, Last picked,
-// optional Reveal mode). Deliberately operates on the file's real prose
-// shape -- markdown bullets with wrapped continuation lines -- rather than
-// forcing it into JSON/YAML, since the register is meant to stay a
-// human-readable, hand-editable document (same reasoning as every other
-// register in this project). No file I/O in this module -- callers own
-// reading/writing the actual themes.md so this stays fully unit-testable.
+// Pure PARSER for research/x-lifestyle-research/themes.md's own register
+// format (see that file's own header for the field spec). Deliberately
+// operates on the file's real prose shape -- markdown bullets with wrapped
+// continuation lines -- rather than forcing it into JSON/YAML, since the
+// register is meant to stay a human-readable, hand-editable document (same
+// reasoning as every other register in this project). No file I/O in this
+// module -- callers own reading the actual themes.md so this stays fully
+// unit-testable.
+//
+// Read-only as of 2026-09-03 (the pool/pick split, see theme-select.js's own
+// header) -- this module used to also WRITE pick-time tags (`tagThemePick`)
+// back into themes.md. That responsibility moved entirely to
+// theme-select.js's own per-cwd state file: themes.md is authored pool data
+// now, same category as canon.md, never mutated by this mechanism. A
+// bullet's `Repeat count`/`Last picked` fields, if still present from before
+// the split, parse fine (harmless legacy text) but are no longer read as
+// authoritative by anything -- theme-select.js sources those from the state
+// file instead.
 
 // Finds the `## <personaName>` section's body range within the whole file --
 // from just after that heading line to just before the next `## ` heading
@@ -30,9 +39,10 @@ function findPersonaSection(mdText, personaName) {
 // continuations, matching themes.md's own prose style) -- field regexes use
 // `[\s\S]*?` rather than `.` so they match across those wraps without
 // requiring a single physical line. `offset`/`length` locate the bullet's
-// exact span in the ORIGINAL mdText (not persona-section-relative), so
-// `tagThemePick` below can splice a change back in without disturbing
-// anything else in the file. Exported for testing.
+// exact span in the ORIGINAL mdText (not persona-section-relative) -- kept
+// for callers that want to point back at a specific bullet, even though
+// nothing in this module writes to themes.md anymore (see this file's own
+// header). Exported for testing.
 function parsePersonaThemes(mdText, personaName) {
   const section = findPersonaSection(mdText, personaName);
   if (!section) return [];
@@ -103,37 +113,4 @@ function pickWeighted(themes, randomFn = Math.random) {
   return pool[pool.length - 1];
 }
 
-// Surgical rewrite of ONE theme's `Repeat count`/`Last picked` fields within
-// its own exact span (`theme.offset`/`theme.length`, from a `parsePersonaThemes`
-// result against this SAME mdText) -- every other byte of the file, including
-// that theme's own wrapping/whitespace elsewhere in the bullet, is left
-// untouched. Throws if either field can't be found in the span (a themes.md
-// bullet is malformed, or `theme` was parsed from different text than
-// `mdText`) rather than silently no-op-ing a write that looks like it
-// succeeded. Per the design doc's own resolution: this is a PICK-time tag
-// (counter++ and timestamp the moment a theme is drawn), not a
-// scene-completion tag. Exported for testing.
-function tagThemePick(mdText, theme, timestamp) {
-  const block = mdText.slice(theme.offset, theme.offset + theme.length);
-  const withRepeat = block.replace(/Repeat count:\s*\d+\./, `Repeat count: ${theme.repeatCount + 1}.`);
-  if (withRepeat === block) {
-    throw new Error(`tagThemePick: no "Repeat count:" field found in ${theme.id}'s bullet -- themes.md may be malformed, or theme/mdText are out of sync.`);
-  }
-  // Same greedy-to-last-period reasoning as the parser's own regex above --
-  // a non-greedy match here would stop at the OLD timestamp's own decimal
-  // point and leave its tail (".000Z.") dangling in the output. Deliberately
-  // NOT anchored with `\s*$` (real bug, caught live by Callie diffing the
-  // actual written themes.md, secretary-pool ddc51b2 -> research 501be66):
-  // that anchor let the match swallow the bullet's own trailing newline, and
-  // since the replacement text has no newline of its own, the blank line
-  // separating this section from the next one silently disappeared on every
-  // write to the LAST theme in a section. Stopping right after the final
-  // "." and never reaching into `\s*$` leaves that newline exactly alone.
-  const withLastPicked = withRepeat.replace(/Last picked:\s*[\s\S]*\./, `Last picked: ${timestamp}.`);
-  if (withLastPicked === withRepeat) {
-    throw new Error(`tagThemePick: no "Last picked:" field found in ${theme.id}'s bullet -- themes.md may be malformed, or theme/mdText are out of sync.`);
-  }
-  return mdText.slice(0, theme.offset) + withLastPicked + mdText.slice(theme.offset + theme.length);
-}
-
-module.exports = { findPersonaSection, parsePersonaThemes, pickWeighted, tagThemePick };
+module.exports = { findPersonaSection, parsePersonaThemes, pickWeighted };

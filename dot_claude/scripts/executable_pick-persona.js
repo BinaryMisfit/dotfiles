@@ -52,9 +52,10 @@
 // can agree on regardless of which one it's rooted in.
 //
 // Registry shape (reworked 2026-08-30, see docs/decision-register.md's
-// DEC-15 in the xls repo for the full design discussion this implements):
+// DEC-15 in the xls repo for the full design discussion this implements;
+// `primary` added 2026-09-03, see `isPrimary`'s own comment):
 //   { cwd, style, file, nickname, sessionName, repoId, everOpened,
-//     firstPinnedAt, pinnedAt, rotateAfterDays, lastSeen }
+//     firstPinnedAt, pinnedAt, primary, lastSeen }
 //
 // `firstPinnedAt` (added 2026-08-30) is IMMUTABLE -- stamped once, the
 // moment this worktree is first ever assigned a persona, and never touched
@@ -74,10 +75,13 @@
 // the raw JSON and a locked entry is obviously different from a normal
 // one, no second boolean field to cross-reference.
 //
-// `rotateAfterDays` is a vestigial field from the removed auto-rotation
-// feature (see below) -- still written on every switch/pin for schema
-// continuity, but nothing reads it anymore. Safe to strip from the schema
-// entirely in a future cleanup; not urgent on its own.
+// `rotateAfterDays` -- REMOVED from the schema entirely 2026-09-03 (the
+// persona-system cleanup pass this comment is now part of). It was a
+// vestigial field from the auto-rotation feature below, still being written
+// on every switch/pin for months after nothing read it anymore. This
+// comment used to say "safe to strip in a future cleanup" -- that cleanup
+// happened; if you find a stray reference to it anywhere, that's a bug, not
+// an intentional legacy field.
 //
 // Auto-rotation, REMOVED 2026-09-02 (BinaryMisfit's own call): every
 // domain now gets one stable, deliberately-chosen persona, permanently --
@@ -574,35 +578,26 @@ function isPrimary(entry) {
   return entry.primary === true;
 }
 
-// Pure: the small random rotation window, 2-4 days inclusive, rolled once
-// per assignment and held stable -- "small random but still a random," not
-// re-rolled on every check. Exported for testing.
-function randomRotateAfterDays(randomFn = Math.random) {
-  return 2 + Math.floor(randomFn() * 3);
-}
-
 // Pure: lazy one-time migration for an entry created before the 2026-08-30
-// rotation rework -- identified by the absence of `rotateAfterDays` (every
+// rotation rework -- identified by the absence of `firstPinnedAt` (every
 // entry written by the current code always has one, so its absence is
 // itself the "this predates the feature" signal, no separate version field
-// needed). Preserves the OLD `pinnedAt` as the new immutable
+// needed; re-keyed off `firstPinnedAt` 2026-09-03 once `rotateAfterDays`,
+// the marker this used before, was removed entirely -- see this file's own
+// header comment). Preserves the OLD `pinnedAt` as the new immutable
 // `firstPinnedAt` (that's real history worth keeping), then resets the
 // mutable `pinnedAt` to `nowIsoStr` -- the "not retroactive" requirement:
 // nobody's already-elapsed pin age counts toward an immediate rotation the
 // moment this ships. A forever-pinned entry ("Perm"/"Fixed") keeps that
-// literal value untouched, just gains `firstPinnedAt`/`rotateAfterDays` for
-// completeness (rotateAfterDays is inert while forever-pinned, but every
-// entry having one keeps the shape uniform). Exported for testing.
-function normalizeEntry(entry, nowIsoStr, randomFn = Math.random) {
-  if (entry.rotateAfterDays != null) return entry;
+// literal value untouched, just gains `firstPinnedAt` for completeness.
+// Exported for testing.
+function normalizeEntry(entry, nowIsoStr) {
+  if (entry.firstPinnedAt != null) return entry;
   const migrated = { ...entry };
-  if (migrated.firstPinnedAt == null) {
-    migrated.firstPinnedAt = migrated.pinnedAt;
-  }
+  migrated.firstPinnedAt = migrated.pinnedAt;
   if (!isForeverPinned(migrated) && typeof migrated.pinnedAt === "string") {
     migrated.pinnedAt = nowIsoStr;
   }
-  migrated.rotateAfterDays = randomRotateAfterDays(randomFn);
   return migrated;
 }
 
@@ -1006,7 +1001,6 @@ function ensureEntry(entries, cwd, now) {
     everOpened: true,
     firstPinnedAt: now,
     pinnedAt: now,
-    rotateAfterDays: randomRotateAfterDays(),
     lastSeen: now,
   };
   // Nickname resolution stays IN ensureEntry (so every caller gets a
@@ -1346,11 +1340,10 @@ function unpinForever(targetPath) {
     return;
   }
   entry.pinnedAt = now;
-  entry.rotateAfterDays = randomRotateAfterDays();
   entry.lastSeen = now;
   writeRegistry(entries);
   appendLog(now, "unpin-forever", entryLogFields(entry));
-  process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} unpinned at ${cwd} -- back to normal rotation, clock starts now (not retroactive).\n`);
+  process.stdout.write(`${entry.style}${entry.nickname ? ` -- ${entry.nickname}` : ""} unpinned at ${cwd} -- no longer Perm (auto-rotation itself was removed 2026-09-02, so this is just a normal, un-Perm'd entry now, not a rotation clock restarting).\n`);
 }
 
 // `node pick-persona.js --set-primary [<path>]` -- added 2026-09-03,
@@ -1496,7 +1489,6 @@ function switchPersona(filename, targetPath) {
   // a content-only refresh specifically because this guard didn't exist yet.
   if (genuinelyDifferent || !wasForeverPinned) {
     entry.pinnedAt = now;
-    entry.rotateAfterDays = randomRotateAfterDays();
   }
   entry.lastSeen = now;
   if (genuinelyDifferent) entry.nickname = null;
@@ -1794,7 +1786,6 @@ function main() {
       everOpened: true,
       firstPinnedAt: now,
       pinnedAt: now,
-      rotateAfterDays: randomRotateAfterDays(),
       lastSeen: now,
     };
     entries.push(entry);
@@ -1889,7 +1880,6 @@ module.exports = {
   sweepDeadSessions,
   isForeverPinned,
   isPrimary,
-  randomRotateAfterDays,
   normalizeEntry,
   dropStaleNicknames,
   diffDroppedNicknames,
