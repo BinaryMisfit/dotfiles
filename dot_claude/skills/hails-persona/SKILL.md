@@ -1,12 +1,12 @@
 ---
-name: persona
-description: Show or switch this session's dev-session persona (Alexia, Hailey, Mistress), authored in ~/.claude/output-styles/*.md. Bare /persona (no args) always lists every pinned worktree's persona — it never switches. Switching requires a name (/persona <name>) or /persona --random. Use when the user runs /persona, /persona <name>, /persona --random, /persona --sweep, /persona --pin-forever, /persona --unpin-forever, or asks to "switch persona", "become <name>", "talk to me as <name>", "pick a random persona", "who's active where", "clean up stale/dead persona sessions", "pin this persona forever", or "unpin"/"stop pinning" a persona.
+name: hails-persona
+description: Show or switch this session's dev-session persona (Alexia, Hailey, Mistress), authored in ~/.claude/output-styles/*.md. Bare /hails-persona (no args) always lists every pinned worktree's persona — it never switches. Switching requires a name (/hails-persona <name>) or /hails-persona --random. Use when the user runs /hails-persona, /hails-persona <name>, /hails-persona --random, /hails-persona --sweep, /hails-persona --pin-forever, /hails-persona --unpin-forever, or asks to "switch persona", "become <name>", "talk to me as <name>", "pick a random persona", "who's active where", "clean up stale/dead persona sessions", "pin this persona forever", or "unpin"/"stop pinning" a persona.
 ---
 
 # Manual persona switch
 
 **This is a global skill** (promoted 2026-08-28 from an X-Lifestyle-only project skill to
-`~/.claude/skills/persona/SKILL.md`, alongside the output styles and the picker hook it
+`~/.claude/skills/hails-persona/SKILL.md`, alongside the output styles and the picker hook it
 overrides) — available in every project, not just X-Lifestyle ones. The `~/.claude/scripts/pick-persona.js`
 `SessionStart` hook assigns a persona per worktree and now also owns its whole lifecycle
 (2026-08-30 rework — see that script's own header comment and
@@ -38,7 +38,7 @@ though the persona content and the picker logic are global.
 2. **Resolve the target from `args`:**
    - **No args (empty string): never switch anything.** Run `node
      ~/.claude/scripts/pick-persona.js --list` and relay its output — same as if the user
-     had typed `--list` themselves. (Changed 2026-08-28: bare `/persona` used to reroll
+     had typed `--list` themselves. (Changed 2026-08-28: bare `/hails-persona` used to reroll
      at random, which meant a slip of the finger silently changed this worktree's
      permanently-pinned persona. A switch now always requires either an explicit name or
      `--random`.)
@@ -82,7 +82,7 @@ though the persona content and the picker logic are global.
    - Sets this entry's `style`/`file` to the matched persona.
    - **Resets the rotation clock to right now — a manual switch is NEVER a permanent
      pin.** The only thing that creates a real permanent pin is `--pin-forever`, a
-     separate, explicit, human-only action (see below) — a plain `/persona <name>` switch
+     separate, explicit, human-only action (see below) — a plain `/hails-persona <name>` switch
      is exactly as rotation-eligible as an automatic pick, just freshly re-anchored.
    - Clears the nickname if the persona genuinely changed (fresh arc); leaves it alone on
      a same-persona re-confirmation.
@@ -106,7 +106,7 @@ though the persona content and the picker logic are global.
    session name (e.g. `xls-48`, `home-ansible-ec`) — never a persona name or nickname —
    and that name is only ever knowable from inside the session itself, via `ListAgents`
    ("This session is xls-48 …"). So: whenever this skill fires (a manual switch, or
-   `/persona --list` etc.), and separately at the START of any session where it hasn't
+   `/hails-persona --list` etc.), and separately at the START of any session where it hasn't
    been done yet this session, call `ListAgents`, read this session's own name off its
    result, and run `node ~/.claude/scripts/pick-persona.js --set-session-name "<name>"`
    from this worktree's own directory. This is what makes "target Alexia" or "target Lex"
@@ -148,7 +148,7 @@ of a bare `ListAgents` session name:
    explicitly asked to be automatic, not a destructive action on anything they'd want a
    chance to stop.
 
-## Sweeping stale peer links (`/persona --sweep`, added 2026-08-30)
+## Sweeping stale peer links (`/hails-persona --sweep`, added 2026-08-30)
 
 Proactive, whole-registry version of step 4's dead-session self-heal above — that one only
 ever fires reactively, after a `SendMessage` to one specific resolved target has already
@@ -175,9 +175,9 @@ gone from disk (that's still `--clean`'s separate job).
 ## Permanent pins (added 2026-08-30, auto-rotation removed 2026-09-02)
 
 **Every domain now gets one stable, deliberately-chosen persona, permanently — not a
-pool that rotates on its own.** `/persona --pin-forever [<path>]` is the explicit,
+pool that rotates on its own.** `/hails-persona --pin-forever [<path>]` is the explicit,
 human-only action that creates this; no path targets the current worktree. Relay
-`pick-persona.js --pin-forever`'s own confirmation. `/persona --unpin-forever [<path>]`
+`pick-persona.js --pin-forever`'s own confirmation. `/hails-persona --unpin-forever [<path>]`
 reverses it.
 
 An entry that's never been explicitly pinned isn't in danger of drifting on its own —
@@ -203,7 +203,7 @@ forever — this happens silently, nothing for this skill to do. If a worktree's
 persona *file* has been deleted or renamed out from under it, the hook degrades
 gracefully instead of crashing: it reports the problem plainly in `additionalContext`
 instead of guessing a replacement. If you see that note, tell the user directly and offer
-`/persona <name>` (which resolves to `--switch` per step 5) to a real persona file as the
+`/hails-persona <name>` (which resolves to `--switch` per step 5) to a real persona file as the
 fix.
 
 ## Worktree families vs. coincidental collisions (added 2026-08-28)
@@ -244,7 +244,7 @@ Whenever this project (`xls`) edits and re-syncs one or more persona files:
 
 1. **`ListAgents`**, and for every currently-live peer session that isn't this one, send a
    short message naming which persona file(s) changed and asking it to reload — the
-   practical mechanism is that session running `/persona <its own current name>` again
+   practical mechanism is that session running `/hails-persona <its own current name>` again
    (re-reads the file fresh per step 3/4 above) or, if it would rather wait, at least
    knowing a stale copy is loaded so it can decide when.
 2. **`binary-dotfiles` specifically also owns the deployed copy on other machines** (it's
@@ -253,7 +253,7 @@ Whenever this project (`xls`) edits and re-syncs one or more persona files:
    live peer, message it directly so it can pull the change promptly. If no
    `binary-dotfiles` session is live, leave a note in `xls`'s own
    `docs/ai/session-scratchpad.md` instead, so the next `binary-dotfiles` session picks it
-   up on its own session-start register sweep rather than the change sitting undiscovered
+   up on its own hails-session-start register sweep rather than the change sitting undiscovered
    until someone happens to notice.
 3. This is notification, not enforcement — nothing here forces a live session to actually
    reload; it just makes sure staleness is a known, visible fact rather than a silent gap.

@@ -1,17 +1,17 @@
 ---
-name: refresh-persona
-description: Mid-session, on-demand refresh of the persona and continuity portions of session-start -- re-register to the session registry, re-check nickname, re-read the persona file end-to-end, re-run the canon-register check if that persona has one, re-read the day-state marker, draw or recall today's theme, and set today's color -- without the register/todo sweep, previous-day git summary, health check, or three-options report that make the full session-start routine heavier. Use when persona voice, continuity, or the day's color/theme feels like it's drifted mid-session, or on explicit ask ("refresh yourself", "re-read your persona", "check canon again", "reload", "redraw the theme", "reset the color").
+name: hails-persona-refresh
+description: Mid-session, on-demand refresh of the persona and continuity portions of hails-session-start -- re-register to the session registry, re-check nickname, re-read the persona file end-to-end, re-run the canon-register check if that persona has one, re-read the day-state marker, draw or recall today's theme, and set today's color -- without the register/todo sweep, previous-day git summary, health check, or three-options report that make the full hails-session-start routine heavier. Use when persona voice, continuity, or the day's color/theme feels like it's drifted mid-session, or on explicit ask ("refresh yourself", "re-read your persona", "check canon again", "reload", "redraw the theme", "reset the color").
 ---
 
 # Refresh persona
 
 **This is a global skill** (added 2026-09-03, BinaryMisfit's own ask) — the deliberately
-small counterpart to `session-start`: everything in that skill's Step 1 through Step 1.3
+small counterpart to `hails-session-start`: everything in that skill's Step 1 through Step 1.3
 (persona greeting/re-read, day-state, theme, color) is cheap enough to be worth re-running
 on its own, mid-conversation, without dragging Steps 2-6 (git-log summary, health check,
 register sweep, three-options report) along. This is that whole slice, callable any time.
 
-Unlike `session-start`/`end-session`, this has no per-repo playbook and no bootstrap
+Unlike `hails-session-start`/`hails-session-end`, this has no per-repo playbook and no bootstrap
 step — nothing here is repo-specific, so it's a single fixed routine.
 
 ## Steps
@@ -22,7 +22,7 @@ step — nothing here is repo-specific, so it's a single fixed routine.
 
 2. **Re-register.** From this worktree's own directory, run `node
    ~/.claude/scripts/pick-persona.js --switch "<own-filename>.md"` (the same file already
-   active) -- the identical mechanism `/persona <name>` uses for a same-name
+   active) -- the identical mechanism `/hails-persona <name>` uses for a same-name
    reconfirmation: it re-touches the registry entry (`lastSeen`), re-derives `style` from
    the persona file's own current frontmatter, and leaves the nickname/pin state alone
    since the persona hasn't actually changed. Relay its output only if it reports something
@@ -73,10 +73,10 @@ step — nothing here is repo-specific, so it's a single fixed routine.
 
 ## Not this skill's job
 
-- Switching to a *different* persona -- that's plain `/persona <name>`, which this skill
+- Switching to a *different* persona -- that's plain `/hails-persona <name>`, which this skill
   doesn't replace or wrap.
 - Previous-day git summary, project health check, register/todo sweep, or the
-  three-options report -- those stay `session-start`'s own job, run through
-  `/session-start` when the full routine is actually wanted.
-- Writing the day-state marker -- that's `end-session`'s job (`day-state.js --write`), not
+  three-options report -- those stay `hails-session-start`'s own job, run through
+  `/hails-session-start` when the full routine is actually wanted.
+- Writing the day-state marker -- that's `hails-session-end`'s job (`day-state.js --write`), not
   this skill, which only ever reads.

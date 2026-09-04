@@ -11,7 +11,7 @@ it, plus the ADR standard for decisions specifically.
 - IDs are sequential integers per type-prefix, assigned once, **never reused or
   renumbered**, even after an entry closes or is superseded.
 - A repo with 2+ registers gets a `docs/tracking-index.md` listing which files are active,
-  so tooling (including `session-start`'s register sweep) never hardcodes a file list. A
+  so tooling (including `hails-session-start`'s register sweep) never hardcodes a file list. A
   repo with exactly one register skips it.
 - Read a register fresh every time it matters — never rely on a prior session's memory of
   its contents.
@@ -169,7 +169,7 @@ names onto a register tracking something else entirely.
 
 ### Session-start integration
 
-Where the `session-start` skill's register sweep step runs in a repo, it reads every file
+Where the `hails-session-start` skill's register sweep step runs in a repo, it reads every file
 `docs/tracking-index.md` lists (or the single register present, if only one exists) fresh
 each time — `docs/adr/README.md` counts as the decision register for that sweep.
 
@@ -181,14 +181,14 @@ chezmoi. As of 2026-08-31 its canonical *authoring* source moved to `xls`'s own
 `secretary-pool`'s own copy of the same tree** — consistent with `secretary-pool` becoming
 the general canonical source over `xls` (confirmed by BinaryMisfit, see `secretary-pool`'s
 own `docs/todo-register.md` TODO-3 for that decision). `secretary-pool` now owns fixes and
-real usage refinements to this file and the `decision-register` skill going forward, and
+real usage refinements to this file and the `hails-decision-register` skill going forward, and
 applies them via its own `scripts/sync-global-claude-config.js` — `xls` no longer authors
 this file; a change made in `xls`'s old `claude-global/` copy is stale the moment it's
 made and won't propagate.
 
 **`binary-dotfiles`/chezmoi never depends on any single project repo being present,
 cloned, or accessible.** It reads only this file's deployed, final copy at
-`~/.claude/rules/registers.instructions.md` (and `~/.claude/skills/decision-register/`) —
+`~/.claude/rules/registers.instructions.md` (and `~/.claude/skills/hails-decision-register/`) —
 the exact same artifact every other project on the machine reads — and merges *that* into
 chezmoi for distribution to other machines. The dependency runs through the deployed
 `~/.claude/` artifact only, never through any one authoring repo's own internal directory

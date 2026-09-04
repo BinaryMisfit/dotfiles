@@ -1,5 +1,5 @@
 ---
-name: decision-register
+name: hails-decision-register
 description: Log a new Architecture Decision Record (ADR) in the current repo under docs/adr/, or list/supersede existing ones. Invoke for "log this decision", "record an ADR", "write a decision record", "what decisions have we made here".
 user-invocable: true
 tools: Read, Glob, Grep, Write, Edit

@@ -1,6 +1,6 @@
 # NSFW-in-comments (AI-interaction content) audit playbook
 
-**Starter template, copied in automatically by the `nsfw-comment-audit` skill on this
+**Starter template, copied in automatically by the `hails-nsfw-comment-audit` skill on this
 repo's first run** (see that skill's own Step 0). This is a generic seed, not a finished
 methodology — extend it with this project's own real Category-A false positives as they
 turn up, the same way X-Lifestyle's own copy of this file grew out of a real first run.
@@ -15,7 +15,7 @@ ANY repo's session now — the check is whether that tone ever bled out of chat 
 something checked into source control here.
 
 **Run this whenever external eyes are about to see source that haven't before, or
-periodically as part of this repo's own session-start routine** (see
+periodically as part of this repo's own hails-session-start routine** (see
 `docs/session-start-playbook.md`, if this repo has one) — a clean result today doesn't
 cover tomorrow's commits.
 

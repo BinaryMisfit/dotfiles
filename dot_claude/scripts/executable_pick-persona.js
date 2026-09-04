@@ -12,9 +12,9 @@
 // whole point of promoting this to global in the first
 // place). `claude-global/` mirrors the deploy target's own structure 1:1
 // (`claude-global/output-styles/` -> `~/.claude/output-styles/`,
-// `claude-global/skills/persona/` -> `~/.claude/skills/persona/`,
+// `claude-global/skills/hails-persona/` -> `~/.claude/skills/hails-persona/`,
 // `claude-global/scripts/` -> `~/.claude/scripts/`), and every other global
-// tool this repo owns (session-start, scratchpad-check, worktree-sync-check,
+// tool this repo owns (hails-session-start, hails-scratchpad-check, hails-worktree-sync-check,
 // the audits, the registers convention) lives under the same tree, so the
 // sync script's mapping is a straight copy, no renaming. Deploy via
 // `npm run sync-global-claude-config` from the secretary-pool repo root
@@ -70,7 +70,7 @@
 // recognized as a synonym) meaning permanently, explicitly locked.
 // `"Perm"` is the ONLY thing that creates a real permanent pin, and the
 // ONLY way an entry gets it is the user explicitly running
-// `--pin-forever` -- no automatic path (a fresh pick, a manual `/persona`
+// `--pin-forever` -- no automatic path (a fresh pick, a manual `/hails-persona`
 // switch, a cascade) ever writes it. Human-legible by design: glance at
 // the raw JSON and a locked entry is obviously different from a normal
 // one, no second boolean field to cross-reference.
@@ -95,7 +95,7 @@
 // session (`--resume=<uuid>`) firing a fresh hook is exactly the shape of
 // event that could trigger it.
 //
-// Manual override (the `persona` skill) resolves a fuzzy name/nickname to
+// Manual override (the `hails-persona` skill) resolves a fuzzy name/nickname to
 // an exact filename itself, then calls `--switch <file> [path]` here to do
 // the actual write -- centralizing it in the script, not skill prose, is
 // what makes two rules real instead of aspirational: a manual switch NEVER
@@ -120,7 +120,7 @@
 // `sessionName` is the harness-assigned live session name that
 // `SendMessage`'s `to` field actually routes on -- NOT a persona name or
 // nickname. Starts `null`, only ever filled in by the session itself via
-// `ListAgents` + `--set-session-name` (see the `persona` skill's own
+// `ListAgents` + `--set-session-name` (see the `hails-persona` skill's own
 // self-register step). This script never calls `SendMessage`/`ListAgents`
 // itself, only stores and looks up the mapping the assistant supplies.
 //
@@ -362,9 +362,9 @@ function writeVscodeWorkspaceColor(cwd, styleName, nickname, execFn = execFileSy
 
   // "End Session drives Start Session" (2026-09-03): once a real day-state
   // marker exists for this cwd, the mood shade is seeded from what she
-  // actually wrote at end-session -- not the calendar date. Falls back to
+  // actually wrote at hails-session-end -- not the calendar date. Falls back to
   // the date-hash placeholder when no marker's ever been written yet
-  // (day one, or `end-session` was never run) -- degrades gracefully
+  // (day one, or `hails-session-end` was never run) -- degrades gracefully
   // rather than requiring the new mechanism to exist before this feature
   // can run at all.
   const dayState = readDayStateFn(cwd);
@@ -665,7 +665,7 @@ function needsNickname(entry, allEntries) {
 // however `needsNickname` would otherwise judge it. The only thing that can
 // still change a `Perm` entry's nickname is a genuine manual persona switch
 // (`switchPersona`'s own `genuinelyDifferent` branch), never a passive
-// side-effect of some OTHER worktree's session-start touching the registry.
+// side-effect of some OTHER worktree's hails-session-start touching the registry.
 // Real incident this fixes (2026-09-02): `xls-playthrough`, forever-pinned
 // to Hailey with nickname "Hails" since 2026-08-30, had "Hails" silently
 // stripped here the moment sibling worktrees were reset out of the registry
@@ -1213,7 +1213,7 @@ function sweepDeadRegistry(liveSessionNamesCsv) {
   const entries = readRegistry();
   // Real incident, 2026-09-04: ListAgents never lists the calling session
   // itself, only its peers -- that's ListAgents' own documented behavior,
-  // not a bug in it. But session-start's own sweep step feeds ListAgents'
+  // not a bug in it. But hails-session-start's own sweep step feeds ListAgents'
   // peer list straight into --sweep-dead, which means the caller's own
   // sessionName is *always* absent from `liveNames`, no matter how alive it
   // genuinely is. Without this, sweep-dead concludes the calling session is
@@ -1440,7 +1440,7 @@ function unsetPrimary(targetPath) {
 // entry + persona file read + output style, nothing else) so a
 // one-question-and-close session never pays for work it doesn't need.
 // Everything with real weight -- day-state, theme, color -- moved to the
-// `session-start` SKILL instead, which BinaryMisfit runs by hand every real
+// `hails-session-start` SKILL instead, which BinaryMisfit runs by hand every real
 // work session ("load bearing on a habit that's actually load bearing").
 // This is the standalone entry point that skill's own Step 1.3 calls --
 // `writeVscodeWorkspaceColor` previously only ran inline inside the hook's
@@ -1466,7 +1466,7 @@ function setColor(targetPath) {
 }
 
 // `node pick-persona.js --switch <filename.md> [<path>]` -- the manual
-// override's actual write path. The `persona` skill resolves a fuzzy
+// override's actual write path. The `hails-persona` skill resolves a fuzzy
 // name/nickname to an exact filename FIRST (its own step 2), then calls
 // this. See this file's header comment for why centralizing the write here
 // is what makes "manual never pins forever" and family cascade real
@@ -1497,7 +1497,7 @@ function switchPersona(filename, targetPath) {
   entry.file = filename;
   entry.style = styleName;
   // A same-file "switch" is how a session refreshes its own stale in-memory
-  // copy after a persona file's content changed on disk (see the `persona`
+  // copy after a persona file's content changed on disk (see the `hails-persona`
   // skill's "notify-on-global-persona-update" step) -- it must never be able
   // to silently un-pin a forever-pinned worktree. Only a GENUINE persona
   // change resets pinnedAt away from "Perm"/"Fixed"; a refresh onto the same
@@ -1758,7 +1758,7 @@ function main() {
     }
 
     nicknameNote = buildNicknameNote(entry, entries);
-    appendLog(now, "session-start", entryLogFields(entry));
+    appendLog(now, "hails-session-start", entryLogFields(entry));
   } else {
     // A brand-new cwd: is this a new git-worktree SIBLING of a repo we
     // already track, or a genuinely new/unrelated repo? A sibling inherits
@@ -1868,14 +1868,14 @@ function main() {
   // own design call, restructured out of what used to also run day-state,
   // theme, and VS Code color inline here). This hook fires on EVERY
   // session, including a one-question-and-close session that never touches
-  // the `session-start` skill at all -- it has to stay fast and cheap for
+  // the `hails-session-start` skill at all -- it has to stay fast and cheap for
   // that case, so it does exactly two things: figure out which persona this
   // worktree is (registry entry, above) and hand back that persona's own
   // file content. Everything with real weight -- continuity, theme, color
-  // -- moved to the `session-start` skill's own Step 1.1-1.3
-  // (`claude-global/skills/session-start/generic-playbook.md`), which
+  // -- moved to the `hails-session-start` skill's own Step 1.1-1.3
+  // (`claude-global/skills/hails-session-start/generic-playbook.md`), which
   // BinaryMisfit runs by hand every real work session ("I open VS, select a
-  // repo, open the Claude tab, type /session-start -- every time") --
+  // repo, open the Claude tab, type /hails-session-start -- every time") --
   // load-bearing on a habit that's actually load-bearing, not bolted onto a
   // hook that has to stay cheap for a session that might never need any of
   // it. `writeVscodeWorkspaceColor` is still reachable directly via

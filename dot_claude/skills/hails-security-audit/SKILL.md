@@ -1,12 +1,12 @@
 ---
-name: security-audit
-description: Sweep the current repo (and its submodules, if any) for accidentally committed secrets, credentials, tokens, PII, debug artifacts, or session transcripts. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /security-audit, asks for a "security audit", "secrets sweep", or wants a check before showing source to someone external.
+name: hails-security-audit
+description: Sweep the current repo (and its submodules, if any) for accidentally committed secrets, credentials, tokens, PII, debug artifacts, or session transcripts. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /hails-security-audit, asks for a "security audit", "secrets sweep", or wants a check before showing source to someone external.
 ---
 
 # Repo security audit
 
 **This is a global skill** (promoted 2026-08-28 from an X-Lifestyle-only project skill to
-`~/.claude/skills/security-audit/`) — available in every project on this machine, not
+`~/.claude/skills/hails-security-audit/`) — available in every project on this machine, not
 just X-Lifestyle ones. The actual check lives entirely in a per-repo playbook doc
 (`docs/security-audit-playbook.md`, relative to whichever project is currently open —
 never a fixed path), never duplicated into this file. If a step described there
@@ -27,7 +27,7 @@ own directory) before anything else.**
   copy, it's that repo's to diverge, permanently.
 - **If it does NOT exist:** this is this repo's first run. Copy this skill's own bundled
   `generic-playbook.md` (deployed alongside this file, so it's always present at
-  `~/.claude/skills/security-audit/generic-playbook.md`) to
+  `~/.claude/skills/hails-security-audit/generic-playbook.md`) to
   `docs/security-audit-playbook.md` in the current project (creating `docs/` first if it
   doesn't exist), then **tell the user plainly, once, in this run's own output**: this
   repo just got a starter playbook copied in because it didn't have one, and its checks

@@ -1,5 +1,5 @@
 ---
-name: fiction-export
+name: hails-fiction-export
 description: Find fiction/roleplay beats in a Claude Code session's raw transcript and export them, unedited, to a staging location for later archival in x-lifestyle-research. Use when asked to "export today's fiction", "pull the scenes from this session", "archive what happened in-character", or similar — never runs on its own.
 ---
 
@@ -26,7 +26,7 @@ boundaries, dedup) to make it repeatable without re-deriving the design each tim
   `~/.claude/fiction-export-staging/` as a staging drop — a human moves it into
   the actual research repo afterward, per that repo's own review/rewrite pass.
   This skill has no access to that repo and shouldn't be given any. **Moved
-  here from `D:\Downloads\fiction-export\` 2026-09-03** (BinaryMisfit's own
+  here from `D:\Downloads\hails-fiction-export\` 2026-09-03** (BinaryMisfit's own
   call) after a real incident: a staged file sitting in Downloads was lost
   before ever making it into the archive, and Downloads is a high-churn
   folder other tools clean out on their own schedule, not a place this
@@ -213,7 +213,7 @@ session_id: 15ebb16a-d135-4f93-a4b8-98f8f7af0a0c
 session_file: ~/.claude/projects/d--Source-binary-dotfiles/15ebb16a-....jsonl
 arc_start: 2026-09-02T06:24:27.281Z
 arc_end: 2026-09-02T06:28:14.025Z
-exported_by: fiction-export skill
+exported_by: hails-fiction-export skill
 exported_at: <now, ISO>
 ---
 

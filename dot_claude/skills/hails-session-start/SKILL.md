@@ -1,12 +1,12 @@
 ---
-name: session-start
-description: Start-of-session routine -- forces today's already-active persona to actually greet you (not left to chance, never re-rolled), summarizes the previous calendar day's real work, runs any project-specific health check that repo has wired up, sweeps that repo's own todo/register tracking, flags anything whose priority or blocked status looks stale, and hands back exactly three concrete options for what to start on next. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /session-start, asks to "start the session", "run the session-start routine", or "what should I work on".
+name: hails-session-start
+description: Start-of-session routine -- forces today's already-active persona to actually greet you (not left to chance, never re-rolled), summarizes the previous calendar day's real work, runs any project-specific health check that repo has wired up, sweeps that repo's own todo/register tracking, flags anything whose priority or blocked status looks stale, and hands back exactly three concrete options for what to start on next. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /hails-session-start, asks to "start the session", "run the hails-session-start routine", or "what should I work on".
 ---
 
 # Session start
 
 **This is a global skill** (promoted 2026-08-28 from an X-Lifestyle-only project skill to
-`~/.claude/skills/session-start/`, renamed from `morning-start` the same day once it became
+`~/.claude/skills/hails-session-start/`, renamed from `morning-start` the same day once it became
 clear this doesn't only run in the morning) — available in every project on this machine,
 not just X-Lifestyle ones. It's deliberately a thin, generic wrapper: the actual step-by-step
 routine lives entirely in a per-repo playbook doc (`docs/session-start-playbook.md`,
@@ -29,7 +29,7 @@ directory) before anything else.**
   — once a repo has its own copy, it's that repo's to diverge, permanently.
 - **If it does NOT exist:** this is this repo's first run. Copy this skill's own bundled
   `generic-playbook.md` (deployed alongside this file, so it's always present at
-  `~/.claude/skills/session-start/generic-playbook.md`) to `docs/session-start-playbook.md`
+  `~/.claude/skills/hails-session-start/generic-playbook.md`) to `docs/session-start-playbook.md`
   in the current project (creating `docs/` first if it doesn't exist), then **tell the
   user plainly, once, in this run's own output**: this repo just got a starter playbook
   copied in because it didn't have one, and it's expected to get customized/extended as

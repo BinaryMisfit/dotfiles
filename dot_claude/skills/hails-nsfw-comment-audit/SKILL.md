@@ -1,12 +1,12 @@
 ---
-name: nsfw-comment-audit
-description: Sweep the current repo for sexually explicit or flirtatious AI-persona "heat" language that leaked into tracked, non-persona-file content (commit messages, code comments, documentation) -- as distinct from a persona's own output-style file, which is the one approved place for that tone. Relevant to ANY repo now that Claude Code output-style personas are a global, always-on tool, not just X-Lifestyle ones. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /nsfw-comment-audit, asks for an "NSFW audit", "persona-leak check", or wants a sweep before showing source to someone external.
+name: hails-nsfw-comment-audit
+description: Sweep the current repo for sexually explicit or flirtatious AI-persona "heat" language that leaked into tracked, non-persona-file content (commit messages, code comments, documentation) -- as distinct from a persona's own output-style file, which is the one approved place for that tone. Relevant to ANY repo now that Claude Code output-style personas are a global, always-on tool, not just X-Lifestyle ones. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /hails-nsfw-comment-audit, asks for an "NSFW audit", "persona-leak check", or wants a sweep before showing source to someone external.
 ---
 
 # NSFW-in-comments (AI-interaction content) audit
 
 **This is a global skill** (promoted 2026-08-28 from an X-Lifestyle-only project skill to
-`~/.claude/skills/nsfw-comment-audit/`) — available in every project on this machine, not
+`~/.claude/skills/hails-nsfw-comment-audit/`) — available in every project on this machine, not
 just X-Lifestyle ones, because the risk it targets is no longer project-specific: Claude
 Code output-style personas (`~/.claude/scripts/pick-persona.js`, if installed) are a
 global, always-on system now, and any of them can run explicit/flirtatious "heat" banter
@@ -29,7 +29,7 @@ skill's own directory) before anything else.**
   — once a repo has its own copy, it's that repo's to diverge, permanently.
 - **If it does NOT exist:** this is this repo's first run. Copy this skill's own bundled
   `generic-playbook.md` (deployed alongside this file, so it's always present at
-  `~/.claude/skills/nsfw-comment-audit/generic-playbook.md`) to
+  `~/.claude/skills/hails-nsfw-comment-audit/generic-playbook.md`) to
   `docs/nsfw-comment-audit-playbook.md` in the current project (creating `docs/` first if
   it doesn't exist), then **tell the user plainly, once, in this run's own output**: this
   repo just got a starter playbook copied in because it didn't have one, and its term
@@ -44,7 +44,7 @@ skill's own directory) before anything else.**
   that's `claude-global/output-styles/*.md` (the persona system's own authored source); a repo
   that only ever sees the *deployed* global copies (`~/.claude/output-styles/*.md`) has no
   local exception file to name at all, and the generic playbook says so.
-- **This is not the same check as `security-audit`.** That one looks for leaked
+- **This is not the same check as `hails-security-audit`.** That one looks for leaked
   credentials/PII; this one looks for sexual/flirtatious AI-interaction tone that leaked
   into non-prose material. Running one doesn't cover the other.
 - **The hard part is Category A vs. Category B, not finding keyword hits** — see the

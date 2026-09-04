@@ -1,6 +1,6 @@
 # Repo security audit playbook
 
-**Starter template, copied in automatically by the `security-audit` skill on this repo's
+**Starter template, copied in automatically by the `hails-security-audit` skill on this repo's
 first run** (see that skill's own Step 0). This is a generic seed, not a finished
 methodology — extend it with this project's own real credential/API naming as it turns
 up, the same way X-Lifestyle's own copy of this file grew out of a real first run.

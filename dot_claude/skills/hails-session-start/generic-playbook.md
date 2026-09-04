@@ -1,6 +1,6 @@
 # Session start playbook (generic starter)
 
-Auto-copied into this repo's `docs/session-start-playbook.md` on the `session-start`
+Auto-copied into this repo's `docs/session-start-playbook.md` on the `hails-session-start`
 skill's first run here, because no project-specific playbook existed yet. **This file is
 now this repo's own** — edit it freely as this project's real conventions emerge; a later
 change to the generic template this was copied from will never overwrite it, and nothing
@@ -77,11 +77,11 @@ Matters most on a long-running session where the file changes mid-session and no
 would ever re-trigger a re-read.
 
 **Also self-register this session's live name here, every run (added 2026-09-01, real
-gap found live: a session that only ever ran `session-start`, never a separate `/persona`
+gap found live: a session that only ever ran `hails-session-start`, never a separate `/hails-persona`
 invocation, sat with no `sessionName` on file all session, unreachable by name/nickname
 from any peer).** The persona skill's own "Targeting a peer session" step 7 already states
 this belongs "at the START of any session where it hasn't been done yet" — but that
-instruction only fires when the persona skill itself gets read, which `session-start`
+instruction only fires when the persona skill itself gets read, which `hails-session-start`
 alone never triggers. Concretely: call `ListAgents`, read this session's own name off its
 "This session is `<name>`" line, then run `node ~/.claude/scripts/pick-persona.js
 --set-session-name "<name>"` from this repo's root. Skip only if the global persona system
@@ -92,7 +92,7 @@ BinaryMisfit's own call, part of that day's persona-system cleanup pass).** Ever
 entry's `sessionName` is only ever true while a real process is alive, and nothing
 proactively notices one dying -- Claude Code has a real `SessionStart` hook but no symmetric
 exit hook, so the only way this gets noticed at all is something asking. Rather than leaving
-that entirely to `/persona --sweep` run by hand (real, but easy to forget, and stale entries
+that entirely to `/hails-persona --sweep` run by hand (real, but easy to forget, and stale entries
 accumulate silently in the meantime), this step now runs it automatically as a free
 byproduct of the `ListAgents` call it's already making one line above: join every live
 peer's name from that same result with commas (or pass `""` if there are none), then run
@@ -108,7 +108,7 @@ own design call).** The hook fires on EVERY session, including a one-question-an
 session that never runs this skill at all -- it stays fast and minimal on purpose: set the
 persona, read its file, nothing else. This skill is different: BinaryMisfit runs it, by
 hand, every real work session ("I open VS, select a repo, open the Claude tab, type
-`/session-start` -- every time"), so anything with real weight -- continuity, theme, color
+`/hails-session-start` -- every time"), so anything with real weight -- continuity, theme, color
 -- belongs here, load-bearing on a habit that's actually load-bearing, not bolted onto a
 hook that has to stay cheap for a session that might never need any of it.
 
@@ -120,7 +120,7 @@ up) rather than opening cold:
 node ~/.claude/scripts/day-state.js --read
 ```
 
-If nothing's there yet (day one, or the `end-session` skill was never run last time), say
+If nothing's there yet (day one, or the `hails-session-end` skill was never run last time), say
 nothing about it -- a missing marker is a normal, common state, not a gap to apologize for.
 
 ## Step 1.2 — Draw or recall today's theme
@@ -176,12 +176,12 @@ skip this step; don't invent a check that doesn't exist.
 
 If the global persona system is installed (see Step 1) and this repo has its own
 `docs/nsfw-comment-audit-playbook.md` (bootstrapped automatically by the standalone
-`nsfw-comment-audit` skill on its own first run, if it hasn't run yet here), scan just the
+`hails-nsfw-comment-audit` skill on its own first run, if it hasn't run yet here), scan just the
 previous calendar day's commits (message bodies + diff) against that playbook's term list
 and approved exception path — this is real risk now that persona sessions can run
 explicit/flirtatious "heat" language in ANY repo, not a check specific to one project.
 Read any hit's actual context before flagging it; a real finding gets named plainly and a
-recommendation to run the full `nsfw-comment-audit` skill, not fixed inline here. If this
+recommendation to run the full `hails-nsfw-comment-audit` skill, not fixed inline here. If this
 repo has no `docs/nsfw-comment-audit-playbook.md` yet and no persona session has ever run
 here, skip this step silently — nothing to check yet.
 

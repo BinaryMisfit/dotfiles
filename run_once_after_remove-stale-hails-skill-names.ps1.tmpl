@@ -1,0 +1,25 @@
+{{- $profile := get . "profile" | default "home" -}}
+{{ if and (eq .chezmoi.os "windows") (eq $profile "home") -}}
+#!powershell
+$ErrorActionPreference = "Continue"
+
+# One-time cleanup: secretary-pool renamed the whole claude-global/skills tree with an
+# explicit hails- prefix, 2026-09-04 (session-start -> hails-session-start, persona ->
+# hails-persona, etc.). Their own sync-global-claude-config.js only ever copies/updates
+# files forward -- it never deletes the old bare-named directories, so they'd otherwise
+# linger stale on every machine that already had them applied and get redistributed
+# alongside the new names. Removes each stale directory entirely on machines that have it.
+
+$StaleDirs = @(
+    "decision-register", "fiction-export", "nsfw-comment-audit", "persona",
+    "scratchpad-check", "security-audit", "session-start", "refresh-persona"
+)
+
+foreach ($name in $StaleDirs) {
+    $path = Join-Path $HOME ".claude\skills\$name"
+    if (Test-Path $path) {
+        Write-Host "==> removing stale ~/.claude/skills/$name"
+        Remove-Item -Force -Recurse -Path $path -ErrorAction SilentlyContinue
+    }
+}
+{{ end -}}

@@ -1,12 +1,12 @@
 ---
-name: scratchpad-check
-description: Find and report every session-continuity scratchpad in the current project, on demand -- not bundled inside a bigger routine. Flags a scratchpad whose every section already reads resolved as an immediate fold-and-delete candidate, and flags one sitting outside this project's own documented centralization location (when it has one) as a placement violation. Use when the user asks to "check for scratchpads", "any stale scratchpads", "scratchpad check", when picking up a worktree that might have a stranded handoff note, or as a standalone substitute for a bigger session-start routine's own scratchpad sub-step.
+name: hails-scratchpad-check
+description: Find and report every session-continuity scratchpad in the current project, on demand -- not bundled inside a bigger routine. Flags a scratchpad whose every section already reads resolved as an immediate fold-and-delete candidate, and flags one sitting outside this project's own documented centralization location (when it has one) as a placement violation. Use when the user asks to "check for scratchpads", "any stale scratchpads", "scratchpad check", when picking up a worktree that might have a stranded handoff note, or as a standalone substitute for a bigger hails-session-start routine's own scratchpad sub-step.
 ---
 
 # Scratchpad check
 
 **This is a global skill**, available in every project on this machine, not just one repo.
-It exists because a project's own session-start routine (if it has one) may bundle a
+It exists because a project's own hails-session-start routine (if it has one) may bundle a
 scratchpad check as one step inside a much bigger sweep -- fine for a daily coordinator run,
 wrong for a quick "did I leave myself a note here" check mid-session or in a worktree that
 never runs the full routine at all. This skill is that one step, standalone and cheap: no
@@ -26,13 +26,13 @@ If `~/.claude/scripts/pick-persona.js` is installed, `Read` the active persona's
 `~/.claude/output-styles/<name>.md` file explicitly before doing anything else, and open
 this skill's own output with one brief in-character line confirming that read happened —
 this doubles as the standalone entry point for a persona refresh mid-session, the same
-problem `session-start`'s own Step 1 fixed for its own routine (a running session sticking
+problem `hails-session-start`'s own Step 1 fixed for its own routine (a running session sticking
 with whatever the `SessionStart` hook injected at boot, even after the persona file
 changed on disk since). If no persona system is installed, skip this step silently.
 
 **If this is the session's actual first output, this line IS the opening beat — treat it
 as such, not just a "read confirmed" note.** Real bug caught live (2026-09-01): a session
-whose literal first command was `/scratchpad-check` opened with "checked in already this
+whose literal first command was `/hails-scratchpad-check` opened with "checked in already this
 session, no need to re-announce" — a fabricated prior check-in that never happened, and
 skipped stating a name entirely. The `SessionStart` hook's own `additionalContext` had
 already delivered the correct instruction (persona name, and nickname if the registry has
@@ -114,5 +114,5 @@ as any other later turn.
   it doesn't execute the fold.
 - **Inventing a scratchpad convention a project never documented.** No convention found in
   step 2 means no placement judgment gets made -- report resolved/live status only.
-- **Replacing a project's own full session-start routine**, if it has one -- this is the
+- **Replacing a project's own full hails-session-start routine**, if it has one -- this is the
   piece that routine can call standalone, not a competing routine.

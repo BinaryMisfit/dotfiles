@@ -112,11 +112,17 @@ OneDrive - Powerfleet/
 .claude/output-styles/alexia.md
 .claude/output-styles/aphrodite.md
 .claude/output-styles/callie.md
-.claude/skills/session-start/**
-.claude/skills/scratchpad-check/**
-.claude/skills/persona/**
-.claude/skills/nsfw-comment-audit/**
-.claude/skills/security-audit/**
+.claude/skills/hails-session-start/**
+.claude/skills/hails-scratchpad-check/**
+.claude/skills/hails-persona/**
+.claude/skills/hails-persona-refresh/**
+.claude/skills/hails-nsfw-comment-audit/**
+.claude/skills/hails-security-audit/**
+.claude/skills/hails-decision-register/**
+.claude/skills/hails-fiction-export/**
+.claude/skills/hails-fiction-import/**
+.claude/skills/hails-session-end/**
+.claude/skills/hails-worktree-sync-check/**
 {{ end }}
 
 # Copilot: work profile only
