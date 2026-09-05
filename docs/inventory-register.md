@@ -162,6 +162,17 @@ running. Both are gone now — see [ADR 0008](adr/0008-interactive-bootstrap-and
 | `.vscode/` | Untracked (2026-09-03, BinaryMisfit's direct call — standard practice not to track editor workspace state) and gitignored. Still present locally with the same `*.tmpl` → go-template syntax highlighting + autofetch settings, just no longer version-controlled — not a chezmoi target either way |
 | `.claude/settings.local.json` | This repo's own local Claude Code permission overrides (not a chezmoi target, explicitly excluded in `.chezmoiignore` as runtime-only state) |
 
+## Machine secrets — deliberately NOT chezmoi targets
+
+See [ADR 0027](adr/0027-machine-secrets-stay-outside-chezmoi.md) for the full reasoning.
+Real credential material never gets templated or committed here, on this machine or any
+other this repo distributes to — each lives as untracked, machine-local state instead.
+
+| What | Lives where (this machine) | Purpose |
+|---|---|---|
+| `BWS_ACCESS_TOKEN` / `BWS_SERVER_URL` | `~/.claude/secrets/bitwarden.env` (untracked file, two plain lines, no BOM) | Bitwarden Secrets Manager shared read credential (Hailey/Callie/Aphrodite) — sourced fresh per command, never relied on as pre-loaded |
+| `CONTEXTFORGE_ADMIN_API_TOKEN` | Persistent Windows user environment variable (`setx`), takes effect on reboot | Hermes MCP server auth, referenced by `${VAR}` name only in `.mcp.json` — resolved at Claude Code's own process launch, not sourceable mid-session |
+
 ## Documentation & registers
 
 | Path | Purpose |

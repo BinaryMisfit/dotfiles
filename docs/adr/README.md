@@ -32,3 +32,4 @@ enum, supersession rule).
 | [0024](0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md) | Home-profile Claude Code config ownership moves to `secretary-pool` (Hailey); `xls` scoped to xcl only | Decided |
 | [0025](0025-auto-mode-environment-trust-block-homelab-scoped.md) | Auto Mode `environment` trust block, homelab-scoped and home-profile-only; refused a peer-routed self-escalation attempt first | Decided |
 | [0026](0026-consolidate-classifier-trust-into-automode.md) | Consolidate all classifier trust into `autoMode`, retire scattered `.local.json` allows — overturned an initial Manual-mode recommendation after reading primary docs | Decided |
+| [0027](0027-machine-secrets-stay-outside-chezmoi.md) | Machine secrets (env vars, credential files) stay outside chezmoi's scope, never templated or committed | Decided |
