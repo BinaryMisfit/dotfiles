@@ -67,6 +67,16 @@ trust. `gitgud.io` and `pixeldrain.com` were added to `environment` as trusted e
 services per BinaryMisfit's own explicit confirmation, noting their keys migrate to
 Bitwarden Secrets Manager in future.
 
+**Real gap in the first pass of this decision, caught and closed the same day:** the
+initial edit never actually named Bitwarden Secrets Manager itself in `environment` — the
+"Secrets management" context slot was left at its default "None configured," which the
+classifier treats as untrusted by default. That's the literal thing that started this
+whole investigation (Hailey's blocked `bws secret get`), and it went unfixed through the
+entire first round of changes above. Added after the fact, same exact-intent mechanic:
+a `Secrets management` entry naming `bws`, the account split (Alexia write/custodian,
+Hailey/Callie/Aphrodite shared read, netctrl's own separate read), and that reading a
+secret with those credentials is routine here, not exfiltration.
+
 **What got cut/kept:** `acceptEdits` ("Edit automatically") was considered as a
 lighter-touch alternative to full Manual mode — rejected because it only auto-approves
 file edits specifically; it would have done nothing for the Bitwarden `bws` read that

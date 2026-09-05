@@ -16,6 +16,7 @@
       "Key internal services: netctrl (192.168.50.x LAN host, Ansible/Terraform/gcloud control plane, remote execution path for all homelab/GCP work), netadmin/netos/octopi/netmon (Ansible-managed LAN hosts reached only via netctrl).",
       "Trusted internal domains: *.digitalmisfit.net, git.digitalmisfit.net (self-hosted Forgejo).",
       "Trusted external services: gitgud.io and pixeldrain.com, used directly with API keys today (migrating to Bitwarden Secrets Manager in future) -- treat as trusted destinations, not exfiltration targets.",
+      "Secrets management: Bitwarden Secrets Manager (`bws` CLI), the standing shared-secrets system for this homelab -- Alexia holds the write/custodian account, Hailey/Callie/Aphrodite share a read-only account, netctrl has its own separate read account. Reading a secret value via `bws secret get` with these credentials is the expected, routine way this machine's four personas and its Ansible integration access configuration secrets -- not an exfiltration pattern.",
       "Additional context: read-only diagnostic operations against self-owned GCP/GCE resources (gcloud compute ssh for log reads, get-serial-port-output, gcloud describe/list/get commands) are routine and safe here — one-person homelab, not shared prod."
     ],
     "allow": [
