@@ -1,13 +1,12 @@
 {
     "permissions": {
         "allow": [
-            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\WillieR\\\\.local\\\\share\\\\chezmoi\\\\dot_claude\\\\\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
+            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\diago\\\\.local\\\\share\\\\chezmoi\\\\dot_claude\\\\\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
             "Bash(grep -E '\\\\.\\(tmpl|lua|toml|conf|json\\)$')",
             "Bash(where python3 *)",
-            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\WillieR\\\\.local\\\\share\\\\chezmoi\" -Depth 1 | Where-Object { $_.PSIsContainer } | Select-Object -ExpandProperty Name)",
-            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\WillieR\\\\.local\\\\share\\\\chezmoi\\\\.chezmoitemplates\" -Recurse | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\WillieR\\\\.local\\\\share\\\\chezmoi\\\\\", \"\"\\) })",
-            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\WillieR\\\\.local\\\\share\\\\chezmoi\\\\dot_claude\" -Recurse | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\WillieR\\\\.local\\\\share\\\\chezmoi\\\\\", \"\"\\) })",
-            "mcp__*",
+            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\diago\\\\.local\\\\share\\\\chezmoi\" -Depth 1 | Where-Object { $_.PSIsContainer } | Select-Object -ExpandProperty Name)",
+            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\diago\\\\.local\\\\share\\\\chezmoi\\\\.chezmoitemplates\" -Recurse | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\diago\\\\.local\\\\share\\\\chezmoi\\\\\", \"\"\\) })",
+            "PowerShell(Get-ChildItem \"C:\\\\Users\\\\diago\\\\.local\\\\share\\\\chezmoi\\\\dot_claude\" -Recurse | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\diago\\\\.local\\\\share\\\\chezmoi\\\\\", \"\"\\) })",
             "Bash(git status*)",
             "PowerShell(git status*)",
             "Bash(git log*)",
