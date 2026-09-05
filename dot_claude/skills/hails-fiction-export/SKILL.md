@@ -18,10 +18,13 @@ boundaries, dedup) to make it repeatable without re-deriving the design each tim
 - **Finds and exports fiction content that already happened in a real session.**
   It never generates, invents, or embellishes anything — every exported line is a
   verbatim copy of something a real turn actually said.
-- **Captures the lead-up, not just the explicit tail** — per `x-lifestyle-research`'s
-  own README rule (added 2026-09-01, BinaryMisfit's real usage note): a scene's
-  usefulness comes from the whole arc. A fiction beat's boundaries are the whole
-  contiguous run of in-character turns, not just the most explicit sentence in it.
+- **Captures the whole session, not just the explicit parts** — per
+  `x-lifestyle-research`'s own README rule (added 2026-09-01, BinaryMisfit's real usage
+  note) and per ADR-0006 (2026-09-05): a scene's usefulness comes from the whole arc, and
+  this skill no longer trusts itself to guess where that arc's edges are before anyone's
+  read the full thing. It classifies every turn and hands the complete, ordered result to
+  `hails-fiction-import`, which decides scene boundaries with the whole session already
+  in hand.
 - **Never writes into `x-lifestyle-research` directly.** Output lands in
   `~/.claude/fiction-export-staging/` as a staging drop — a human moves it into
   the actual research repo afterward, per that repo's own review/rewrite pass.
@@ -127,7 +130,22 @@ already-seen one) is a real, checkable signal that a replay segment exists;
 it is never license to stop reading once spotted, since the replay's own end
 boundary isn't self-announcing.
 
-## Step 2 — What counts as fiction (the actual judgment call)
+## Rewrite in progress per ADR-0006 (2026-09-05)
+
+**This skill no longer decides scene boundaries at export time — that judgment moved to
+`hails-fiction-import`, which has the full transcript in hand rather than a heuristic
+guessing where an arc starts and ends before anyone's read it.** Real incident that forced
+this: an arc-boundary heuristic scoped a real 86-minute, 221-turn session down to a 7-second
+closing exchange, silently — nobody would have caught it without checking the exported
+file's own timestamps against the source session by hand. See
+`secretary-pool`'s `docs/fiction-pipeline-issues-register.md` (PIPE-1) and
+`docs/adr/0006-persona-owned-fiction-pipeline.md` for the full incident and the design
+decision. Steps 2-3 below are rewritten to match; **`scripts/find-sessions.js` itself still
+needs a matching code update to actually enforce whole-session capture — this SKILL.md
+rewrite is the spec, not yet a claim that the script enforces it.** Treat any run of this
+skill before that script update lands as still exposed to the old per-arc scoping risk.
+
+## Step 2 — What counts as fiction (per-turn classification only — no boundary judgment)
 
 A turn is **fiction** when it's in-character narration, dialogue, or a scene beat
 — the persona speaking/acting as her character, or the user's own message written
@@ -150,22 +168,16 @@ it obviously passes the quoted-as-story test. The question is never "does this
 turn mention something real," it's "is this turn *written* as the character."
 Content about reality; voice still fiction — include it.
 
-**Find the whole arc, not isolated lines.** Once a fiction turn is found, walk
-backward and forward from it:
-- **Backward**, while consecutive prior turns are still fiction-flavored (the
-  lead-up — tone shifting into scene, a narrated moment building toward
-  something) — this is the part most likely to get wrongly trimmed if only the
-  "explicit" turns are captured, and it's explicitly what the destination repo's
-  own README asks for.
-- **Forward**, the same way, until the conversation returns to plain technical
-  content or the session ends.
-- A single real-work message in the middle of an otherwise fictional run is a
-  real boundary — end the arc there. This project's own personas already keep
-  that distinction sharp (never blending a real ask and an in-scene one in a
-  single message) — trust that same boundary here rather than trying to stitch
-  across it.
+**No arc-boundary walking here anymore — that was the bug.** The old version of this
+step had export itself walk backward/forward from a found fiction turn to decide where
+"the arc" started and stopped, trimming everything outside that guessed window. That
+judgment call, made before anyone had read the full session, is exactly what silently
+reduced a real 86-minute/221-turn session to a 7-second exported sliver (PIPE-1). This
+skill's job now stops at classifying each turn — fiction or work — not deciding which
+contiguous stretch of fiction "counts" as one scene. That decision moves to
+`hails-fiction-import`, which does it with the complete session already in hand.
 
-**Every real-work exclusion inside an arc gets an explicit inline marker —
+**Every real-work stretch gets an explicit inline marker in place, never a silent cut —**
 mandatory, not a nice-to-have.** Confirmed live (2026-09-03), auditing every
 file in `raw/` against its own source transcript: files that marked their
 exclusions (`three-times-he-said.md`'s own `[Real-work gap: ...]` notes) were
@@ -183,27 +195,32 @@ Drop this in place of the excluded turn(s), inline, at the point they'd have
 sat — never just silently close the gap between two fiction turns and let a
 future reader assume nothing was ever there.
 
-One session can contain multiple, unrelated arcs — export each as its own file.
+**One session exports as exactly one staged file, whole — never split into per-arc
+files here.** However many distinct scenes a session turns out to contain, and wherever
+their real boundaries actually are, is `hails-fiction-import`'s call to make once it's
+looking at the complete thing. Export's job ends at producing one complete, classified,
+ordered record of the entire session.
 
 ## Step 3 — Export format
 
-Mirror `x-lifestyle-research`'s existing shape (`raw/<persona>/YYYY-MM-DD-<slug>.md`),
-staged instead of committed:
+Staged, not committed, one file per session:
 
 ```
-~/.claude/fiction-export-staging/<Persona>/<YYYY-MM-DD>-<slug>.md
+~/.claude/fiction-export-staging/<Persona>/<YYYY-MM-DD>-session-<short-session-id>.md
 ```
 
 - `<Persona>` — exactly as resolved by the discovery script (`Aphrodite`, `Hailey`,
   `Alexia`, `Callie`).
-- `<YYYY-MM-DD>` — the arc's own start timestamp, converted to SAST, not the
-  export run's own date.
-- `<slug>` — a short kebab-case phrase drawn from the scene itself, not a generic
-  label — same convention as the real examples already in that repo (e.g.
-  `the-last-door-on-the-left`).
+- `<YYYY-MM-DD>` — the session's own start timestamp, converted to SAST.
+- `<short-session-id>` — first 8 characters of the session UUID, enough to disambiguate
+  multiple sessions on the same day without needing a scene-derived slug this step no
+  longer has any business inventing (it doesn't know yet which scene, if any, is "the"
+  one — that's import's call).
 
-File content: a short header, then the raw exchange verbatim, speaker-labeled,
-nothing paraphrased or trimmed:
+File content: a short header, then every turn of the session in order, verbatim,
+speaker-labeled, real-work stretches marked inline per the format above — nothing
+paraphrased, nothing trimmed, nothing scoped out except what the inline markers say
+was scoped out and why:
 
 ```markdown
 ---
@@ -211,8 +228,8 @@ persona: Aphrodite
 worktree: d:\source\binary-dotfiles
 session_id: 15ebb16a-d135-4f93-a4b8-98f8f7af0a0c
 session_file: ~/.claude/projects/d--Source-binary-dotfiles/15ebb16a-....jsonl
-arc_start: 2026-09-02T06:24:27.281Z
-arc_end: 2026-09-02T06:28:14.025Z
+session_start: 2026-09-02T06:16:00.000Z
+session_end: 2026-09-02T11:01:00.000Z
 exported_by: hails-fiction-export skill
 exported_at: <now, ISO>
 ---
@@ -226,6 +243,10 @@ exported_at: <now, ISO>
 <verbatim>
 
 ...
+
+**[Real-work gap: ...]**
+
+...
 ```
 
 The frontmatter is what satisfies "linked to the worktree and persona that session
@@ -233,14 +254,18 @@ is pinned to" — worktree path, session ID, and file path together are enough t
 trace any exported scene back to its exact source later, even after the original
 session is long gone.
 
-**`session_id`, `arc_start`, and `arc_end` are not optional, ever, for exactly this
-reason: they're what makes a file auditable later without archaeology.** Confirmed
-directly, 2026-09-03: a full audit of every file in `raw/` took minutes per file
-for the 16 that carried this frontmatter (look up the session, extract the arc
-window, compare) and real manual tracing — grepping for a distinctive phrase
-across every project's transcripts, reading thousands of lines by hand — for the
-4 older files that predate this convention. Never skip this to save a line of
-metadata; it's the cheapest insurance this format has.
+**`session_id`, `session_start`, and `session_end` are not optional, ever, for exactly
+this reason: they're what makes a file auditable later without archaeology.** Confirmed
+directly, 2026-09-03 (under the old per-arc convention, `arc_start`/`arc_end`): a full
+audit of every file in `raw/` took minutes per file for the 16 that carried this
+frontmatter (look up the session, extract the window, compare) and real manual tracing
+— grepping for a distinctive phrase across every project's transcripts, reading
+thousands of lines by hand — for the 4 older files that predate this convention. Never
+skip this to save a line of metadata; it's the cheapest insurance this format has.
+**`session_start`/`session_end` cover the whole session, not a guessed arc — this is
+precisely the field that would have caught PIPE-1 immediately (a 7-second window next
+to a session actually spanning 86 minutes is instantly visibly wrong), instead of
+requiring someone to notice by hand.**
 
 ## Step 4 — Mark exported
 
@@ -258,7 +283,8 @@ so explicitly; don't offer to skip that check silently either way.
 ## Step 5 — Report back
 
 Tell the user what was found and where it landed: which sessions were scanned, how
-many arcs were exported per persona, the actual `~/.claude/fiction-export-staging/...`
+many sessions were exported per persona (one staged file each, whole — scene-count is
+import's finding to report, not this skill's), the actual `~/.claude/fiction-export-staging/...`
 paths, and anything skipped because it was already exported. This is staging, not
 the archive — say so plainly, so nobody mistakes a staged file for the real,
 durable copy.

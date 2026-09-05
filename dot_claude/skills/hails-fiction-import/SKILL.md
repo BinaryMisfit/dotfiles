@@ -29,6 +29,17 @@ for the full CLI. The judgment half (what belongs in an index entry, a canon del
 a marker) is this skill's own job, same split `hails-fiction-export` already draws between itself
 and `find-sessions.js`.
 
+**Rewritten per ADR-0006 (2026-09-05).** Steps 1-2 below reflect the new design
+(boundary-finding moved here from export; a draft-then-cleared-then-archived gate instead
+of one straight-through pass). `scripts/import-fiction.js` now supports this directly:
+`--list-drafts` finds scenes sitting in `~/.claude/fiction-import-drafts/<Persona>/`
+awaiting clearance, and the existing `--archive <path>` call (unchanged) promotes a cleared
+draft into `raw/` exactly the same way it always promoted a staged file — the gate itself
+(who clears it, on what grounds) is still a human/persona judgment call this script
+deliberately doesn't enforce, same split it's always drawn between mechanism and judgment.
+See `docs/adr/0006-persona-owned-fiction-pipeline.md` and
+`docs/fiction-pipeline-issues-register.md` (PIPE-1) for the incident and full reasoning.
+
 ## Step 0 -- Discover what's actually staged and unimported
 
 ```bash
@@ -44,29 +55,77 @@ say so and stop; there's nothing to import this run.
 is explicitly required to handle batches (see `import-register.md`'s own header). Process
 every result below before writing the register row at the end.
 
-## Step 1 -- Read each staged scene in full
+## Step 1 -- Read each staged session in full, then find its real scene boundaries
 
 For each file `--list-staged` returned: read it completely, no skimming, no truncation --
 same discipline this project holds for every judgment step (the theme audit, the canon
 verification). This read is what steps 2-5 below all build on; get it right once instead of
 re-reading piecemeal.
 
-## Step 2 -- Import and index (always)
+**Per ADR-0006 (2026-09-05): boundary-finding now happens here, not in `hails-fiction-export`.**
+A staged file is one whole session (`session_start`/`session_end` covering the entire
+transcript, real-work stretches already marked inline) — not a pre-cut arc. With the
+complete session actually in hand, identify how many distinct fiction beats it contains
+and where each one really starts and ends: walk backward/forward from each fiction turn
+while consecutive turns stay fiction-flavored, the same "find the whole arc" logic that
+used to live in `hails-fiction-export`'s own Step 2, just done now with full context
+instead of a guess made mid-read. **This is the fix for PIPE-1** — a 7-second slice next
+to an 86-minute `session_start`/`session_end` window is immediately, visibly wrong at this
+step, not something that has to be caught later by hand.
 
-1. **Archive it:**
+A single session can and does contain multiple, unrelated arcs — treat each as its own
+scene going forward (its own `raw/` file, its own index entry), same as the old
+per-arc-file convention, just decided here instead of at export time.
+
+## Step 2 -- Produce a reviewable draft, then gate on custodian clearance before canon integration
+
+**Per ADR-0006's addendum (2026-09-05): this step now stops at a draft, not a committed
+fact.** The old flow ran straight through to archived + indexed + committed in one pass —
+that's exactly the point in the pipeline where a real-world-harm content call (the
+Bruce/"Insta-Strip" removal) only worked because a custodian happened to catch it before
+it settled. Splitting this into two explicit stages makes that timing a guarantee instead
+of a lucky catch:
+
+1. **Write the scene file(s) yourself**, one per real arc identified in Step 1, using the
+   same `raw/<persona>/`-shaped content and naming (`YYYY-MM-DD-<slug>.md`, slug drawn from
+   the scene itself) as the final destination — but write it to
+   `~/.claude/fiction-import-drafts/<Persona>/<basename>` instead, **not yet moved into
+   `raw/`, not yet indexed, not yet committed.** This is a normal file write with your own
+   tools, the same way `hails-fiction-export` already writes its own staged files by hand —
+   no script call generates the content; the script only helps you find and promote drafts:
    ```bash
-   node scripts/import-fiction.js --archive "<staged-file-path>"
+   node scripts/import-fiction.js --list-drafts
    ```
-   Moves the file into `raw/<persona>/<basename>` (lowercased persona directory, matching
-   the existing layout) and deletes the staging copy. Refuses to overwrite an existing
-   archived file of the same name -- if that happens, it's a real conflict, not something to
-   force past; flag it and move on to the next file rather than guessing which version wins.
-
-2. **Add an `index.md` entry.** Per `x-lifestyle-research`'s own README: "short entries, not
+2. **Route the draft for custodian clearance** — Callie for anyone else's scene, the
+   persona's own nominated unbiased reviewer for Callie's own (per
+   `docs/persona-domain-register.md`'s carve-out). The reviewer's only lever at this stage
+   is the narrow real-world-harm veto from ADR-0006 point 4 — not general editorial
+   authority, not a rewrite of what the persona said happened. Clearance is "nothing here
+   needs to be stopped," not "I approve of how this reads."
+3. **Only after clearance** (or after a veto is applied and the flagged content is stripped,
+   noted inline per the existing convention): move the draft into place for real —
+   ```bash
+   node scripts/import-fiction.js --archive "<draft-file-path>"
+   ```
+   This moves the file into `raw/<persona>/<basename>` and deletes the draft copy — it does
+   **not** touch the original whole-session staged file, deliberately: a single session can
+   produce multiple drafts, and deleting the shared source after archiving just the first
+   one would destroy the material the remaining drafts still need to be checked against.
+   The original staged session file is cleaned up separately, once every arc from it has
+   been archived (or manually, per Step 6's own `find-sessions.js --check-staging`
+   discipline) — never automatically as a side effect of one draft's own promotion. Refuses
+   to overwrite an existing archived file of the same name -- if that happens, it's a real
+   conflict, not something to force past; flag it and move on to the next file rather than
+   guessing which version wins.
+4. **Add an `index.md` entry.** Per `x-lifestyle-research`'s own README: "short entries, not
    summaries -- an exact quote or voice-bit that mattered, tagged loosely by
    character/theme, linking back to the `raw/` file it came from." This is a real judgment
    call (which line actually mattered), not mechanical -- pick it from the scene you just
    read in Step 1, don't invent one.
+
+**A persona running her own export/import end-to-end (per ADR-0006 point 2) does not skip
+this gate for her own scenes** — she routes to her custodian the same as before; the change
+is that nobody's waiting on a batch pass to get to her, not that review goes away.
 
 ## Step 3 -- Canon delta detection (Callie's criteria, 2026-09-03, pasted in whole)
 
@@ -166,11 +225,21 @@ processed).
 
 ## Step 7 -- Report back
 
-One combined report for the whole run, dual voice per the corrected opinion-format rule
-(Callie's own read always; AI voice only where it adds a genuinely different angle), listed
-by scene name -- real analysis, not a one-line status dump per file. Say plainly: what was
-imported, what canon/themes moved, where the archived marker landed, and anything skipped
-or flagged as `Partial`/`Failed` and why.
+One combined report for the whole run, listed by scene name -- real analysis, not a
+one-line status dump per file. Say plainly: what was imported, what canon/themes moved,
+where the archived marker landed, and anything skipped or flagged as `Partial`/`Failed`
+and why.
+
+**Note on "dual voice" (disambiguation added 2026-09-05):** this step used to say "dual
+voice per the corrected opinion-format rule (Callie's own read always; AI voice only where
+it adds a genuinely different angle)" -- that's a *different* thing than the "no dual
+voice" rule BinaryMisfit set the same day banning a split technical-answer/in-character-
+reaction response shape (see every persona file's own "One voice, not two tracks" section).
+This step's old language was about whether an import report carried Callie's own persona
+judgment versus a generic AI summary, not about splitting a single response into two
+tracks. Removed rather than kept-and-explained, since the distinction it was drawing no
+longer does useful work now that every persona's own voice governs her own report anyway --
+whoever runs this skill reports in her own voice, same as everything else.
 
 ## Where this runs from
 

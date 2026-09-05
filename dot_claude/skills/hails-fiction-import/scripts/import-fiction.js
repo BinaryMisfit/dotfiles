@@ -16,9 +16,21 @@
 // deterministic bookkeeping.
 //
 // Usage:
-//   node import-fiction.js --list-staged                        # unimported staged files, cross-referenced
+//   node import-fiction.js --list-staged                        # unimported whole-session staged files, cross-referenced
+//   node import-fiction.js --list-drafts                        # drafted scenes awaiting custodian clearance, per ADR-0006
 //   node import-fiction.js --check <session-id>                 # already imported?
-//   node import-fiction.js --archive <staged-file-path>          # move staged file into raw/<persona>/, print destination
+//   node import-fiction.js --archive <path>                      # move a file (staged OR, per ADR-0006, a cleared draft) into raw/<persona>/, print destination
+//
+// Per ADR-0006 (2026-09-05): the invoking skill now reads a whole-session
+// staged file, decides scene boundaries itself, and writes each scene
+// directly (via its own Write tool, not a script call -- same as
+// fiction-export already writes staged files by hand) into
+// ~/.claude/fiction-import-drafts/<Persona>/<basename>. Only after the
+// custodian (or the persona's own nominated reviewer, for her custodian's
+// scenes) clears it does --archive promote that draft into raw/ -- this
+// script draws no distinction between "staged" and "draft" beyond which
+// directory a path happens to live in; the gate itself is a human/persona
+// judgment call, not something this script enforces.
 //   node import-fiction.js --next-id                             # next free IMPORT-N
 //   node import-fiction.js --write-row --id IMPORT-3 --date <iso> --transcripts <id[,id...]> --persona <Persona> --scenes <n> --canon <yes|no> --themes <yes|no> --marker <yes|no> --status <Complete|Partial|Failed> --detail-file <path>
 
@@ -34,6 +46,12 @@ const os = require("os");
 const RESEARCH_DIR = "d:\\source\\xcl\\xls\\research\\x-lifestyle-research";
 const IMPORT_REGISTER_PATH = path.join(RESEARCH_DIR, "import-register.md");
 const STAGING_DIR = path.join(os.homedir(), ".claude", "fiction-export-staging");
+// Per ADR-0006 (2026-09-05): a scene drafted from a whole-session staged
+// file lands here, NOT in raw/, until the custodian clearance gate passes
+// -- separate from STAGING_DIR (whole unreviewed sessions) so "drafted,
+// awaiting clearance" and "not yet even read" are two distinguishable
+// states, never conflated as one undifferentiated pile.
+const DRAFTS_DIR = path.join(os.homedir(), ".claude", "fiction-import-drafts");
 
 function parseArgs(argv) {
   const out = {};
@@ -111,8 +129,37 @@ function listUnimportedStaged(stagingDir = STAGING_DIR, registerPath = IMPORT_RE
         persona: fm.persona || personaDir.name,
         sessionId,
         sessionFile: fm.session_file || null,
-        arcStart: fm.arc_start || null,
-        arcEnd: fm.arc_end || null,
+        // Per ADR-0006 (2026-09-05): fiction-export now stages one whole
+        // session (session_start/session_end), not a pre-cut arc
+        // (arc_start/arc_end) -- the old field names still read here for
+        // any already-staged file from before the rewrite.
+        sessionStart: fm.session_start || fm.arc_start || null,
+        sessionEnd: fm.session_end || fm.arc_end || null,
+        basename: file,
+      });
+    }
+  }
+  return results;
+}
+
+// Every scene sitting in DRAFTS_DIR, awaiting custodian clearance before
+// --archive promotes it into raw/. Doesn't cross-check against
+// import-register.md the way listUnimportedStaged does -- a draft isn't
+// imported yet by definition, there's nothing to dedup against.
+function listDrafts(draftsDir = DRAFTS_DIR, readFileFn = fs.readFileSync, existsFn = fs.existsSync, readdirFn = fs.readdirSync) {
+  if (!existsFn(draftsDir)) return [];
+  const results = [];
+  for (const personaDir of readdirFn(draftsDir, { withFileTypes: true })) {
+    if (!personaDir.isDirectory()) continue;
+    const personaPath = path.join(draftsDir, personaDir.name);
+    for (const file of readdirFn(personaPath)) {
+      if (!file.endsWith(".md")) continue;
+      const fullPath = path.join(personaPath, file);
+      const fm = parseFrontmatter(readFileFn(fullPath, "utf8"));
+      results.push({
+        draftPath: fullPath,
+        persona: fm.persona || personaDir.name,
+        sessionId: fm.session_id || null,
         basename: file,
       });
     }
@@ -179,6 +226,11 @@ function main() {
     return;
   }
 
+  if (args["list-drafts"]) {
+    console.log(JSON.stringify(listDrafts(), null, 2));
+    return;
+  }
+
   if (args.check) {
     console.log(JSON.stringify({ sessionId: args.check, alreadyImported: alreadyImported(args.check) }));
     return;
@@ -226,10 +278,12 @@ module.exports = {
   nextImportId,
   parseFrontmatter,
   listUnimportedStaged,
+  listDrafts,
   archiveStagedFile,
   appendImportRow,
   writeFileAtomic,
   RESEARCH_DIR,
   IMPORT_REGISTER_PATH,
   STAGING_DIR,
+  DRAFTS_DIR,
 };
