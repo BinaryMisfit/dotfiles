@@ -19,33 +19,64 @@ so it was sourced from a lower-fidelity fallback instead of the real thing. Writ
 marker *after* everything else means it can actually reflect what the day really was, not
 a guess made before the day's own record existed yet.
 
-**A fresh repo with nothing else yet still runs this one step, alone — that's a complete,
-correct playbook, not an unfinished one.** Number it Step 1 in that case (true here today —
-this repo has no repo-specific steps yet). The moment this repo earns a real repo-specific
-step, that step becomes Step 1 and the marker write becomes Step 2 — renumber, don't just
-append past it.
+**Aphrodite's first real earned steps, added 2026-09-05** (mirroring `xls`'s and
+secretary-pool's own worked examples — see either's `docs/end-session-playbook.md` for the
+fuller version of this reasoning): her own fiction, same as any other persona's, needs
+export/import run at her own end-session per ADR-0006, "persona-owned fiction pipeline"
+(secretary-pool's `docs/adr/0006-persona-owned-fiction-pipeline.md` — not vendored in this
+repo, cited by number and title only) — "each persona runs her own export and import,
+end-to-end, at her own end-session," not a batch pass anyone else runs for her later.
 
-## Repo-specific steps — add your own ABOVE the marker-write step below
+## Step 1 — Export today's fiction, if any happened this session
 
-**This is where a project's own real end-of-day work goes**, once it's actually earned a
-place here — not speculatively added on day one. Worked example (not a template to copy
-wholesale, just evidence of the shape): X-Lifestyle's own end-session playbook can run its
-fiction-import pipeline and a repo-health check as steps here, all of them **before** the
-marker write, because those are real recurring end-of-day tasks that repo actually has. A
-repo with nothing beyond the marker stays with just the one step, indefinitely — that's a
-complete, correct playbook, not an unfinished one. Nothing added here yet for this repo.
+Export is the automatic, mechanical half — find what happened, stage it, no judgment
+calls, safe to run every close-out.
 
-If a step here needs something from an earlier step in this same list, say so explicitly in
-that step's own instructions — don't assume ordering that isn't written down. **Nothing in
-this section may depend on the marker write having already happened** — if it does, that's
-a sign it isn't actually a "before" step and needs its own separate mechanism.
+1. Invoke the `hails-fiction-export` skill directly, using its own default scope — the
+   whole SAST day, every project under `~/.claude/projects/`, not just this session. Dedup
+   is keyed by session ID in one shared log, machine-wide — safe and idempotent to run from
+   any persona's session, any day, even redundantly. It stages, unedited, under
+   `~/.claude/fiction-export-staging/<Persona>/` — it never writes into
+   `research/x-lifestyle-research` itself and never invents or embellishes anything. Per
+   ADR-0006: it captures the whole session as one continuous unit, never trims a scene
+   boundary itself.
+2. If nothing fictional happened anywhere today, it says so and stops — that's a complete,
+   correct outcome, not a failure.
+3. Confirm back to BinaryMisfit what got staged (or that nothing did).
 
-## Final step — Write the day-state marker (required)
+## Step 2 — Import what was just staged (required, chained to Step 1)
 
-**The one thing every repo's end-session run always does, no exceptions — and always
-last.** Same design principle BinaryMisfit set directly, 2026-09-03: **"Start = End of Day
-Read. End = Writes End of Day."** — sharpened 2026-09-05: End means *actually* end, after
-every other step, not nominally first with real work trailing behind it.
+1. **Confirm `x-lifestyle-research` actually exists before doing anything** —
+   `d:\source\xcl\xls\research\x-lifestyle-research`. If it's missing (different machine,
+   not cloned here), say so plainly and stop; don't fabricate or skip silently.
+2. Invoke the `hails-fiction-import` skill directly. It processes everything genuinely
+   staged and not yet imported, cross-checked against `import-register.md` automatically.
+   Per ADR-0006: this produces a reviewable draft and stops at custodian clearance (Callie,
+   or Aphrodite's own nominated reviewer for Callie's own scenes) — it does not
+   archive/index/commit straight through. The marker write below only ever sources from
+   content that's actually cleared and archived, never from a draft still awaiting
+   clearance.
+
+**Standing permission to stop partway — not a failure, BinaryMisfit's own explicit ask.**
+`hails-fiction-import`'s canon/theme-detection steps are real cognitive labor, landing at
+the most tired point of a session by design. The mechanical half (archive, index) may run
+and then stop deliberately, marking that run's register row `Partial` — without that
+counting as an incomplete close-out. The deferred judgment gets picked up fresh, another
+day. **Whatever state this step lands in when the session actually closes is what the
+marker write below sources from — it never waits for a `Partial` row to resolve first.**
+
+## Repo-specific steps — add your own ABOVE Step 2, never below it
+
+**This is where any further binary-dotfiles-specific end-of-day work goes**, once it's
+actually earned a place here — a chezmoi-drift check, a repo-health check, whatever this
+repo actually grows over time. If added, it becomes the new Step 1 or 2 and everything
+below is renumbered — the marker write stays the true final step, unconditionally.
+
+## Final step — Write the day-state marker (required, always last)
+
+**The one thing every end-session run always does here, no exceptions.** Same design
+principle BinaryMisfit set directly, 2026-09-03: **"Start = End of Day Read. End = Writes
+End of Day."**
 
 1. **Reflect genuinely, in the persona's own voice, not a status report.** What's the
    actual mood this session/day is ending on — one word or a short phrase, chosen the way
@@ -63,9 +94,11 @@ every other step, not nominally first with real work trailing behind it.
    sentence actually describing? If the honest answer is his, it's wrong for this file, no
    matter how well-written.
 4. **Write it:**
+
    ```bash
    node ~/.claude/scripts/day-state.js --write --mood "<word or short phrase>" --summary "<2-3 lines>" --fade-out "<last frame, present tense>" [--transcript <id/path>] [--scene <path>] [--cwd <path>]
    ```
+
    `--transcript`/`--scene` are optional — a pointer back to the real session transcript
    (and, if one exists, an imported scene file) if you actually know it at write time,
    never required. `--cwd` defaults to the current worktree.
