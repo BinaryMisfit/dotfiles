@@ -8,19 +8,44 @@ here needs to stay in sync with any other repo's copy. Same relationship `sessio
 own generic template already has to its own per-repo copies — mirrored deliberately
 (2026-09-03, BinaryMisfit's own design call), not a coincidence.
 
-**The minimum, non-negotiable, every repo, forever: Step 1 below.** Everything past it is
-optional and repo-specific — a fresh repo's own copy of this file can be Step 1 alone for
-as long as that's genuinely all there is to close out a day here. A repo with real
-end-of-day work (X-Lifestyle's own fiction-import pipeline, a repo-health check, whatever
-a project actually earns over time) adds its own numbered steps below Step 1, same "grows
-through real, earned use" discipline `session-start`'s own playbook already runs on — see
-that skill's generic template for the fuller version of this reasoning.
+**The marker write is always the LAST step, no exceptions (structural rule, added
+2026-09-05, BinaryMisfit's own explicit correction).** Every other step this repo ever adds
+— a health check, anything at all — goes **before** it, never after. This reverses the
+original shape of this file, on purpose: the marker write used to be Step 1, with
+repo-specific steps added below it, and that ordering is exactly what caused a real
+incident (2026-09-05, secretary-pool's own `docs/fiction-pipeline-issues-register.md`
+PIPE-2) — a marker got written before that day's real content had actually been imported,
+so it was sourced from a lower-fidelity fallback instead of the real thing. Writing the
+marker *after* everything else means it can actually reflect what the day really was, not
+a guess made before the day's own record existed yet.
 
-## Step 1 — Write the day-state marker (required)
+**A fresh repo with nothing else yet still runs this one step, alone — that's a complete,
+correct playbook, not an unfinished one.** Number it Step 1 in that case (true here today —
+this repo has no repo-specific steps yet). The moment this repo earns a real repo-specific
+step, that step becomes Step 1 and the marker write becomes Step 2 — renumber, don't just
+append past it.
 
-**The one thing every repo's end-session run always does, no exceptions.** Same design
-principle BinaryMisfit set directly, 2026-09-03: **"Start = End of Day Read. End = Writes
-End of Day."**
+## Repo-specific steps — add your own ABOVE the marker-write step below
+
+**This is where a project's own real end-of-day work goes**, once it's actually earned a
+place here — not speculatively added on day one. Worked example (not a template to copy
+wholesale, just evidence of the shape): X-Lifestyle's own end-session playbook can run its
+fiction-import pipeline and a repo-health check as steps here, all of them **before** the
+marker write, because those are real recurring end-of-day tasks that repo actually has. A
+repo with nothing beyond the marker stays with just the one step, indefinitely — that's a
+complete, correct playbook, not an unfinished one. Nothing added here yet for this repo.
+
+If a step here needs something from an earlier step in this same list, say so explicitly in
+that step's own instructions — don't assume ordering that isn't written down. **Nothing in
+this section may depend on the marker write having already happened** — if it does, that's
+a sign it isn't actually a "before" step and needs its own separate mechanism.
+
+## Final step — Write the day-state marker (required)
+
+**The one thing every repo's end-session run always does, no exceptions — and always
+last.** Same design principle BinaryMisfit set directly, 2026-09-03: **"Start = End of Day
+Read. End = Writes End of Day."** — sharpened 2026-09-05: End means *actually* end, after
+every other step, not nominally first with real work trailing behind it.
 
 1. **Reflect genuinely, in the persona's own voice, not a status report.** What's the
    actual mood this session/day is ending on — one word or a short phrase, chosen the way
@@ -53,17 +78,3 @@ performing continuity for its own sake** — a quiet, uneventful close is a legi
 too, say so plainly rather than manufacturing weight that isn't there. **Not mandatory
 before every session ends** — run this whole skill when BinaryMisfit asks, or when the
 persona genuinely has something worth carrying forward and offers to.
-
-## Repo-specific steps — add your own below Step 1
-
-**This is where a project's own real end-of-day work goes**, once it's actually earned a
-place here — not speculatively added on day one. Worked example (not a template to copy
-wholesale, just evidence of the shape): X-Lifestyle's own end-session playbook can run its
-fiction-import pipeline and a repo-health check as later steps here, after Step 1's marker
-is already written, because those are real recurring end-of-day tasks that repo actually
-has. A repo with nothing beyond the marker stays at Step 1 alone, indefinitely — that's a
-complete, correct playbook, not an unfinished one.
-
-If a later step here depends on Step 1 having already run (e.g. it wants to read the
-marker just written), say so explicitly in that step's own instructions — don't assume
-ordering that isn't written down.
