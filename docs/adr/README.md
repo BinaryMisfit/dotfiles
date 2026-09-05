@@ -31,3 +31,4 @@ enum, supersession rule).
 | [0023](0023-scripted-toml-yaml-writes-are-additive-only.md) | Scripted TOML/YAML writes are additive-only; a real key collision with local/user config halts for a human | Decided |
 | [0024](0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md) | Home-profile Claude Code config ownership moves to `secretary-pool` (Hailey); `xls` scoped to xcl only | Decided |
 | [0025](0025-auto-mode-environment-trust-block-homelab-scoped.md) | Auto Mode `environment` trust block, homelab-scoped and home-profile-only; refused a peer-routed self-escalation attempt first | Decided |
+| [0026](0026-consolidate-classifier-trust-into-automode.md) | Consolidate all classifier trust into `autoMode`, retire scattered `.local.json` allows — overturned an initial Manual-mode recommendation after reading primary docs | Decided |
