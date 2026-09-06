@@ -67,3 +67,33 @@ use `//c`, not `/c`, and must verify its actual effect independently (a registry
 file check) rather than trusting a zero exit code alone** — this bug produces a clean
 success signal while doing nothing. Re-ran case two's `setx` correctly on 2026-09-06;
 verified present in `HKCU\Environment` afterward, length checked, value never printed.
+
+---
+*Addendum (2026-09-06, later the same night):* Third real instance of this ADR's own
+pattern — a formatting character surviving into a captured secret, not a revoked/expired/
+wrong-token problem. `CONTEXTFORGE_ADMIN_API_TOKEN` was still failing Hermes auth (401)
+after a full reboot, which should have cleared it per the addendum above. Root-caused by
+Alexia (digital-homelab, her domain, handed to her rather than dug into here) without ever
+printing the actual secret: the stored value was wrapped in literal double quotes — first
+char `"`, last char `"`, a real JWT sitting inside them, 471 characters where the bare
+token is 469. `Authorization: Bearer "eyJ...=="` sends the quote marks as part of the
+credential, which fails signature parsing deterministically, every time, regardless of
+whether the token itself is otherwise valid. Whatever login/curl call originally captured
+this token evidently didn't strip the JSON string quotes before it got `setx`'d.
+
+**The real gap in the previous addendum's own verification step:** "length checked, value
+never printed" caught that *something* was present, but length alone doesn't catch a
+wrapping-character problem unless it's compared against the bare token's own known length
+— which wasn't done. Fixed by Alexia via `[Environment]::SetEnvironmentVariable(...,'User')`
+directly (bypasses `cmd.exe`/MSYS entirely, so it can't hit the `/c`-mangling bug above
+either), then verified live against the real server afterward, not assumed: the SSE
+endpoint returned a genuine open connection (a 401 fails fast; a stream that hangs open is
+the actual success signal for this transport) rather than a fast 401. Independently
+re-confirmed the same night, separately: first/last character and exact length checked
+again without printing the value, plus the same live endpoint check, both agreeing.
+
+**Standing rule, sharpened by this instance specifically:** verifying a re-set secret means
+checking its actual *shape* — first character, last character, exact length against a known-
+good reference — not just "a value is present, length looks roughly right." A wrapping
+character is invisible to a bare presence check and will pass every verification step that
+doesn't specifically look for it.
