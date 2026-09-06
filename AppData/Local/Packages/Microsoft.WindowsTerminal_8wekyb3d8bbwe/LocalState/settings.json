@@ -66,7 +66,7 @@
                 "commandline": "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\wt.exe new-tab -d \"D:\\Source\\_persona-fleet-test\\test-1\" -- pwsh -NoExit -Command claude ; split-pane -V --size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-3\" -- pwsh -NoExit -Command claude ; split-pane -H --size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-4\" -- pwsh -NoExit -Command claude ; move-focus left ; split-pane -H --size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-2\" -- pwsh -NoExit -Command claude",
                 "guid": "{7267ac9e-06f8-4a52-b8d3-9e6cf8bb8123}",
                 "hidden": false,
-                "name": "Persona Fleet TEST (click to launch)",
+                "name": "The Girls",
                 "tabColor": "#ff2d55"
             },
             {
