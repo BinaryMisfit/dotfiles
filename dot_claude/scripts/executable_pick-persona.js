@@ -1159,17 +1159,27 @@ function setSessionName(sessionName) {
   process.stdout.write(`Session name "${sessionName}" recorded for ${cwd} (persona: ${entry.style})${healedNote}.\n`);
 }
 
-// Pure: a dead sessionName is grounds to drop the WHOLE entry -- except an
-// entry that has never actually had a real session yet (`everOpened ===
-// false`), which only has its sessionName nulled, not removed. Returns
-// `{ entries, removed, sessionNameOnlyCleared }`. Exported for testing.
+// Pure: a dead sessionName is grounds to drop the WHOLE entry -- except a
+// forever-pinned one (`isForeverPinned`, "Perm"/"Fixed"), which only has its
+// sessionName nulled, never removed. Real incident, 2026-09-06: this used to
+// key off `everOpened` instead -- "never actually opened yet survives,
+// already-opened doesn't" -- which meant a real, human-decided Perm/Primary
+// domain binding (binary-dotfiles/Aphrodite, xcl-xls/Callie) got deleted
+// outright the moment its process wasn't live at sweep time, same as any
+// throwaway rotation-eligible entry. `everOpened` answers "has a session
+// ever attached here," not "did a human deliberately commit to this
+// binding" -- Perm is the only field that actually answers that, so it's the
+// only thing this function protects now. A non-Perm entry is always
+// realistically droppable, opened before or not -- rotation-eligible state
+// was never meant to survive its process dying. Returns `{ entries, removed,
+// sessionNameOnlyCleared }`. Exported for testing.
 function clearDeadSession(entries, sessionName) {
   const keep = [];
   const removed = [];
   const sessionNameOnlyCleared = [];
   for (const e of entries) {
     if (e.sessionName === sessionName) {
-      if (e.everOpened) {
+      if (!isForeverPinned(e)) {
         removed.push(e);
         continue;
       }
@@ -1237,17 +1247,17 @@ function sweepDeadRegistry(liveSessionNamesCsv) {
   const now = nowIso();
   for (const e of removed) {
     appendLog(now, "remove-dead-session", entryLogFields(e));
-    process.stdout.write(`Removed ${e.style}${e.nickname ? ` -- ${e.nickname}` : ""} from ${e.cwd} entirely -- dead session, already opened before, so no permanent pin survives.\n`);
+    process.stdout.write(`Removed ${e.style}${e.nickname ? ` -- ${e.nickname}` : ""} from ${e.cwd} entirely -- dead session, not forever-pinned, so nothing survives.\n`);
   }
   for (const e of sessionNameOnlyCleared) {
     appendLog(now, "clear-session-name-only", entryLogFields(e));
-    process.stdout.write(`Cleared dead session from ${e.cwd} (persona: ${e.style}) but kept the pin -- it had never actually been opened yet.\n`);
+    process.stdout.write(`Cleared dead session from ${e.cwd} (persona: ${e.style}) but kept the entry -- it's forever-pinned.\n`);
   }
 }
 
 // `node pick-persona.js --clear-session-name "<name>"` -- self-healing for
-// a dead peer, single target. REMOVES the whole entry (unless never
-// opened), same rule as sweepDeadSessions.
+// a dead peer, single target. REMOVES the whole entry (unless forever-pinned),
+// same rule as sweepDeadSessions.
 function clearSessionName(sessionName) {
   const entries = readRegistry();
   const { entries: kept, removed, sessionNameOnlyCleared } = clearDeadSession(entries, sessionName);
@@ -1259,11 +1269,11 @@ function clearSessionName(sessionName) {
   const now = nowIso();
   for (const e of removed) {
     appendLog(now, "remove-dead-session", entryLogFields(e));
-    process.stdout.write(`Removed ${e.style}${e.nickname ? ` -- ${e.nickname}` : ""} from ${e.cwd} entirely -- dead session, already opened before, so no permanent pin survives. Next session there gets a fresh pick.\n`);
+    process.stdout.write(`Removed ${e.style}${e.nickname ? ` -- ${e.nickname}` : ""} from ${e.cwd} entirely -- dead session, not forever-pinned, so nothing survives. Next session there gets a fresh pick.\n`);
   }
   for (const e of sessionNameOnlyCleared) {
     appendLog(now, "clear-session-name-only", entryLogFields(e));
-    process.stdout.write(`Cleared dead session from ${e.cwd} (persona: ${e.style}) but kept the pin -- it had never actually been opened yet.\n`);
+    process.stdout.write(`Cleared dead session from ${e.cwd} (persona: ${e.style}) but kept the entry -- it's forever-pinned.\n`);
   }
 }
 
