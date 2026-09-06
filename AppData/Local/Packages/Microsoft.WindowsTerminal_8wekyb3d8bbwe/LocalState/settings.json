@@ -10,6 +10,14 @@
                 "input": "\u001b\r"
             },
             "id": "User.sendInput.8F63D3A9"
+        },
+        {
+            "command":
+            {
+                "action": "wt",
+                "commandline": "new-tab -d \"D:\\Source\\_persona-fleet-test\\test-1\" -- pwsh -NoExit -Command claude ; split-pane -H -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-3\" -- pwsh -NoExit -Command claude ; move-focus left ; split-pane -V -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-2\" -- pwsh -NoExit -Command claude ; move-focus right ; split-pane -V -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-4\" -- pwsh -NoExit -Command claude"
+            },
+            "id": "User.personaFleetTest"
         }
     ],
     "centerOnLaunch": true,
@@ -39,6 +47,10 @@
         {
             "id": "Terminal.FindText",
             "keys": "ctrl+shift+f"
+        },
+        {
+            "id": "User.personaFleetTest",
+            "keys": "ctrl+shift+alt+t"
         }
     ],
     "newTabMenu":
