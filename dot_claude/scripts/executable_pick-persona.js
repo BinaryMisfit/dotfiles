@@ -14,7 +14,7 @@
 // (`claude-global/output-styles/` -> `~/.claude/output-styles/`,
 // `claude-global/skills/hails-persona/` -> `~/.claude/skills/hails-persona/`,
 // `claude-global/scripts/` -> `~/.claude/scripts/`), and every other global
-// tool this repo owns (hails-session-start, hails-scratchpad-check, hails-worktree-sync-check,
+// tool this repo owns (hails-session-start, hails-scratchpad-check,
 // the audits, the registers convention) lives under the same tree, so the
 // sync script's mapping is a straight copy, no renaming. Deploy via
 // `npm run sync-global-claude-config` from the secretary-pool repo root

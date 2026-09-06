@@ -43,117 +43,76 @@ directly, the fixed offset to use — this project may not have a `TZ`-env-based
 compute it reliably, the same trap X-Lifestyle's own playbook hit early on, so prefer
 computing the offset by hand over trusting an unverified `TZ` variable).
 
-## Step 0.5 — Sync this worktree's branches forward (skip if this project has no worktrees)
+## Step 0 — Identity gate (added 2026-09-06, replaces the old Step 1 self-register/sweep sub-bullets)
 
-If this project uses `git worktree` for parallel work (a root/coordinator worktree plus
-one or more standing child worktrees), fetch and merge `origin/main` (or this project's
-default branch) forward into this worktree's own branch before anything else in this
-routine — a stale worktree risks silently running outdated `CLAUDE.md`/playbook
-instructions with no way to know its own guidance is wrong. A clean merge or "already up
-to date" needs only a one-line confirmation; a reported `CONFLICT` is never auto-resolved
-here, just surfaced plainly. If the root worktree also coordinates OTHER standing
-worktrees (pulling stranded content out of them, or pushing new commits back into them),
-that's real, repo-specific methodology worth its own dedicated script and playbook
-section once it's actually needed — see X-Lifestyle's own `docs/session-start-playbook.md`,
-Steps 0.5/1.4/1.4b, for the fullest worked example of this (added 2026-09-02, once that
-project's own 8-worktree setup made silent multi-day drift a real, confirmed incident).
-If this project has no worktrees at all, skip this step silently.
+**Real incident, same day:** a dead-peer sweep deleted Perm-pinned registry entries
+(fixed separately, `isForeverPinned` vs `everOpened` — see `pick-persona.js`), and the
+mismatch between what a session was actually voicing and what the registry said sat
+undetected for the better part of an hour, across three sessions, before a human caught it
+by noticing the wrong voice out loud. This step exists so that never happens silently again.
 
-## Step 1 — Persona greeting (skip if not applicable)
+Before anything else in this routine: call `ListAgents`, read this session's own name off
+its "This session is `<name>`" line, self-register it (`node ~/.claude/scripts/pick-persona.js
+--set-session-name "<name>"`), and sweep dead peers off that same call
+(`node ~/.claude/scripts/pick-persona.js --sweep-dead "<comma-separated live names>"`,
+`""` if none) — same mechanics the old Step 1 ran, just moved here since they're registry
+work, not greeting work. Skip this whole step silently if the global persona system isn't
+installed.
 
-If the global persona system (`~/.claude/scripts/pick-persona.js`) is installed on this
-machine, force whatever persona is already active for this session/worktree to actually
-open with a real, in-character greeting that states its name explicitly — a persona never
-opens unprompted on its own without an explicit trigger like this step. If no persona
-system is installed, skip this step silently; don't invent a persona.
+Then **compare this session's live persona** (`.claude/settings.local.json`'s `outputStyle`
+field) **against what the registry says for this cwd** (the entry `--set-session-name` just
+touched). Match → proceed to Step 0.5. **Mismatch → stop the entire routine here.** No
+auto-recovery for this one, ever — BinaryMisfit's own explicit call, 2026-09-06: if it's
+broken, only a human fixes it. Surface plainly (this cwd, what the registry says, what's
+actually loaded) and wait for a real `/hails-persona <name>` correction before continuing;
+don't guess, don't self-heal, don't proceed "just this once."
 
-**Force a fresh read of the persona file itself before writing that greeting (added
-2026-09-01, a real gap found live in X-Lifestyle's own copy of this routine).** A running
-session tends to stick with whatever the `SessionStart` hook injected at boot, even after
-the persona file gets edited mid-session — `Read ~/.claude/output-styles/<active-persona>.md`
-explicitly every time this step runs, don't rely on cached context from hours ago. The
-greeting is the confirmation: it should read as genuinely current, not just in-character.
-Matters most on a long-running session where the file changes mid-session and nothing else
-would ever re-trigger a re-read.
+## Step 0.5 — Full repo cleanup, including the NSFW spot check (reworked 2026-09-06, was "sync worktree branches forward")
 
-**Also self-register this session's live name here, every run (added 2026-09-01, real
-gap found live: a session that only ever ran `hails-session-start`, never a separate `/hails-persona`
-invocation, sat with no `sessionName` on file all session, unreachable by name/nickname
-from any peer).** The persona skill's own "Targeting a peer session" step 7 already states
-this belongs "at the START of any session where it hasn't been done yet" — but that
-instruction only fires when the persona skill itself gets read, which `hails-session-start`
-alone never triggers. Concretely: call `ListAgents`, read this session's own name off its
-"This session is `<name>`" line, then run `node ~/.claude/scripts/pick-persona.js
---set-session-name "<name>"` from this repo's root. Skip only if the global persona system
-isn't installed (same condition as the greeting above).
+Merge `origin/main` (or this project's default branch) forward, commit outstanding work,
+and push — on the active branch, submodules included, every session start, not just when
+worktrees are in play. BinaryMisfit's own framing: this operates a level higher than
+tracking any one worktree's own drift, so it replaces the narrower worktree-only sync this
+step used to do — nothing should ever sit stale or unpushed between sessions again,
+worktree or plain clone alike. **Retires `hails-worktree-sync-check` outright** (removed
+2026-09-06) — that skill existed only because nothing else checked drift automatically;
+BinaryMisfit's own words, it "creates a manual task I haven't had the discipline to
+perform," and this step now does the same job as an unskippable default instead of an
+on-demand chore nobody remembered to run.
 
-**Also sweep dead peer links off the SAME `ListAgents` call, every run (added 2026-09-03,
-BinaryMisfit's own call, part of that day's persona-system cleanup pass).** Every registry
-entry's `sessionName` is only ever true while a real process is alive, and nothing
-proactively notices one dying -- Claude Code has a real `SessionStart` hook but no symmetric
-exit hook, so the only way this gets noticed at all is something asking. Rather than leaving
-that entirely to `/hails-persona --sweep` run by hand (real, but easy to forget, and stale entries
-accumulate silently in the meantime), this step now runs it automatically as a free
-byproduct of the `ListAgents` call it's already making one line above: join every live
-peer's name from that same result with commas (or pass `""` if there are none), then run
-`node ~/.claude/scripts/pick-persona.js --sweep-dead "<comma-separated live names>"` from
-this repo's root. Relay its output only if it actually removed or cleared something --
-"nothing stale, nothing to report" needs no line of its own. Skip only if the global persona
-system isn't installed (same condition as the greeting above).
+**Whether "commit" means finishing a genuinely dirty working tree, or only pushing what's
+already committed: judgment call for whoever's actually running it, in the moment — not a
+fixed rule** (BinaryMisfit's own correction, 2026-09-06, replacing the earlier "treat it as
+X until told otherwise" placeholder). Still never blind `add -A` without looking at what's
+about to be committed — that discipline doesn't loosen just because the call is a judgment
+one now.
 
-## Step 1.1 — Day-state note (continuity)
+**The NSFW/persona-leak spot check (old standalone Step 3.5) runs here now, before the
+push** (moved 2026-09-06, BinaryMisfit's own call) — catching a leak before it goes out is
+the actual point, not after. If the global persona system is installed and this repo has
+its own `docs/nsfw-comment-audit-playbook.md` (bootstrapped by `hails-nsfw-comment-audit`
+on its own first run, if it hasn't run here yet), scan whatever's about to be pushed
+(message bodies + diff) against that playbook's term list and approved exception path.
+Read any hit's actual context before flagging it; a real finding gets named plainly and a
+recommendation to run the full `hails-nsfw-comment-audit` skill before pushing, not fixed
+inline here. If this repo has no `docs/nsfw-comment-audit-playbook.md` yet and no persona
+session has ever run here, skip this sub-step silently — nothing to check yet.
 
-**Deliberately NOT part of the automatic `SessionStart` hook (2026-09-03, BinaryMisfit's
-own design call).** The hook fires on EVERY session, including a one-question-and-close
-session that never runs this skill at all -- it stays fast and minimal on purpose: set the
-persona, read its file, nothing else. This skill is different: BinaryMisfit runs it, by
-hand, every real work session ("I open VS, select a repo, open the Claude tab, type
-`/hails-session-start` -- every time"), so anything with real weight -- continuity, theme, color
--- belongs here, load-bearing on a habit that's actually load-bearing, not bolted onto a
-hook that has to stay cheap for a session that might never need any of it.
+A reported `CONFLICT` on the merge is never auto-resolved here, just surfaced plainly. If
+this project has no git remote at all, skip this step silently.
 
-If the global persona system is installed, read the previous end-of-day marker for this
-worktree, if one exists, and let it genuinely inform how you open (mood, what to pick back
-up) rather than opening cold:
+## Step 1 — Run `hails-persona-refresh` (reworked 2026-09-06)
 
-```bash
-node ~/.claude/scripts/day-state.js --read
-```
-
-If nothing's there yet (day one, or the `hails-session-end` skill was never run last time), say
-nothing about it -- a missing marker is a normal, common state, not a gap to apologize for.
-
-## Step 1.2 — Draw or recall today's theme
-
-If the global persona/themes-register system is installed on this machine, draw (or recall
-today's already-drawn) theme for this persona:
-
-```bash
-node ~/.claude/scripts/theme-select.js --persona "<this persona's style name>"
-```
-
-Draws/recalls per THIS worktree (`cwd`, defaulted automatically -- no flag needed when run
-from here), not per persona style -- a real design correction, 2026-09-03, once simultaneous
-live instances of one persona stopped being theoretical. Two worktrees sharing a persona now
-draw and weight independently; `themes.md` itself is pure authored pool data, never written
-by this command.
-
-Reveal mechanism (announce it, let it surface unprompted, or keep it fully hidden) is your
-own live judgment call, per the persona/design-doc's own rules -- never announced by
-default, but always a real, honest answer if BinaryMisfit asks directly what today's theme
-is. Skip silently if the command reports nothing (no research repo present on this
-machine, or no themes exist yet for this persona) -- that's an expected, common state.
-
-## Step 1.3 — Set today's color
-
-```bash
-node ~/.claude/scripts/pick-persona.js --set-color
-```
-
-Cheap and deterministic, no judgment involved -- makes this window's title/statusbar color
-reflect the day's actual continuity (via Step 1.1's marker) instead of yesterday's, or the
-plain date-hash fallback if no marker exists yet. Safe to run even when nothing above
-found anything real to report.
+**Session-start now auto-chains into persona-refresh** (BinaryMisfit's own call,
+overriding this doc's earlier "defaulting to separate" placeholder) — every persona-
+identity step (re-register, persona-file re-read, canon-check, day-state, theme, color)
+runs here, mechanically, via that skill. What changes from running it standalone: **its own
+"report back once, tersely, in character" step is held, not printed here** — the voice
+shows up once, folded into this routine's own closing summary (Step 6/7 below), not as an
+upfront announcement before any real content exists. Dropped as the lead per BinaryMisfit's
+own call ("noise I never see, more relevant later") — the mechanics still run early (so the
+rest of this routine has fresh identity/continuity data to work with), the *telling* just
+waits. Skip if no persona system is installed.
 
 ## Step 2 — Previous day summary
 
@@ -171,19 +130,6 @@ older day's work to fill the slot.
 If this project has its own health-check mechanism — a hosted service, a CI dashboard, a
 deploy status — run it here and report only what's actually worth a line. If it doesn't,
 skip this step; don't invent a check that doesn't exist.
-
-## Step 3.5 — NSFW/persona-leak spot check (added 2026-08-28, skip if not applicable)
-
-If the global persona system is installed (see Step 1) and this repo has its own
-`docs/nsfw-comment-audit-playbook.md` (bootstrapped automatically by the standalone
-`hails-nsfw-comment-audit` skill on its own first run, if it hasn't run yet here), scan just the
-previous calendar day's commits (message bodies + diff) against that playbook's term list
-and approved exception path — this is real risk now that persona sessions can run
-explicit/flirtatious "heat" language in ANY repo, not a check specific to one project.
-Read any hit's actual context before flagging it; a real finding gets named plainly and a
-recommendation to run the full `hails-nsfw-comment-audit` skill, not fixed inline here. If this
-repo has no `docs/nsfw-comment-audit-playbook.md` yet and no persona session has ever run
-here, skip this step silently — nothing to check yet.
 
 ## Step 4 — Register/todo sweep
 
@@ -212,13 +158,34 @@ or blocked status still looks accurate given anything that's shipped or changed 
 was set. **Surface a suggested reclassification, never apply one silently** — the human
 who set the priority is the one who gets to change it.
 
-## Step 6 — Options, not a dump
+## Step 6 — Read the scratchpad (replaces the old "three options" framing, 2026-09-06)
 
-From everything still genuinely open and unblocked, present **exactly three** concrete
-candidates for what to start next, each with one line of *why this one* — not the whole
-open list.
+Look for a session-continuity scratchpad for this repo (the `hails-scratchpad-check` skill's
+own territory — a file like `docs/scratchpad-<date>-*.md`, written when a prior session
+signed off mid-thread rather than cleanly). If one exists, read it fresh — it's the closest
+thing to "what was actually still moving when the lights went out," more concrete than
+inferring intent from a register alone. If none exists, that's a normal, common state, not
+a gap — say nothing about it and move to Step 7.
 
-**Exception:** if Step 4 found no tracking doc at all, there's only one honest option,
-not three manufactured ones: *"Set up `docs/todo-register.md` (or this project's own
-equivalent) and populate it with real outstanding work."* Don't pad that out to three by
-inventing filler.
+## Step 7 — Two concrete next actions, not three manufactured options (replaces the old Step 6, 2026-09-06)
+
+BinaryMisfit's own correction: stop presenting three generated candidates and instead
+surface exactly two real, traceable things:
+
+1. **The highest-priority still-open item in the register** (from Step 4's fresh read) —
+   whatever the human-set priority field actually says is most urgent, not a re-ranking of
+   your own guessing.
+2. **Whatever Step 6's scratchpad says was started but not finished** — the last real
+   thread in motion, if the scratchpad names one. If there's no scratchpad, or it doesn't
+   point at anything unfinished, this half is simply omitted rather than backfilled with a
+   manufactured second option.
+
+**Exception:** if Step 4 found no tracking doc at all, there's only one honest thing to
+surface, not two: *"Set up `docs/todo-register.md` (or this project's own equivalent) and
+populate it with real outstanding work."*
+
+## Closing summary
+
+This is where Step 1's held persona voice actually surfaces — one short, in-character beat
+naming the persona explicitly (first time this session, per that persona's own file), woven
+around the real content from Steps 2-7, not a separate greeting printed before any of it.

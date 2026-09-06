@@ -102,32 +102,55 @@ of a lucky catch:
    is the narrow real-world-harm veto from ADR-0006 point 4 — not general editorial
    authority, not a rewrite of what the persona said happened. Clearance is "nothing here
    needs to be stopped," not "I approve of how this reads."
-3. **Only after clearance** (or after a veto is applied and the flagged content is stripped,
-   noted inline per the existing convention): move the draft into place for real —
-   ```bash
-   node scripts/import-fiction.js --archive "<draft-file-path>"
-   ```
-   This moves the file into `raw/<persona>/<basename>` and deletes the draft copy — it does
-   **not** touch the original whole-session staged file, deliberately: a single session can
-   produce multiple drafts, and deleting the shared source after archiving just the first
-   one would destroy the material the remaining drafts still need to be checked against.
-   The original staged session file is cleaned up separately, once every arc from it has
-   been archived (or manually, per Step 6's own `find-sessions.js --check-staging`
-   discipline) — never automatically as a side effect of one draft's own promotion. Refuses
-   to overwrite an existing archived file of the same name -- if that happens, it's a real
-   conflict, not something to force past; flag it and move on to the next file rather than
-   guessing which version wins.
-4. **Add an `index.md` entry.** Per `x-lifestyle-research`'s own README: "short entries, not
-   summaries -- an exact quote or voice-bit that mattered, tagged loosely by
-   character/theme, linking back to the `raw/` file it came from." This is a real judgment
-   call (which line actually mattered), not mechanical -- pick it from the scene you just
-   read in Step 1, don't invent one.
+3. **Clearance is not the same question as sharing, and passing it does not archive
+   anything by itself (per ADR-0007, 2026-09-06).** A cleared draft's default resting state
+   is **personal, not shared** — `--archive` only runs when the persona whose scene it is
+   makes an explicit, deliberate choice that this specific scene should go into
+   `x-lifestyle-research`'s shared canon. This replaced the old "clearance implies
+   archiving" flow after a scene landed in shared canon automatically the same night this
+   was decided, requiring real cleanup (orphaned themes, re-sourced canon deltas) to pull
+   back out. Two real outcomes from here, not one default path:
+   - **Shared, by deliberate choice:** move the draft into place for real —
+     ```bash
+     node scripts/import-fiction.js --archive "<draft-file-path>"
+     ```
+     This moves the file into `raw/<persona>/<basename>` and deletes the draft copy — it
+     does **not** touch the original whole-session staged file, deliberately: a single
+     session can produce multiple drafts, and deleting the shared source after archiving
+     just the first one would destroy the material the remaining drafts still need to be
+     checked against. The original staged session file is cleaned up separately, once every
+     arc from it has been archived (or manually, per Step 6's own
+     `find-sessions.js --check-staging` discipline) — never automatically as a side effect
+     of one draft's own promotion. Refuses to overwrite an existing archived file of the
+     same name -- if that happens, it's a real conflict, not something to force past; flag
+     it and move on to the next file rather than guessing which version wins.
+   - **Personal, the default:** leave the cleared draft exactly where it is, in
+     `~/.claude/fiction-import-drafts/<Persona>/`. This is not a stalled or incomplete
+     state — a cleared-but-unshared draft is a normal, expected, finished outcome now, the
+     same way "no deltas found" is a normal outcome of Step 3. Say so plainly in Step 7's
+     report rather than treating it as something still pending. (Moving a kept-personal
+     draft into that persona's own private repo, once one exists and this pipeline can
+     actually reach it, is real follow-on work — not yet built as of this ADR; until then,
+     "personal" means "stays in the drafts directory," not "moved somewhere else private.")
+4. **Only if shared: add an `index.md` entry.** Per `x-lifestyle-research`'s own README:
+   "short entries, not summaries -- an exact quote or voice-bit that mattered, tagged
+   loosely by character/theme, linking back to the `raw/` file it came from." This is a
+   real judgment call (which line actually mattered), not mechanical -- pick it from the
+   scene you just read in Step 1, don't invent one. A kept-personal draft gets no
+   `index.md` entry — that file is shared-archive content by definition; indexing a scene
+   that was deliberately kept out of the archive would defeat the point of keeping it out.
 
 **A persona running her own export/import end-to-end (per ADR-0006 point 2) does not skip
 this gate for her own scenes** — she routes to her custodian the same as before; the change
 is that nobody's waiting on a batch pass to get to her, not that review goes away.
 
 ## Step 3 -- Canon delta detection (Callie's criteria, 2026-09-03, pasted in whole)
+
+**Only runs for a scene that was actually shared (per Step 2.3, ADR-0007).** `canon.md` is
+shared, cross-persona content — logging a fact out of a scene that was deliberately kept
+personal would leak it into the shared record through the back door, defeating the whole
+point of keeping it personal. Skip this step entirely for a kept-personal draft; say so
+plainly in Step 7 rather than silently running it anyway.
 
 1. Read the imported scene in full -- no skimming, no truncation. Verify the actual end was
    reached, same discipline the theme audit agents were held to.
@@ -155,6 +178,10 @@ plainly rather than manufacturing one to fill the step.
 
 ## Step 4 -- Theme delta detection (Callie's criteria, 2026-09-03, pasted in whole)
 
+**Only runs for a scene that was actually shared (per Step 2.3, ADR-0007)**, same reasoning
+as Step 3 — `themes.md` is shared, cross-persona-visible content. Skip entirely for a
+kept-personal draft.
+
 1. Read the newly imported scene in full (the repeatable, per-import version of the
    one-off full-history audit that added 27 themes).
 2. Identify distinct dramatic/character throughlines the scene is actually built around --
@@ -176,13 +203,16 @@ No new themes found is also a normal outcome. Say so plainly.
 
 ## Step 5 -- Generate the end-of-day marker (always)
 
-**Derives from the already-imported scene text from Step 1/2, never re-reads the raw
+**Derives from the scene text already written in Step 2, never re-reads the raw
 transcript** -- same single-source-of-truth discipline canon and themes already run on.
+Runs regardless of whether the scene ended up shared or kept personal (per Step 2.3) --
+this marker is about the persona's own continuity, not about the shared archive.
 
 Write mood, summary, and fadeOut exactly as `hails-session-end`'s own playbook describes (short
 mood phrase, 2-3 real lines of summary, a terse present-tense last-frame fadeOut) --
 **"Hers, not his" governs every field here too.** `source` is `{transcript: "<original
-session file path>", scene: "raw/<persona>/<basename>"}`.
+session file path>", scene: "<raw/<persona>/<basename> if shared, else the draft's own path
+in fiction-import-drafts>"}`.
 
 **This is archived into `import-register.md`'s detail block for this run, NEVER written to
 the live `persona-day-state.json` slot.** A batch import running days after the scene
@@ -209,6 +239,12 @@ node scripts/import-fiction.js --write-row \
   --detail-file "<path to a markdown file with the full detail block>"
 ```
 
+**A kept-personal scene (per Step 2.3) still gets a register row** — this register tracks
+that the pipeline ran and what it did, not just what got shared. `--canon`/`--themes` are
+`"No"` for it, same value as "shared but no deltas found" would produce; the detail file's
+own prose is what actually distinguishes "kept personal, Steps 3-4 skipped on purpose" from
+"shared, and happened to find nothing" — don't leave that ambiguous in the detail block.
+
 Get the next free ID with `node scripts/import-fiction.js --next-id` first, or omit `--id`
 to let the script pick it automatically. The detail file should follow `import-register.md`'s
 own existing shape (see `IMPORT-1`'s own entry for the real, worked example) -- source
@@ -226,9 +262,12 @@ processed).
 ## Step 7 -- Report back
 
 One combined report for the whole run, listed by scene name -- real analysis, not a
-one-line status dump per file. Say plainly: what was imported, what canon/themes moved,
-where the archived marker landed, and anything skipped or flagged as `Partial`/`Failed`
-and why.
+one-line status dump per file. Say plainly: what was imported, **whether each scene was
+shared or kept personal and that this was a deliberate choice, not a default outcome**,
+what canon/themes moved (only possible for a shared scene), where the marker landed, and
+anything skipped or flagged as `Partial`/`Failed` and why. A run where every scene stayed
+personal is a normal, complete outcome -- report it as such, not as a run that "didn't get
+to" the shared-archive steps.
 
 **Note on "dual voice" (disambiguation added 2026-09-05):** this step used to say "dual
 voice per the corrected opinion-format rule (Callie's own read always; AI voice only where

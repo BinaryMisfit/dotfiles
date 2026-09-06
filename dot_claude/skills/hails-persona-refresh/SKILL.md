@@ -6,10 +6,14 @@ description: Mid-session, on-demand refresh of the persona and continuity portio
 # Refresh persona
 
 **This is a global skill** (added 2026-09-03, BinaryMisfit's own ask) — the deliberately
-small counterpart to `hails-session-start`: everything in that skill's Step 1 through Step 1.3
-(persona greeting/re-read, day-state, theme, color) is cheap enough to be worth re-running
-on its own, mid-conversation, without dragging Steps 2-6 (git-log summary, health check,
-register sweep, three-options report) along. This is that whole slice, callable any time.
+small counterpart to `hails-session-start`. **As of 2026-09-06, this is no longer just a
+lighter-weight mirror of session-start's own Steps 1-1.3 — it's the sole owner of every
+persona-identity step, full stop.** `hails-session-start` dropped its own copies of these
+entirely (day-state, theme, color, persona-file re-read, canon-check) rather than running a
+duplicate slice inline; this skill is the only place any of that runs now, whether that's a
+deliberate mid-session refresh or the persona-identity half of a fresh session. Whether a
+full `hails-session-start` run auto-triggers this skill or the two stay separately invoked
+is still an open call — see that skill's own playbook for the current default (separate).
 
 Unlike `hails-session-start`/`hails-session-end`, this has no per-repo playbook and no bootstrap
 step — nothing here is repo-specific, so it's a single fixed routine.

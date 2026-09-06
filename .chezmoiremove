@@ -69,6 +69,12 @@ scoop/
 .claude/skills/session-start/
 .claude/skills/worktree-sync-check/
 
+# secretary-pool (2026-09-06): hails-worktree-sync-check itself retired, not just its
+# pre-hails- predecessor above -- superseded by hails-session-start's own rework (identity
+# gate, Step 0.5, persona-refresh handoff). Unconditional for the same reason as the block
+# above: a home-profile machine is exactly where a leftover copy would exist.
+.claude/skills/hails-worktree-sync-check/
+
 # Old flat-path rule files, superseded by rules/work/*.instructions.md
 .claude/rules/branches.instructions.md
 .claude/rules/external-services.instructions.md

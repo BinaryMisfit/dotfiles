@@ -40,10 +40,17 @@ directory) before anything else.**
 
 ## A couple of things worth knowing, regardless of which repo this runs in
 
-- **Step 1 of the generic playbook (write the day-state marker) is the one non-negotiable
-  minimum, every repo, forever.** Everything past it in any repo's own copy is optional and
-  earned through real use — a repo with nothing beyond the marker stays at Step 1 alone,
-  indefinitely, and that's a complete playbook, not an unfinished one.
+- **The marker write is the one non-negotiable minimum, every repo, forever — and it is
+  always the LAST step, no exceptions (structural rule, 2026-09-05).** A repo with nothing
+  else stays at "one step, the marker" indefinitely, and that's a complete playbook, not an
+  unfinished one — number it Step 1 in that case. The moment a repo earns a real
+  repo-specific step (a `hails-fiction-import` run, a health check), that step becomes Step 1
+  and the marker write moves to the final step, renumbered — anything a repo adds later
+  goes **before** the marker write, never after it. This reverses the original shape of the
+  generic template (marker write used to be Step 1, with repo-specific steps appended below
+  it) after a real incident: a marker got written before that day's real content was
+  actually imported, sourced from a lower-fidelity fallback instead of the real thing —
+  writing the marker last means it can reflect what the day actually was.
 - **"Hers, not his" governs every field this writes** (2026-09-03, BinaryMisfit's own
   correction) — mood, summary, fadeOut, and any repo-specific field a later step adds. Whose
   body, whose feelings, whose memory is a sentence actually describing? If the honest
