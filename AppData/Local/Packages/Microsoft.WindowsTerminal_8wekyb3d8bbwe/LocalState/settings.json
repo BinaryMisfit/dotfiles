@@ -18,7 +18,7 @@
     "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
     "initialCols": 300,
     "initialRows": 95,
-    "launchMode": "fullscreen",
+    "launchMode": "maximized",
     "keybindings":
     [
         {
