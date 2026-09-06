@@ -71,6 +71,15 @@ in a `--data` payload; a bare status is enough.
 and a genuinely-skipped one look identical to a resuming run otherwise, which would make it
 try to run something that was correctly, deliberately skipped.
 
+**Not safe under this file's own "dispatch as parallel Agent calls" technique named near
+the top** (real gap in the script itself, caught 2026-09-06 while wiring it in here — see
+`session-start-log.js`'s own header comment): every write is an unlocked read-modify-write
+of one shared JSON file, so two dispatched agents calling `--step-start`/`--step-done`
+themselves can race and silently clobber each other's update. If Steps 2-4 ever actually
+grow into that technique here, only the main orchestrating session calls this script for
+those steps' outcomes — a dispatched agent reports its findings back in its own return
+value, never by calling `session-start-log.js` itself.
+
 ## Step 0 — Identity gate (added 2026-09-06, split out of the old Step 1)
 
 **Real incident this same day, elsewhere on this machine:** a dead-peer sweep deleted a

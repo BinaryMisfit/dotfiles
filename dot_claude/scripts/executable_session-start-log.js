@@ -59,6 +59,19 @@
 // the playbook cares about has actually reported a real outcome -- this
 // script has no fixed step list of its own to check that against, so
 // "complete" is asserted by the caller, not inferred.
+//
+// NOT SAFE FOR CONCURRENT CALLS AGAINST THE SAME CWD (real gap, caught
+// 2026-09-06 by Alexia while wiring this into binary-dotfiles' own
+// playbook, before it ever shipped as a live bug): every write here is an
+// unlocked read-modify-write of one shared JSON file. A playbook that
+// dispatches steps as parallel agents (several repos' own Step 1.5) must
+// never have those agents call `--step-start`/`--step-done` themselves --
+// two processes racing the same read-modify-write can silently clobber
+// each other's update. The fix is structural, not a script feature: only
+// the one process actually orchestrating the run (the main session, never
+// a dispatched sub-agent) calls this script, serializing every write
+// through it -- same reasoning this project's own file-exclusivity rule
+// already applies to parallel writes against a register file.
 
 const fs = require("fs");
 const os = require("os");
