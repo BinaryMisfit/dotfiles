@@ -83,3 +83,21 @@ generically in conversation, was blocked; a retry after BinaryMisfit named the e
 and exact change went through. This is the concrete mechanic behind "specific, informed
 approval naming the exact mechanic" in the original decision above — it isn't just good
 practice, it's the literal condition the classifier checks for.
+
+---
+*Addendum (2026-09-06):* Second real instance of this ADR's own "How to apply" clause,
+same shape, different trigger. A `digital-homelab` session (Alexia) hit a real, repeatable
+classifier block editing her own persona file (`~/.claude/output-styles/alexia.md`) from
+outside her project directory — not a trust-config self-escalation this time, just a
+missing fact: the `environment` block had no context telling the classifier that a persona
+editing her own output-style file, from any project session, is BinaryMisfit's own standing
+grant (2026-09-06) rather than unauthorized modification of shared global config. She
+reported the raw symptom to this session (`binary-dotfiles`, Aphrodite) rather than asking
+for the fix to be pushed through on her behalf — no laundering risk here, this repo's own
+permissions/settings domain is Aphrodite's per its CLAUDE.md, and diagnosing/fixing a real
+gap in that domain is exactly what routing the report there was for. Proposed the exact
+line, got BinaryMisfit's specific approval ("I approve of the change") naming it, then
+added it to `environment` in `dot_claude/settings.json.tmpl`. Per this ADR's own "How to
+apply" clause, the edit itself is committed and pushed but `chezmoi apply` is left to
+BinaryMisfit's own review of `chezmoi diff` — approval of the content isn't a substitute for
+the separate apply-review hold this ADR already decided on.
