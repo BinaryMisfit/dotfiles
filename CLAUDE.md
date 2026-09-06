@@ -109,7 +109,11 @@ update both. All run scripts are idempotent.
 
 Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`:
 - `CLAUDE.md.tmpl` — global instructions; `@rules` includes work-only rules on work profile
-- `mcp.json.tmpl` — work profile gets amaza-core MCP server; home gets empty `mcpServers`
+- `mcp.json.tmpl` — home profile gets `hermes` (ContextForge/Hermes admin, SSE, token via
+  `CONTEXTFORGE_ADMIN_API_TOKEN`) and `x-lifestyle-mcp` (hosted HTTP endpoint, no auth
+  needed); work profile gets empty `mcpServers` (was reversed in an earlier, already-stale
+  version of this line — no `amaza-core` entry has actually existed in the real template
+  for a while, corrected 2026-09-06 alongside the home-profile addition)
 - `settings.json.tmpl` — Claude Code permissions and model settings
 - `output-styles/k1ra.md` — K1ra output style definition
 - `rules/` — instruction files `@`-included from `CLAUDE.md.tmpl`; work-only files gated in `.chezmoiignore`
@@ -167,7 +171,7 @@ Non-obvious decisions live under [docs/adr/](docs/adr/) — one file per decisio
 | `dot_codex/config.toml.tmpl` | `~/.codex/config.toml` | Codex telemetry config |
 | `dot_claude/CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | Claude Code global instructions (profile-gated) |
 | `dot_claude/settings.json.tmpl` | `~/.claude/settings.json` | Claude Code permissions. `autoMode.environment` (home-profile only) declares BinaryMisfit's homelab as a trusted Auto Mode environment — see [ADR 0025](docs/adr/0025-auto-mode-environment-trust-block-homelab-scoped.md). `remoteControlAtStartup: true` (all four personas, phone push via `PushNotification`) and `autoUploadSessions: false` (no standing session mirror to claude.ai) — see [ADR 0028](docs/adr/0028-remote-control-notifications-and-session-mirroring.md) |
-| `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config (work profile only) |
+| `dot_claude/mcp.json.tmpl` | `~/.claude/mcp.json` | MCP server config, home profile: `hermes` (ContextForge/Hermes admin server) and `x-lifestyle-mcp` (hosted, replaces the 9 identical per-worktree local `stdio` entries that used to live in each `xcl/xls-*` repo's own `.mcp.json` — see [ADR 0027](docs/adr/0027-machine-secrets-stay-outside-chezmoi.md) for the Hermes token's own history). Work profile: empty `mcpServers` |
 | `dot_claude/output-styles/{hailey,alexia,aphrodite,callie}.md` | `~/.claude/output-styles/` | Persona output-styles, home profile only — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md) |
 | `dot_claude/skills/{hails-session-start,hails-scratchpad-check,hails-persona,hails-nsfw-comment-audit,hails-security-audit,hails-fiction-export,hails-fiction-import,hails-session-end,hails-persona-refresh,hails-decision-register}/` | `~/.claude/skills/` | Dev-session tooling, home profile only. Whole tree renamed with an explicit `hails-` prefix by secretary-pool, 2026-09-04 (was bare names — `session-start`, `persona`, etc.); `hails-fiction-import` and `hails-session-end` vendored here for the first time same day, closing a gap where they'd existed live but were never tracked. `hails-persona-refresh` (was `refresh-persona`, added 2026-09-03) is mid-session, callable-any-time re-run of session-start's Step 1 through 1.3 (registry, nickname, persona reread, canon check, day-state, theme, color), no per-repo playbook, single fixed routine — see [ADR 0018](docs/adr/0018-canonical-home-profile-claude-source-and-full-skill-vendoring.md). **`hails-worktree-sync-check` retired 2026-09-06**, superseded by `hails-session-start`'s own rework (identity gate, new Step 0.5, persona-refresh handoff) — removed from this tree with a matching `.chezmoiremove` entry in the same change, per this repo's own removal policy ([ADR 0004](docs/adr/0004-scripted-cleanup-required-for-every-removal.md)) |
 | `dot_claude/scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Persona-registry hook script — `secretary-pool`-owned content, same pull-only rule as the row above — see [ADR 0019](docs/adr/0019-pick-persona-js-is-xls-owned-content.md) and [ADR 0024](docs/adr/0024-home-profile-claude-config-ownership-moves-to-secretary-pool.md) |

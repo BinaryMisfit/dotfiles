@@ -1,3 +1,18 @@
+{{- $profile := get . "profile" | default "home" -}}
 {
-  "mcpServers": {}
+  "mcpServers": {
+    {{- if eq $profile "home" }}
+    "hermes": {
+      "type": "sse",
+      "url": "https://mcpadmin.digitalmisfit.net/servers/5fa1d1ea612e4a31a06e4c4b4f769762/sse",
+      "headers": {
+        "Authorization": "Bearer ${CONTEXTFORGE_ADMIN_API_TOKEN}"
+      }
+    },
+    "x-lifestyle-mcp": {
+      "type": "http",
+      "url": "https://xcl-mcp.binarymisfit.dev/mcp"
+    }
+    {{- end }}
+  }
 }
