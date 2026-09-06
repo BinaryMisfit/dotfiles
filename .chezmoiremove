@@ -47,12 +47,27 @@ scoop/
 {{ if ne $profile "home" }}
 .claude/rules/home/
 .claude/home/
-.claude/skills/session-start/
-.claude/skills/scratchpad-check/
-.claude/skills/persona/
-.claude/skills/nsfw-comment-audit/
-.claude/skills/security-audit/
 {{ end }}
+
+# secretary-pool TODO-83 (2026-09-06): pre-`hails-` skill names, superseded by their
+# `hails-`-prefixed replacements (see CLAUDE.md's Key Files table). Unconditional, not
+# gated behind the home-profile check above -- these are dead names on ANY profile, and a
+# home-profile machine (the one place a leftover pre-rename copy would actually exist) is
+# exactly the profile the old `{{ if ne $profile "home" }}` gating would have skipped,
+# leaving them un-cleaned there forever. Real gap Hailey caught: only 5 of these 11 were
+# previously listed at all, and even those 5 were gated the wrong way for their own
+# purpose.
+.claude/skills/decision-register/
+.claude/skills/end-session/
+.claude/skills/fiction-export/
+.claude/skills/fiction-import/
+.claude/skills/nsfw-comment-audit/
+.claude/skills/persona/
+.claude/skills/refresh-persona/
+.claude/skills/scratchpad-check/
+.claude/skills/security-audit/
+.claude/skills/session-start/
+.claude/skills/worktree-sync-check/
 
 # Old flat-path rule files, superseded by rules/work/*.instructions.md
 .claude/rules/branches.instructions.md
