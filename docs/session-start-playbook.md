@@ -33,6 +33,44 @@ directly, the fixed offset to use — this project may not have a `TZ`-env-based
 compute it reliably, the same trap X-Lifestyle's own playbook hit early on, so prefer
 computing the offset by hand over trusting an unverified `TZ` variable).
 
+## Progress log (added 2026-09-06, wires in `session-start-log.js`)
+
+Every step below reports its own outcome to `~/.claude/scripts/session-start-log.js` —
+built and tested elsewhere in this system, wired into this specific playbook here. The
+real problem it solves: this file is instructions to follow, not code with an enforced call
+stack, so nothing about a plain run guarantees a step actually happened or lets a dead
+session's rerun resume where it left off instead of redoing (or silently skipping) work.
+
+**Once, right after Step 0's `ListAgents` call resolves this session's own name:**
+`node ~/.claude/scripts/session-start-log.js --begin --session "<name>"`. Its `resuming`
+field in the JSON response tells you whether this is a fresh run (`false`) or picking up an
+incomplete one (`true`). If resuming, check the returned `entry.steps` — any step already
+`"status": "done"` is genuinely done, don't redo it or its report; re-run only a step
+that's missing entirely, `"in-progress"` (died mid-step), or `"failed"` (explicitly
+retryable).
+
+**Before each numbered step below:** `--step-start "<n>"` (the step's own number as a
+plain string — `"0"`, `"1"`, `"1.1"`, `"3.6"`, etc.). **After it finishes:** `--step-done
+"<n>"` on a genuine success, or `--step-failed "<n>" --reason "..."` for something that
+went wrong but a rerun should just try again. **Step 0's own identity-mismatch outcome is
+`--step-blocked "0" --reason "..."` specifically, never `--step-failed`** — that step's
+whole point is no auto-recovery, ever, and `blocked` is what keeps a plain rerun from
+quietly retrying past it.
+
+**Once the real last step below has reported a genuine outcome:** `--complete`. That's the
+only thing that lets the *next* `--begin` for this `cwd` start clean instead of resuming —
+don't skip it just because the run went smoothly.
+
+This script never inspects or restricts what a step logs beyond its own status/reason — the
+convention is "which steps ran," never "what they found." Nothing from Step 3.6's real
+diff content, Step 4's actual register text, or anything else genuinely sensitive belongs
+in a `--data` payload; a bare status is enough.
+
+**A step this playbook says to "skip" still gets `--step-done "<n>"`** — with
+`--data '{"skipped":"<one-word reason>"}'` if useful — not left unlogged. An unlogged step
+and a genuinely-skipped one look identical to a resuming run otherwise, which would make it
+try to run something that was correctly, deliberately skipped.
+
 ## Step 0 — Identity gate (added 2026-09-06, split out of the old Step 1)
 
 **Real incident this same day, elsewhere on this machine:** a dead-peer sweep deleted a
@@ -53,12 +91,18 @@ there are none, then `node ~/.claude/scripts/pick-persona.js --sweep-dead "<comm
 live names>"`, same root). Relay the sweep's output only if it actually removed or cleared
 something — "nothing stale, nothing to report" needs no line of its own.
 
+**This is also where the progress log's own `--begin --session "<name>"` call happens** —
+see "Progress log" above for the full mechanics (resuming an incomplete run, skipping
+already-`done` steps). Then `--step-start "0"` for this step itself.
+
 Then **compare this session's live persona** (this project's own `.claude/settings.local.json`'s
 `outputStyle` field) **against what the registry says for this `cwd`** (the entry
-`--set-session-name` just touched). Match → proceed to Step 1. **Mismatch → stop the
-entire routine here.** No auto-recovery, no guessing, no proceeding "just this once" —
-surface plainly (this `cwd`, what the registry says, what's actually loaded) and wait for
-a real `/hails-persona <name>` correction before continuing.
+`--set-session-name` just touched). Match → `--step-done "0"`, proceed to Step 1.
+**Mismatch → `session-start-log.js --step-blocked "0" --reason "<cwd> registry says X,
+session is voicing Y>"`, then stop the entire routine here.** No auto-recovery, no
+guessing, no proceeding "just this once" — surface the same mismatch plainly to the human
+(this `cwd`, what the registry says, what's actually loaded) and wait for a real
+`/hails-persona <name>` correction before continuing.
 
 ## Step 1 — Persona greeting (skip if not applicable)
 
@@ -231,3 +275,7 @@ open list.
 not three manufactured ones: *"Set up `docs/todo-register.md` (or this project's own
 equivalent) and populate it with real outstanding work."* Don't pad that out to three by
 inventing filler.
+
+**This is the real last step.** Once it's reported (`--step-done "6"`), call
+`node ~/.claude/scripts/session-start-log.js --complete` — the only thing that lets the
+next `--begin` for this `cwd` start clean instead of resuming this one.
