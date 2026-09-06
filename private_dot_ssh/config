@@ -27,6 +27,33 @@ Host git.digitalmisfit.net
   IdentitiesOnly yes
   AddKeysToAgent yes
 
+# Persona private Forgejo repos (ADR 0021 in digital-homelab/home-ansible), own account,
+# own dedicated key each. Real regression, 2026-09-06: these three blocks were only ever
+# added live to ~/.ssh/config, never committed here -- a routine `chezmoi apply` overwrote
+# the live file back to this file's own (missing) content and silently wiped all three.
+# Keys on disk were untouched; only the routing was lost. Tracked here now so this can't
+# happen again.
+Host git.digitalmisfit.net-callie
+  HostName git.digitalmisfit.net
+  Port 10022
+  User git
+  IdentityFile ~/.ssh/personas/callie_driftwood
+  IdentitiesOnly yes
+
+Host git-hailey
+  HostName git.digitalmisfit.net
+  Port 10022
+  User git
+  IdentityFile ~/.ssh/personas/hailey_nerdcupboard
+  IdentitiesOnly yes
+
+Host git-aphrodite
+  HostName git.digitalmisfit.net
+  Port 10022
+  User git
+  IdentityFile ~/.ssh/id_ed25519_forgejo_aphrodite
+  IdentitiesOnly yes
+
 # Global defaults
 Host *
   AddKeysToAgent yes
