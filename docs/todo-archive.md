@@ -7,6 +7,22 @@ deleted.
 
 ---
 
+## Cross-reference: secretary-pool's TODO-83 (pre-`hails-` skill dirs scrubbed)
+
+**Closed:** 2026-09-06, in `secretary-pool`'s own registers, not this repo's.
+
+**Why it's here anyway:** the actual work landed in this repo — `.chezmoiremove` gained
+entries for all 11 stale pre-`hails-`-rename skill directories plus the separate
+`hails-worktree-sync-check` retirement, and the deployed `~/.claude/skills/` was confirmed
+clean of every old bare name (verified directly 2026-09-06: `.chezmoiremove` entries
+present, chezmoi source and this repo's working copy byte-identical at HEAD `d97abaa`, no
+stale dirs deployed). But the item itself was raised and tracked as `TODO-83` in
+`secretary-pool`'s own `docs/todo-register.md`/archive, per the content-authorship
+ownership split documented in this repo's own `CLAUDE.md` ("Domain boundary" section) —
+this repo never had its own row for it, which meant a future session checking only this
+repo's registers would find no record the work ever happened. This entry exists purely so
+that search doesn't come up empty; the real closure record lives in `secretary-pool`.
+
 ## TODO-5: Self-heal: detect and recover from broken/drifted chezmoi state
 
 **Closed:** 2026-09-04
