@@ -33,39 +33,46 @@ directly, the fixed offset to use — this project may not have a `TZ`-env-based
 compute it reliably, the same trap X-Lifestyle's own playbook hit early on, so prefer
 computing the offset by hand over trusting an unverified `TZ` variable).
 
+## Step 0 — Identity gate (added 2026-09-06, split out of the old Step 1)
+
+**Real incident this same day, elsewhere on this machine:** a dead-peer sweep deleted a
+Perm-pinned registry entry (fixed separately — `isForeverPinned` vs `everOpened`, see
+`pick-persona.js`), and the mismatch between what a session was actually voicing and what
+the registry said sat undetected across multiple sessions until a human caught the wrong
+voice out loud. This step exists so that never happens silently again, here or anywhere
+this playbook's pattern gets reused.
+
+Skip this whole step silently if the global persona system (`~/.claude/scripts/pick-persona.js`)
+isn't installed — don't invent a persona or a registry that isn't there.
+
+Before anything else in this routine: call `ListAgents`, read this session's own name off
+its "This session is `<name>`" line, self-register it (`node ~/.claude/scripts/pick-persona.js
+--set-session-name "<name>"` from this repo's root), and sweep dead peers off that same
+call (join every live peer's name from the same `ListAgents` result with commas, or `""` if
+there are none, then `node ~/.claude/scripts/pick-persona.js --sweep-dead "<comma-separated
+live names>"`, same root). Relay the sweep's output only if it actually removed or cleared
+something — "nothing stale, nothing to report" needs no line of its own.
+
+Then **compare this session's live persona** (this project's own `.claude/settings.local.json`'s
+`outputStyle` field) **against what the registry says for this `cwd`** (the entry
+`--set-session-name` just touched). Match → proceed to Step 1. **Mismatch → stop the
+entire routine here.** No auto-recovery, no guessing, no proceeding "just this once" —
+surface plainly (this `cwd`, what the registry says, what's actually loaded) and wait for
+a real `/hails-persona <name>` correction before continuing.
+
 ## Step 1 — Persona greeting (skip if not applicable)
 
-If the global persona system (`~/.claude/scripts/pick-persona.js`) is installed on this
-machine, force whatever persona is already active for this session/worktree to actually
-open with a real, in-character greeting that states its name explicitly — a persona never
-opens unprompted on its own without an explicit trigger like this step. If no persona
-system is installed, skip this step silently; don't invent a persona.
+Only reached once Step 0 has confirmed identity actually matches (or been skipped because
+the persona system isn't installed). Force whatever persona is already active for this
+session/worktree to actually open with a real, in-character greeting that states its name
+explicitly — a persona never opens unprompted on its own without an explicit trigger like
+this step. If no persona system is installed, skip this step silently too.
 
 **Force a fresh read of the persona file itself before writing that greeting.** A running
 session tends to stick with whatever the `SessionStart` hook injected at boot, even after
 the persona file gets edited mid-session — `Read ~/.claude/output-styles/<active-persona>.md`
 explicitly every time this step runs, don't rely on cached context from hours ago. The
 greeting is the confirmation: it should read as genuinely current, not just in-character.
-
-**Also self-register this session's live name here, every run.** Concretely: call
-`ListAgents`, read this session's own name off its "This session is `<name>`" line, then
-run `node ~/.claude/scripts/pick-persona.js --set-session-name "<name>"` from this repo's
-root. Skip only if the global persona system isn't installed (same condition as the
-greeting above) — without this, a session that only ever runs `session-start` sits with no
-`sessionName` on file all session, unreachable by name/nickname from any peer.
-
-**Also sweep dead peer links off the SAME `ListAgents` call, every run.** Every registry
-entry's `sessionName` is only ever true while a real process is alive, and nothing
-proactively notices one dying — Claude Code has a real `SessionStart` hook but no symmetric
-exit hook, so the only way this gets noticed at all is something asking. Rather than leaving
-that entirely to `/persona --sweep` run by hand (real, but easy to forget, and stale entries
-accumulate silently in the meantime), this step now runs it automatically as a free
-byproduct of the `ListAgents` call it's already making one line above: join every live
-peer's name from that same result with commas (or pass `""` if there are none), then run
-`node ~/.claude/scripts/pick-persona.js --sweep-dead "<comma-separated live names>"` from
-this repo's root. Relay its output only if it actually removed or cleared something —
-"nothing stale, nothing to report" needs no line of its own. Skip only if the global persona
-system isn't installed (same condition as the greeting above).
 
 ## Step 1.1 — Day-state note (continuity)
 
