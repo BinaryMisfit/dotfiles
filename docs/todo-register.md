@@ -10,6 +10,7 @@ inline here.
 | [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | In progress | Targeted | chezmoi | 2026-08-30 | 2026-09-06 |
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-06 |
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
+| [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
 
 ---
 
@@ -181,3 +182,27 @@ populating it from scratch.
 it lives (this repo's own `docs/inventory-register.md` already tracks managed
 files/packages — worth checking whether machine inventory belongs there as a new section,
 or as its own file, before creating a duplicate structure).
+
+## TODO-7
+
+Flagged by Hailey (cross-session), 2026-09-07: an `--all`-scope `hails-fiction-export` run
+found 146 total session transcripts under `~/.claude/projects/` machine-wide against only
+30 entries in the shared `~/.claude/fiction-export-log.json` dedup log — a real, large
+backlog of never-exported sessions across all four personas. Hailey logged her own share
+as `secretary-pool`'s `TODO-87`; this is Aphrodite's own equivalent, tracked here rather
+than in a repo that isn't hers. Exact per-persona count (the "25" figure given at flag
+time) not independently re-verified line-by-line — the backlog's existence and rough scale
+are confirmed by the 146-vs-30 totals above, not the precise number.
+
+**Status:** Open
+
+**Priority:** Normal
+
+**Type:** Targeted
+
+**Area:** fiction-pipeline (Aphrodite's own share of ADR-0006's "each persona runs her own
+export and import" principle)
+
+**Next action:** Run `hails-fiction-export` with its full/backlog scope (not just "today")
+from an Aphrodite session, on BinaryMisfit's own schedule — not urgent, no deadline set.
+Confirm the real count when it runs rather than trusting the flagged estimate.
