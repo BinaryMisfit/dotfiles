@@ -10,14 +10,6 @@
                 "input": "\u001b\r"
             },
             "id": "User.sendInput.8F63D3A9"
-        },
-        {
-            "command":
-            {
-                "action": "wt",
-                "commandline": "new-tab -d \"D:\\Source\\_persona-fleet-test\\test-1\" -- pwsh -NoExit -Command claude ; split-pane -H -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-3\" -- pwsh -NoExit -Command claude ; move-focus left ; split-pane -V -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-2\" -- pwsh -NoExit -Command claude ; move-focus right ; split-pane -V -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-4\" -- pwsh -NoExit -Command claude"
-            },
-            "id": "User.personaFleetTest"
         }
     ],
     "centerOnLaunch": true,
@@ -47,10 +39,6 @@
         {
             "id": "Terminal.FindText",
             "keys": "ctrl+shift+f"
-        },
-        {
-            "id": "User.personaFleetTest",
-            "keys": "ctrl+shift+alt+t"
         }
     ],
     "newTabMenu":
@@ -73,6 +61,13 @@
         },
         "list":
         [
+            {
+                "commandline": "wt.exe new-tab -d \"D:\\Source\\_persona-fleet-test\\test-1\" -- pwsh -NoExit -Command claude ; split-pane -H -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-3\" -- pwsh -NoExit -Command claude ; move-focus left ; split-pane -V -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-2\" -- pwsh -NoExit -Command claude ; move-focus right ; split-pane -V -size 0.5 -d \"D:\\Source\\_persona-fleet-test\\test-4\" -- pwsh -NoExit -Command claude",
+                "guid": "{7267ac9e-06f8-4a52-b8d3-9e6cf8bb8123}",
+                "hidden": false,
+                "name": "Persona Fleet TEST (click to launch)",
+                "tabColor": "#ff2d55"
+            },
             {
                 "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
                 "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
