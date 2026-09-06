@@ -539,6 +539,92 @@ function writeRegistry(entries) {
   fs.writeFileSync(registryPath, JSON.stringify(entries, null, 4));
 }
 
+// Real, time-critical fix (2026-09-06, Aphrodite's own catch, minutes before
+// four brand-new SessionStart hooks were about to fire at once against real
+// never-seen worktrees): every registry mutation up to this point was an
+// unlocked read-modify-write against ONE shared file -- the exact same shape
+// of bug she and Alexia already found in session-start-log.js the same
+// night, just here it's not a theoretical future risk, it's about to
+// actually happen. Two (or four) processes reading the same entries array,
+// each independently deciding to add its own new-worktree row, then each
+// writing its own version back -- the second write wins outright and
+// silently erases the first process's addition, no error, no trace.
+//
+// Fix: a real lockfile mutex (`<registryPath>.lock`), acquired with
+// exclusive create (`wx` -- fails if the file already exists, which IS the
+// lock), retried with a short synchronous sleep until acquired or a real
+// timeout is hit. A logical operation's entire read -> decide -> write span
+// has to run while holding this lock, not just the read or the write in
+// isolation -- locking only the individual calls still leaves the race
+// wide open between them. Every CLI-invoked mutating handler below wraps
+// its own read-through-write span in `acquireRegistryLock()` /
+// `releaseRegistryLock()` (try/finally, so a thrown error still releases).
+//
+// Stale-lock recovery: a lock file older than STALE_LOCK_MS is assumed to
+// belong to a process that crashed or got killed before releasing it (a
+// real, if rare, possibility -- a killed Claude Code session mid-hook) and
+// is removed rather than left to deadlock every future invocation forever.
+const REGISTRY_LOCK_PATH = `${registryPath}.lock`;
+const LOCK_RETRY_MS = 25;
+const LOCK_TIMEOUT_MS = 5000;
+const STALE_LOCK_MS = 15000;
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// Exported for testing. `lockPath` and timing are injectable so tests never
+// touch the real registry lock file and never actually sleep for seconds.
+function acquireRegistryLock(
+  lockPath = REGISTRY_LOCK_PATH,
+  { timeoutMs = LOCK_TIMEOUT_MS, retryMs = LOCK_RETRY_MS, staleMs = STALE_LOCK_MS, sleepFn = sleepSync } = {},
+) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      fs.writeFileSync(lockPath, String(process.pid), { flag: "wx" });
+      return;
+    } catch (err) {
+      if (err.code !== "EEXIST") throw err;
+      try {
+        const age = Date.now() - fs.statSync(lockPath).mtimeMs;
+        if (age > staleMs) {
+          fs.rmSync(lockPath, { force: true });
+          continue;
+        }
+      } catch {
+        continue; // lock disappeared between the failed create and the stat -- just retry
+      }
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for the registry lock (${lockPath}) after ${timeoutMs}ms -- another process may be stuck holding it.`);
+    }
+    sleepFn(retryMs);
+  }
+}
+
+// Exported for testing.
+function releaseRegistryLock(lockPath = REGISTRY_LOCK_PATH) {
+  try {
+    fs.rmSync(lockPath, { force: true });
+  } catch {
+    // already gone -- nothing to release
+  }
+}
+
+// Runs `fn` while holding the registry lock, always releasing it afterward
+// (success or throw). This is the one thing every mutating CLI handler
+// should call through, rather than acquiring/releasing by hand. Exported
+// for testing.
+function withRegistryLock(fn, lockPath = REGISTRY_LOCK_PATH, opts) {
+  acquireRegistryLock(lockPath, opts);
+  try {
+    return fn();
+  } finally {
+    releaseRegistryLock(lockPath);
+  }
+}
+
 // Pure: drop entries whose worktree no longer exists on disk, so a removed
 // worktree doesn't keep permanently occupying a persona slot. `existsFn` is
 // injectable for testing. Exported for testing.
@@ -1705,10 +1791,19 @@ function main() {
 
   const cwd = resolveCwd();
   const now = nowIso();
-  let entries = pruneStale(readNormalizedRegistry(now));
-  let entry = findEntry(entries, cwd);
 
+  // Real, time-critical fix (2026-09-06): this whole span, read through
+  // write, is exactly the race Aphrodite caught minutes before four brand-
+  // new SessionStart hooks were about to fire at once against real
+  // never-seen worktrees -- see acquireRegistryLock's own header comment
+  // for the full incident and why per-call locking alone wouldn't fix it.
+  acquireRegistryLock();
+  let entries;
+  let entry;
   let nicknameNote = "";
+  try {
+  entries = pruneStale(readNormalizedRegistry(now));
+  entry = findEntry(entries, cwd);
 
   if (entry) {
     entry.lastSeen = now;
@@ -1805,6 +1900,7 @@ function main() {
     // here. A cwd with a real repoId but no family yet is still a
     // legitimate brand-new project and is unaffected by this guard.
     if (!repoId && family.length === 0) {
+      releaseRegistryLock();
       process.exit(0);
     }
 
@@ -1854,6 +1950,9 @@ function main() {
   }
 
   writeRegistry(entries);
+  } finally {
+    releaseRegistryLock();
+  }
 
   const finalFilePath = path.join(stylesDir, entry.file);
   if (!fs.existsSync(finalFilePath)) {
@@ -1938,6 +2037,9 @@ module.exports = {
   pruneLogLines,
   formatLogLine,
   entryLogFields,
+  acquireRegistryLock,
+  releaseRegistryLock,
+  withRegistryLock,
 };
 
 if (require.main === module) {
