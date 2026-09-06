@@ -65,10 +65,11 @@
     "type": "command",
     "command": "python {{ .chezmoi.homeDir }}/.claude/rate-limit-statusline-bridge.py"
   },
-  "advisorModel": "opus",
+  "advisorModel": "sonnet",
   "effortLevel": "medium",
   "theme": "dark",
   "tui": "fullscreen",
+  "timeFormat": "24-hour",
   "editorMode": "normal",
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": true,
@@ -77,6 +78,10 @@
   "agentPushNotifEnabled": true,
   "switchModelsOnFlag": false,
   "useAutoModeDuringPlan": false,
+  "promptSuggestionEnabled": false,
+  "dialogExpiry": "never",
+  "autoContinueAtUsageLimit": false,
+  "crossSessionInbound": "accept",
   {{- if eq $profile "work" }}
   "outputStyle": "K1ra",
   {{- end }}
