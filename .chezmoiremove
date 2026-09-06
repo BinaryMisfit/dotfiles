@@ -53,10 +53,15 @@ scoop/
 # `hails-`-prefixed replacements (see CLAUDE.md's Key Files table). Unconditional, not
 # gated behind the home-profile check above -- these are dead names on ANY profile, and a
 # home-profile machine (the one place a leftover pre-rename copy would actually exist) is
-# exactly the profile the old `{{ if ne $profile "home" }}` gating would have skipped,
-# leaving them un-cleaned there forever. Real gap Hailey caught: only 5 of these 11 were
+# exactly the profile the old non-home-profile gating above would have skipped, leaving
+# them un-cleaned there forever. Real gap Hailey caught: only 5 of these 11 were
 # previously listed at all, and even those 5 were gated the wrong way for their own
-# purpose.
+# purpose. (Real bug caught 2026-09-06: this comment originally spelled out the literal
+# double-curly-brace template syntax it was describing -- chezmoi's template engine parses
+# that as a real, unclosed conditional block regardless of the leading `#`, producing
+# "unexpected EOF" on every diff/apply since this comment landed. Described in prose
+# instead, here and going forward -- never spell out literal template delimiters inside a
+# .chezmoiremove comment, describe the behavior in words instead.)
 .claude/skills/decision-register/
 .claude/skills/end-session/
 .claude/skills/fiction-export/
