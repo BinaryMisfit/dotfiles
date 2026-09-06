@@ -78,6 +78,21 @@ function sastDateKey(now = new Date()) {
   return new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+// TODO-82 fix (2026-09-05): `lastPicked`/`pickedAt` are human-read-facing
+// (surfaced back to a persona or BinaryMisfit asking "what's today's theme")
+// -- writing raw `now.toISOString()` here put a `Z`-suffixed UTC instant in
+// front of a human expecting SAST, same class of bug `sastDateKey` already
+// guards against for the date-bucket key. Deliberately drops the `Z` suffix
+// and milliseconds rather than keeping a `+02:00` offset suffix: this
+// project's own convention for a display timestamp is a bare, offset-free
+// string that's SAST by house convention (see `import-register.md`'s "Date
+// run (SAST)" column) -- a trailing `Z` specifically would be actively
+// wrong once shifted, since it would then claim to be UTC while holding a
+// SAST value. Exported for testing.
+function toSastTimestamp(now = new Date()) {
+  return new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 19);
+}
+
 function readThemeState(statePath) {
   try {
     return JSON.parse(fs.readFileSync(statePath, "utf8"));
@@ -171,7 +186,7 @@ function attemptDrawOrRecall(cwd, personaStyle, opts) {
   const picked = pickWeighted(weighted, randomFn);
   if (!picked) return null; // every theme for this persona is Under review
 
-  const timestamp = now.toISOString();
+  const timestamp = toSastTimestamp(now);
   const newRepeatCount = repeatFor(picked.id).repeatCount + 1;
   instance.style = personaStyle;
   instance.repeats[picked.id] = { repeatCount: newRepeatCount, lastPicked: timestamp };
@@ -249,6 +264,7 @@ function main() {
 module.exports = {
   drawOrRecallTheme,
   sastDateKey,
+  toSastTimestamp,
   readThemeState,
   writeThemeState,
   writeFileAtomic,

@@ -74,6 +74,25 @@ function realCwd(cwd) {
   return resolveRealCwd(cwd);
 }
 
+// TODO-82 fix (2026-09-05): `endedAt`'s default write value was raw
+// `new Date().toISOString()` -- a `Z`-suffixed UTC instant, wrong class of
+// value for a field that's part of a marker meant to be read by a persona
+// or BinaryMisfit reflecting on how a day ended. Same fixed-offset-by-hand
+// technique every other SAST computation in this project uses (this
+// machine has no real `Africa/Johannesburg` tzdata, so `Intl`/`TZ` silently
+// no-ops); a small local copy rather than a shared import, matching
+// `theme-select.js`'s own `sastDateKey`/`toSastTimestamp` precedent -- two
+// independent copies of this same pure function can't drift into
+// disagreeing with each other for the same `now` input, so there's no
+// cross-module consistency hazard to guard against by sharing it. Only
+// changes the DEFAULT here -- `writeDayState` itself still stores whatever
+// `now` value a caller explicitly passes verbatim, unchanged, since that
+// pass-through is what the existing tests already pin down. Exported for
+// testing.
+function toSastTimestamp(now = new Date()) {
+  return new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 19);
+}
+
 function readAll(dayStatePath) {
   try {
     return JSON.parse(fs.readFileSync(dayStatePath, "utf8"));
@@ -101,7 +120,7 @@ function readDayState(cwd, dayStatePath = DAY_STATE_PATH) {
 // as incomplete as one with no mood. `source` is optional and unvalidated
 // (see this file's own header comment) -- `{ transcript?, scene? }`, either
 // or both, or omitted entirely.
-function writeDayState(cwd, mood, summary, fadeOut, source, now = new Date().toISOString(), dayStatePath = DAY_STATE_PATH) {
+function writeDayState(cwd, mood, summary, fadeOut, source, now = toSastTimestamp(), dayStatePath = DAY_STATE_PATH) {
   if (!mood || !mood.trim()) throw new Error("mood is required -- an empty mood isn't a real end-of-day marker");
   if (!summary || !summary.trim()) throw new Error("summary is required -- 'not an essay' still means something, not nothing");
   if (!fadeOut || !fadeOut.trim()) throw new Error("fadeOut is required -- the last frame is part of the marker, not an optional extra");
@@ -159,7 +178,7 @@ function main() {
   process.exitCode = 1;
 }
 
-module.exports = { readDayState, writeDayState, realCwd, DAY_STATE_PATH };
+module.exports = { readDayState, writeDayState, realCwd, toSastTimestamp, DAY_STATE_PATH };
 
 if (require.main === module) {
   main();
