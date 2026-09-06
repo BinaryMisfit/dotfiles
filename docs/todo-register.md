@@ -7,8 +7,8 @@ inline here.
 
 | # | Item | Priority | Status | Type | Area | Raised | Touched |
 |---|---|---|---|---|---|---|---|
-| [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | In progress | Targeted | chezmoi | 2026-08-30 | 2026-09-02 |
-| [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-02 |
+| [TODO-1](#todo-1) | Build cross-platform uninstall script (Windows/macOS/Linux) | High | In progress | Targeted | chezmoi | 2026-08-30 | 2026-09-06 |
+| [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-06 |
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 
 ---
@@ -50,13 +50,46 @@ macOS or Linux, and never run with `-Confirm`/`--confirm` anywhere** — the sta
 first real run are now materially higher than v1's, since it uninstalls actual dev tools,
 not just config files.
 
-**Next action:** Real `-Confirm` execution testing, ideally on a disposable/VM machine per
-platform, not this daily-driver machine. Cross-reference against
-[`docs/inventory-register.md`](inventory-register.md) periodically for drift, since the
-managed-file/package lists inside both scripts are hand-maintained, not generated from that
-doc or from `run_onchange_install-tools.*.tmpl` directly. Coordinate with
-[TODO-4](#todo-4)'s non-Windows audit — real execution testing on macOS/Linux naturally
-belongs in that pass rather than duplicating the effort.
+**Real `--confirm` execution test, WSL2 Ubuntu, 2026-09-05 night, findings written up
+2026-09-06:** first real (non-dry-run) run of `uninstall.sh --confirm` against a disposable
+WSL2 Ubuntu instance. Misdiagnosed a slow WSL trigger as a hung process and killed it
+prematurely; a reboot landed before the resumed second run finished, leaving the instance in
+a genuine partial-uninstall state that survived the reboot untouched (WSL2 instances persist
+disk state across a Windows reboot the same as any VM). Verified for real post-reboot:
+
+- Chezmoi-managed dotfiles (`.zshrc`, `.tmux.conf`, `.wezterm.lua`, `.gitconfig`,
+  `.p10k.zsh`) — fully removed, no partial state.
+- `APT_PACKAGES` (10 targets) — 8 removed cleanly (`bat`, `fd-find`, `fzf`, `jq`, `neovim`,
+  `python3-pip`, `ripgrep`, `shellcheck`). **2 genuinely did not remove: `python3`, `tmux`**
+  — this is a real per-package failure, not the premature-kill misdiagnosis from the same
+  night; every other package in the same list succeeded around them.
+- `GITHUB_RELEASE_BINARIES` (`lazygit`, `stylua`, `lua-language-server`, `shfmt`) — all
+  absent from `~/.local/bin`, removed cleanly.
+- `APT_RISKY_SHARED` (`ca-certificates`, `curl`, `gnupg`) and `git` — still present, exactly
+  as designed (never auto-removed / never a target).
+- **Real observability gap, confirmed not just theorized:** `/var/log/apt/history.log` on
+  this instance is empty and stale (last rotated May), so neither the successful removals
+  nor the `python3`/`tmux` failures left any trace there — the `2>/dev/null` on the
+  `apt-get remove` line in `uninstall.sh` hides the actual per-package error, and there's
+  currently no other log to reconstruct it from after the fact. Root cause of the
+  `python3`/`tmux` failure specifically is still unknown — didn't re-run the actual removal
+  to avoid repeating the same live-system risk this finding is about.
+- `NPM_GLOBAL_PACKAGES` and VS Code Server extension removal — **untested, not just
+  "unreached."** This WSL2 distro has no native Linux `npm` at all (`npm` resolves through
+  Windows interop to the host's own `npm.exe`) and never had a `~/.vscode-server` directory
+  in the first place, so neither removal path is exercisable on this kind of instance —
+  needs a host that actually has native Node + a real Remote-WSL/Remote-SSH extension
+  install to test for real.
+
+**Next action:** before the next real run, stop swallowing `apt-get remove`'s stderr on that
+line so a `python3`/`tmux`-style failure is diagnosable instead of silent. Still need a real
+`-Confirm` execution pass on a disposable macOS box, plus a Linux/WSL host with native
+npm + real `vscode-server` state, to close out the two paths this run couldn't exercise at
+all. Cross-reference against [`docs/inventory-register.md`](inventory-register.md)
+periodically for drift, since the managed-file/package lists inside both scripts are
+hand-maintained, not generated from that doc or from `run_onchange_install-tools.*.tmpl`
+directly. Coordinate with [TODO-4](#todo-4)'s non-Windows audit — real execution testing on
+macOS/Linux naturally belongs in that pass rather than duplicating the effort.
 
 ---
 
@@ -103,6 +136,14 @@ in the repo plus the relevant `.chezmoiignore` OS-gates):
    `.vscode/`/the extensions installer *on* Linux, despite the confusing label) — no local
    VS Code needed on a remote-SSH target. Worth a comment-clarity fix on that misleading
    label at some point, not a functional one.
+
+**Real execution data point, 2026-09-05/06 (WSL2 Ubuntu, `uninstall.sh` side, not
+`apply`):** see [TODO-1](#todo-1)'s own write-up for the full findings — this doesn't
+confirm or refute findings 2/3 above (those are `install-tools`/`bootstrap` concerns, this
+run only exercised `uninstall.sh`), but it is this repo's first real non-Windows execution
+evidence of any kind, and it already surfaced one new real gap TODO-1 didn't have before:
+`apt-get remove`'s swallowed stderr hides genuine per-package failures (`python3`, `tmux`
+both silently failed to remove).
 
 **Next action:** Real execution testing on a disposable/VM macOS and Linux machine — a
 fresh `chezmoi init`/`apply` end to end, not just reading the templates. Confirm or refute
