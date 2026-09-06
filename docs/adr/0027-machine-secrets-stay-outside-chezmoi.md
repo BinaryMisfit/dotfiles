@@ -51,3 +51,19 @@ already supports age-encrypted files. Rejected — the encryption solves "who ca
 committed file," not the actual failure mode either case hit (stale environment revival,
 or a launch-time substitution timing that doesn't fit chezmoi's own apply-time model). Adding
 encryption machinery here would be solving a problem neither incident actually had.
+
+---
+*Addendum (2026-09-06):* Case two's `setx` never actually landed the first time, despite
+this ADR recording it as done and the command itself reporting a clean exit. Real root
+cause, found the hard way: running `cmd.exe /c ...` from git-bash silently mismangles `/c`
+— MSYS's automatic Unix-path-to-Windows-path conversion rewrites it before `cmd.exe` ever
+sees a real `/c` flag, so `cmd.exe` drops into an inert interactive banner instead of
+running the given command, exits 0, and nothing happens. No error, no non-zero exit,
+nothing that would have flagged it without independently reading the registry back
+afterward — which the original run apparently didn't do. Fixed by using `cmd.exe //c ...`
+(the standard git-bash escape that survives MSYS's path substitution) instead of `/c`.
+**Any future `cmd.exe`-launched command from within this repo's git-bash environment must
+use `//c`, not `/c`, and must verify its actual effect independently (a registry read, a
+file check) rather than trusting a zero exit code alone** — this bug produces a clean
+success signal while doing nothing. Re-ran case two's `setx` correctly on 2026-09-06;
+verified present in `HKCU\Environment` afterward, length checked, value never printed.
