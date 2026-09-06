@@ -61,7 +61,7 @@
 // "complete" is asserted by the caller, not inferred.
 //
 // NOT SAFE FOR CONCURRENT CALLS AGAINST THE SAME CWD (real gap, caught
-// 2026-09-06 by Alexia while wiring this into binary-dotfiles' own
+// 2026-09-06 by Alexia while wiring this into digital-homelab's own
 // playbook, before it ever shipped as a live bug): every write here is an
 // unlocked read-modify-write of one shared JSON file. A playbook that
 // dispatches steps as parallel agents (several repos' own Step 1.5) must
