@@ -78,6 +78,11 @@
             },
             {
                 "commandline": "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\wt.exe new-tab -- pwsh ; split-pane -V --size 0.667 -- pwsh ; split-pane -V --size 0.5 -- pwsh ; split-pane -H --size 0.5 -- pwsh ; move-focus left ; split-pane -H --size 0.5 -- pwsh ; move-focus left ; split-pane -H --size 0.5 -- pwsh",
+                "font":
+                {
+                    "face": "MesloLGS Nerd Font",
+                    "size": 10
+                },
                 "guid": "{3a404ab3-3326-418d-ac1c-0059e4f518d9}",
                 "hidden": false,
                 "name": "Six Pane Sample (blank)",
