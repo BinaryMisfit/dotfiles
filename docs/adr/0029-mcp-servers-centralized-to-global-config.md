@@ -51,3 +51,22 @@ Hailey's; permissions and settings... are Aphrodite's"). This specific deploy wa
 BinaryMisfit's own direct, explicit assignment to this session tonight — not a
 reassignment of the domain itself, not a precedent that `mcp.json` moves to Aphrodite's
 ownership going forward. Flagged here so the exception is visible, not assumed.
+
+---
+*Addendum (2026-09-07):* **Real bug found: `~/.claude/mcp.json` is not a file the Claude
+Code CLI actually reads for server registration.** `claude mcp list` reported "No MCP
+servers configured" despite this file being byte-correct, and a live session had zero
+`hermes`/`x-lifestyle-mcp` tools loaded. The CLI's real user-scope registry is the
+top-level `mcpServers` key inside `~/.claude.json` (a large, frequently-written runtime
+state file — history, onboarding flags, etc. — not a sane chezmoi template target), and
+the only supported way to write to it is `claude mcp add`/`add-json ... -s user`.
+
+The *decision* this ADR records — one global definition per server, no per-repo
+duplicates — still stands and isn't reversed. What was wrong is the mechanism: a template
+deploying a file nothing reads is not "centralized," it's inert. Fixed by
+`run_onchange_register-mcp-servers.{sh,ps1}.tmpl`, which runs `claude mcp add-json` for
+both servers at user scope, idempotently (remove-then-add), re-running whenever the
+script's own content changes. `dot_claude/mcp.json.tmpl` stays in the tree as a readable
+record of what the two servers are — it is no longer a live deployment path, and nothing
+should be added to it expecting the CLI to pick it up. Confirmed working: `claude mcp
+list` shows both servers `✔ Connected` after the new scripts ran.

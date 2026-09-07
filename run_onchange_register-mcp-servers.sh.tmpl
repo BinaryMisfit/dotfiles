@@ -1,0 +1,35 @@
+{{ if ne .chezmoi.os "windows" -}}
+{{ if eq (get . "profile" | default "home") "home" -}}
+#!/usr/bin/env sh
+set -eu
+
+# Registers this machine's two MCP servers (hermes, x-lifestyle-mcp) at Claude
+# Code's *user* scope via `claude mcp add-json ... -s user`.
+#
+# Real bug this replaces (found 2026-09-07): `dot_claude/mcp.json.tmpl` deploys
+# to `~/.claude/mcp.json`, a file the Claude Code CLI never actually reads for
+# server registration -- `claude mcp list` reported nothing despite that file
+# being correct, and a live session had zero hermes/x-lifestyle-mcp tools
+# loaded. The real registry is the top-level `mcpServers` key inside
+# `~/.claude.json`, which only `claude mcp add`/`add-json` writes to. This
+# script is the actual fix; `mcp.json.tmpl` stays only as documentation of
+# what these two servers are, not as a live deployment mechanism.
+#
+# Idempotent by reconciliation: remove then re-add each server every time this
+# script runs, rather than checking first and skipping. Re-runs whenever this
+# script's own rendered content changes (chezmoi's run_onchange convention),
+# so editing the server list below is what triggers the next apply to pick it
+# up -- no separate versioning needed.
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "register-mcp-servers: claude CLI not found on PATH, skipping" >&2
+  exit 0
+fi
+
+claude mcp remove hermes -s user >/dev/null 2>&1 || true
+claude mcp add-json hermes '{"type":"sse","url":"https://mcpadmin.digitalmisfit.net/servers/5fa1d1ea612e4a31a06e4c4b4f769762/sse","headers":{"Authorization":"Bearer ${CONTEXTFORGE_ADMIN_API_TOKEN}"}}' -s user
+
+claude mcp remove x-lifestyle-mcp -s user >/dev/null 2>&1 || true
+claude mcp add-json x-lifestyle-mcp '{"type":"http","url":"https://xcl-mcp.binarymisfit.dev/mcp"}' -s user
+{{ end -}}
+{{ end -}}

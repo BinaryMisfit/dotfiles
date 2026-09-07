@@ -35,6 +35,7 @@ for why that replaced the one-time script ADR 0007 originally shipped with.
 | `run_onchange_install-tools.{ps1,sh}.tmpl` | Windows / macOS+Linux | Installs the pinned dev tool list via winget / Homebrew+apt; re-runs whenever the tool list changes |
 | `run_onchange_install-mosh-client.sh.tmpl` | macOS | Installs `mosh` via Homebrew if absent |
 | `run_onchange_install-vscode-extensions.{ps1,sh}.tmpl` | Windows / POSIX | Diffs desired vs. installed VS Code extensions, installs/uninstalls to match; re-runs via an embedded checksum of the extension list |
+| `run_onchange_register-mcp-servers.{ps1,sh}.tmpl` | Windows / POSIX, home profile only | Registers `hermes` and `x-lifestyle-mcp` at Claude Code's user scope via `claude mcp add-json ... -s user` — the real MCP registration mechanism, added 2026-09-07 once `mcp.json.tmpl` (above) was found to deploy to a file the CLI never reads. Idempotent remove-then-add; re-runs whenever this script's own content changes. See [ADR 0029](adr/0029-mcp-servers-centralized-to-global-config.md)'s addendum |
 
 ## Shell (zsh)
 
@@ -100,7 +101,7 @@ both profiles, with content gated individually instead of one blanket switch.
 | Path | Deploys to | Bucket | Purpose |
 |---|---|---|---|
 | `CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` | — | Global instructions; `@`-includes `rules/*` per profile |
-| `mcp.json.tmpl` | `~/.claude/mcp.json` | — | MCP server config — currently always empty regardless of profile (see open finding below) |
+| `mcp.json.tmpl` | `~/.claude/mcp.json` (documentation only, not read by the CLI — see below) | — | Records the two home-profile MCP servers (`hermes`, `x-lifestyle-mcp`); the actual registration path is `run_onchange_register-mcp-servers.{sh,ps1}.tmpl` (see the diagnostics/scripts table) — corrected 2026-09-07, [ADR 0029](adr/0029-mcp-servers-centralized-to-global-config.md) addendum |
 | `settings.json.tmpl` | `~/.claude/settings.json` | — | Permissions/model settings; home- and work-only blocks inside |
 | `rules/registers.instructions.md` | `~/.claude/rules/` | Common | The todo/idea/ADR register standard |
 | `skills/decision-register/` | `~/.claude/skills/` | Common | Logs/supersedes/lists ADRs |
@@ -186,7 +187,7 @@ other this repo distributes to — each lives as untracked, machine-local state 
 ## Flags — found during this pass, not yet actioned
 
 1. **`.chezmoiignore`'s "Bootstrap / root-only files" section references `install-core.ps1`, `install-core.sh`, `setup-github-ssh.ps1`, `setup-github-ssh.sh`** — none of these exist on disk, and git history shows no trace of them ever existing under those names. Likely superseded by `run_once_setup-github-ssh.*.tmpl` and left stale. Candidate for cleanup.
-2. **`dot_claude/mcp.json.tmpl` has no profile branching** — always `{"mcpServers": {}}` — while root `CLAUDE.md` documents a work-profile `amaza-core` server that isn't in the template. Unresolved from the earlier repo scan.
+2. ~~`dot_claude/mcp.json.tmpl` has no profile branching`~~ — **stale, superseded 2026-09-06 by [ADR 0029](adr/0029-mcp-servers-centralized-to-global-config.md)**: the template now branches on home/work and the work-profile `amaza-core` reference this flag was about never actually existed in the real template (see CLAUDE.md's own domain-boundary note). Left here, struck rather than deleted, so a future pass doesn't re-investigate a closed question.
 3. **PowerShell profile-location gating keys off a hardcoded Windows username (`willier`)** to decide work vs. home — functionally fine today, fragile if that account name ever changes.
 
 Resolved since the last pass: `dot_codex/` dead weight (removed, [ADR 0008](adr/0008-interactive-bootstrap-and-finish-codex-removal.md)); bootstrap's stale `encrypted_private_env.age` re-encrypt instructions (fixed, same ADR); `.chezmoiremove`'s blanket `.claude/` removal on non-home profiles (fixed, same ADR — this one was actively dangerous, not just stale).
