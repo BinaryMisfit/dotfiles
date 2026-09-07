@@ -70,6 +70,13 @@
                 "tabColor": "#ff2d55"
             },
             {
+                "commandline": "%LOCALAPPDATA%\\Microsoft\\WindowsApps\\wt.exe new-tab -- pwsh ; split-pane -H --size 0.8 -- pwsh ; split-pane -V --size 0.8 -- pwsh ; split-pane -H --size 0.25 -- pwsh ; move-focus up ; split-pane -V --size 0.25 -- pwsh ; move-focus left",
+                "guid": "{f11427a3-a915-4ed8-a6b9-9e8608a559b2}",
+                "hidden": false,
+                "name": "Windmill Sample (blank)",
+                "tabColor": "#5856d6"
+            },
+            {
                 "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
                 "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
                 "hidden": false,
