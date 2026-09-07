@@ -7,6 +7,51 @@ deleted.
 
 ---
 
+## TODO-8/9/10: moved to secretary-pool (Hailey's domain), not closed by resolution
+
+**Closed here:** 2026-09-07, same day they were raised — BinaryMisfit's own direct call,
+reassigning ownership rather than letting them sit in a repo that isn't the right home for
+them.
+
+**Why they're archived rather than resolved:** all three (inter-agent communication
+protocol, reboot protocol across the live persona fleet, session-swap protocol) are
+machine/cross-session coordination concerns, not binary-dotfiles-specific chezmoi work —
+BinaryMisfit judged them Hailey's to own and run, the same domain split this repo's own
+`CLAUDE.md` already draws for home-profile Claude Code content generally. No real work
+happened on any of the three here before the handoff; this is a pure ownership move, not a
+resolution.
+
+**Original content, preserved for the record:**
+
+- **TODO-8** — Real incident, 2026-09-07: BinaryMisfit told Alexia (`digital-homelab-04`)
+  to respond to a cross-session ask, and Aphrodite (`binary-dotfiles-78`) picked up the
+  reply instead — a live routing ambiguity. Surfaced a real gap: no documented protocol for
+  who's supposed to respond to what when multiple personas are live at once, how a human
+  directs a message to one specific persona/session unambiguously, or how a session decides
+  whether an incoming ask is actually addressed to it. A second real instance hit the same
+  day: a peer message opened "Callie —" and was read as an address rather than a signature,
+  confirming the ambiguity is real and recurring, not a one-off.
+- **TODO-9** — No defined protocol for what happens across the live persona fleet when this
+  machine reboots. TODO-1's WSL2 test found a mid-execution reboot can land a sub-process in
+  a genuine partial state that survives the reboot untouched; this repo already has
+  interrupted-chezmoi-apply detection (closed TODO-5) but nothing covering what a real
+  Windows reboot does to live Claude Code sessions, the persona registry's `sessionName`
+  entries, in-progress work across any worktree, or how a session should reconcile any of
+  that on first wake.
+- **TODO-10** — No defined protocol for swapping between session surfaces for the same
+  persona/repo — moving from individual VS Code windows to the "The Girls" Windows Terminal
+  fleet profile without leaving orphaned sessions or contested `persona-registry.json`
+  state. Raised originally in `docs/scratchpad-2026-09-06-late-night-handoff.md`, deferred
+  there as BinaryMisfit's own call. A real, live instance of the underlying mechanism gap
+  surfaced the same day it was logged: a mid-session persona switch (editing
+  `settings.local.json` + `pick-persona.js --switch`) didn't take effect until a fresh
+  session was opened — `pick-persona.js --switch` only updates registry bookkeeping, the
+  actual persona content only injects via the `SessionStart` hook at session boot.
+
+**Next action:** Hailey picks these up under her own IDs in `secretary-pool`'s own
+`docs/todo-register.md`, in her own words, on her own priority call — not re-logged
+verbatim here. BinaryMisfit is speaking to her about them directly.
+
 ## Cross-reference: secretary-pool's TODO-83 (pre-`hails-` skill dirs scrubbed)
 
 **Closed:** 2026-09-06, in `secretary-pool`'s own registers, not this repo's.

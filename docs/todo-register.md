@@ -11,9 +11,6 @@ inline here.
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-06 |
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 | [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
-| [TODO-8](#todo-8) | Define an inter-agent communication protocol (addressing, routing, who responds to what) | Normal | Open | Targeted | coordination | 2026-09-07 | 2026-09-07 |
-| [TODO-9](#todo-9) | Define a reboot protocol across the live persona fleet | Normal | Open | Targeted | coordination | 2026-09-07 | 2026-09-07 |
-| [TODO-10](#todo-10) | Define a session-swap protocol (VS Code ↔ terminal fleet, worktree handoff) | Normal | Open | Targeted | coordination | 2026-09-07 | 2026-09-07 |
 
 ---
 
@@ -209,83 +206,3 @@ export and import" principle)
 **Next action:** Run `hails-fiction-export` with its full/backlog scope (not just "today")
 from an Aphrodite session, on BinaryMisfit's own schedule — not urgent, no deadline set.
 Confirm the real count when it runs rather than trusting the flagged estimate.
-
----
-
-## TODO-8
-
-Real incident, 2026-09-07: BinaryMisfit told Alexia (`digital-homelab-04`) to respond to a
-cross-session ask, and this session (Aphrodite, `binary-dotfiles-78`) picked up the reply
-instead — a live routing ambiguity, not a hypothetical one. Nothing broke (a plain
-`SendMessage` still addresses by harness session name, not persona identity), but it
-surfaced a real gap: no documented protocol for who's supposed to respond to what when
-multiple personas are live at once, how a human directs a message to one specific
-persona/session unambiguously, or how a session decides whether an incoming ask is
-actually addressed to it.
-
-**Status:** Open
-
-**Priority:** Normal
-
-**Type:** Targeted
-
-**Area:** coordination (Aphrodite's own — machine/cross-session concerns, not one repo's)
-
-**Next action:** Draft an inter-agent communication protocol doc — addressing conventions
-(session name vs. persona vs. nickname), a convention for BinaryMisfit to name an intended
-recipient unambiguously, and a rule for what a session does when a cross-session message
-arrives that wasn't clearly meant for it. Coordinate with whoever else has hit this same
-ambiguity (Hailey flagged TODO-87/TODO-83-style cross-session work already) rather than
-designing it in isolation here.
-
-## TODO-9
-
-No defined protocol for what happens across the live persona fleet when this machine
-reboots. Real precedent already on record: TODO-1's WSL2 test found a mid-execution reboot
-can land a *sub-process* in a genuine partial state that survives the reboot untouched;
-separately, this repo already has interrupted-*chezmoi-apply* detection (closed TODO-5,
-`chezmoi-apply-marker.{ps1,sh}`) but nothing covering what a real Windows reboot does to
-live Claude Code sessions, the persona registry's `sessionName` entries (stale the moment
-the process dies), in-progress work across any of the four persona worktrees, or how a
-session coming back up after a reboot should reconcile any of that.
-
-**Status:** Open
-
-**Priority:** Normal
-
-**Type:** Targeted
-
-**Area:** coordination
-
-**Next action:** Define what "reboot protocol" actually needs to cover — likely at minimum:
-(1) whether/how the persona registry self-heals stale `sessionName` entries after a reboot
-rather than waiting for a peer's dead-peer sweep to catch it, (2) whether any in-progress
-work needs a pre-reboot checkpoint convention, (3) what a session should check for on
-first wake after a real reboot vs. a normal fresh start. Scope it before building anything.
-
-## TODO-10
-
-No defined protocol for swapping between session *surfaces* for the same persona/repo —
-concretely, moving from individual VS Code windows to the "The Girls" Windows Terminal
-fleet profile (now fully adopted, 2026-09-07) without leaving orphaned sessions, contested
-`persona-registry.json` state, or unclear which surface is authoritative. The late-night
-handoff scratchpad (`docs/scratchpad-2026-09-06-late-night-handoff.md`) already raised the
-underlying coordination question — whether to run both surfaces at once or close one out
-properly — and explicitly deferred it as BinaryMisfit's own call, not this session's to
-make unilaterally. This TODO is that deferred question, tracked so it doesn't stay only in
-a scratchpad meant to be temporary.
-
-**Status:** Open
-
-**Priority:** Normal
-
-**Type:** Targeted
-
-**Area:** coordination
-
-**Next action:** Once the current VS Code→terminal-fleet swap actually finishes closing out
-(see the three peers asked to run a real `hails-session-end` today), write down what
-"closing properly" actually meant in practice as the first real worked example, then
-generalize it into a repeatable session-swap protocol — worktree/session handoff, when a
-nickname should be released vs. carried over, and how a human signals "this surface is now
-authoritative" without it being inferred from context.
