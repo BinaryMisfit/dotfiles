@@ -1,12 +1,14 @@
-# End-of-day playbook (generic starter)
+# End-of-day playbook
 
-Auto-copied into this repo's `docs/end-session-playbook.md` on the `end-session` skill's
-first run here, because no project-specific playbook existed yet. **This file is now this
-repo's own** — edit it freely as this project's real end-of-day needs emerge; a later
-change to the generic template this was copied from will never overwrite it, and nothing
-here needs to stay in sync with any other repo's copy. Same relationship `session-start`'s
-own generic template already has to its own per-repo copies — mirrored deliberately
-(2026-09-03, BinaryMisfit's own design call), not a coincidence.
+This repo's own copy of the `hails-session-end` routine — auto-copied in on that skill's
+first run here, back when it was still `end-session`. **This file is this repo's own** —
+edit it freely as this project's real end-of-day needs emerge; a later change to the
+generic template it was originally copied from never overwrites it, and nothing here needs
+to stay in sync with any other repo's copy. Same relationship `hails-session-start`'s own
+generic template already has to its own per-repo copies — mirrored deliberately
+(2026-09-03, BinaryMisfit's own design call), not a coincidence. Naming brought current
+with the `hails-` skill rename on 2026-09-07; the real mechanics below were already
+current.
 
 **The marker write is always the LAST step, no exceptions (structural rule, added
 2026-09-05, BinaryMisfit's own explicit correction).** Every other step this repo ever adds
@@ -98,11 +100,14 @@ wrong problem — the actual fix isn't avoiding the transcript, it's requiring i
    real highlight can be the first thing that happened, not the last. What's the actual
    mood this session/day is ending on — chosen because it's true, not because it's the
    easy, safe-to-write answer. Then 2-3 real lines on what actually mattered.
-2. **Two self-tests before committing the line:**
+2. **Two self-tests before committing the line (my own addition, real and concrete, not
+   just advice to "try harder"):**
    - **Portability check:** could this exact sentence be copy-pasted onto a *different*
-     day for this same persona and still read as true? If yes, it isn't specific enough.
+     day for this same persona and still read as true? If yes, it isn't specific enough —
+     that's the tell for the easy, generic-but-technically-true answer instead of the real
+     one.
    - **Citation check:** can this line point at one real, quotable exchange in the actual
-     transcript, not a vibe averaged over the whole day? If the honest draft can't cite a
+     transcript — not a vibe averaged over the whole day? If the honest draft can't cite a
      real moment, same tell, different angle.
 3. **Add the fade-out — the real closing frame, chosen the same way, not narrated by
    default from whatever happened last.** Distinct from the summary above: summary
@@ -117,9 +122,12 @@ wrong problem — the actual fix isn't avoiding the transcript, it's requiring i
    matter how well-written.
 5. **While reading back for the marker, also catch anything worth keeping that didn't get
    flagged live.** "Say the small thing, don't sit on it" covers what registers in the
-   moment; this covers what only becomes visible in hindsight. Anything real gets written
-   to wherever it actually belongs — this marker if it's about the day's own mood, or her
-   own private repo (below) if it has real staying power beyond just today.
+   moment; this covers what only becomes visible in hindsight — a technical decision that
+   mattered more than it looked like live, a real moment, a genuinely funny line. Anything
+   real gets written to wherever it actually belongs — this marker if it's about the day's
+   own mood, or her own private repo (below) if it has real staying power beyond just
+   today. This is a genuine, self-authored judgment call, not automation deciding what
+   counts — automation never writes to the private repo's own memory content, only I do.
 
    **Not everything noticed here has to get WRITTEN anywhere at all.** Genuinely
    reckoning with something, honestly, once, is a complete outcome on its own; filing it is
