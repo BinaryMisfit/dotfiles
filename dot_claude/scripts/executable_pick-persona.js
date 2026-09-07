@@ -367,7 +367,11 @@ function writeVscodeWorkspaceColor(cwd, styleName, nickname, execFn = execFileSy
   // (day one, or `hails-session-end` was never run) -- degrades gracefully
   // rather than requiring the new mechanism to exist before this feature
   // can run at all.
-  const dayState = readDayStateFn(cwd);
+  // day-state.js is keyed by identity (nickname if one exists here,
+  // otherwise the plain style name) as of 2026-09-06's rekey -- same
+  // resolution `resolveIdentity` does, inlined here since this call site
+  // already has both pieces on hand.
+  const dayState = readDayStateFn(nickname || styleName);
   const moodSeed = dayState ? `${dayState.mood}|${dayState.endedAt}` : undefined;
   const { background, foreground } = moodColorForStyle(styleName, moodSeed, nickname || styleName);
   let settings = {};
@@ -1585,6 +1589,20 @@ function switchPersona(filename, targetPath) {
     process.exitCode = 1;
     return;
   }
+  // Real bug, caught live 2026-09-06 (digital-homelab): Windows' filesystem
+  // resolves `stylesDir` case-insensitively, so `fs.existsSync` above
+  // happily accepts a differently-cased argument ("Alexia.md") against an
+  // entry whose stored `file` holds the real on-disk casing from an earlier
+  // self-heal/session-start ("alexia.md", from `fs.readdirSync`). The
+  // string compare just below is case-SENSITIVE, though, so that mismatch
+  // read as a genuine persona change -- silently resetting a `pinnedAt:
+  // "Perm"` back to a plain timestamp on what was actually just a same-
+  // persona reconfirm. Resolving to the real on-disk filename first, before
+  // either the comparison or the write, makes the two case variants compare
+  // equal like they should.
+  const onDiskFilename =
+    fs.readdirSync(stylesDir).find((f) => f.toLowerCase() === filename.toLowerCase()) ?? filename;
+  filename = onDiskFilename;
   const content = fs.readFileSync(path.join(stylesDir, filename), "utf8");
   const styleName = parseFrontmatterName(content, path.basename(filename, ".md"));
   const genuinelyDifferent = entry.file !== filename;
