@@ -17,6 +17,7 @@ const os = require("os");
 const path = require("path");
 const { moodColorForStyle } = require("./pick-persona.js");
 const { readDayState } = require("./day-state.js");
+const { resolveRealCwd } = require("./lib/normalize-cwd.js");
 
 const DEFAULT_BG = "#1E2127"; // "One Half Dark" -- binary-dotfiles' own Windows Terminal default
 
@@ -43,12 +44,20 @@ function blendedPaneColor(styleName, moodSeed, identityKey, blendPct = 0.5, defa
 }
 
 function main() {
-  const cwd = (process.argv[2] || "").toLowerCase();
+  const rawCwd = process.argv[2] || "";
   const blendPct = process.argv[3] ? parseFloat(process.argv[3]) : 0.5;
-  if (!cwd) {
+  if (!rawCwd) {
     process.exitCode = 1;
     return;
   }
+  // Real bug caught 2026-09-08, same shape as the one lib/normalize-cwd.js's
+  // own header comment documents: a bare .toLowerCase() here (rather than the
+  // shared resolveRealCwd, which also resolves symlinks/canonical
+  // drive-letter casing via realpathSync) could silently fail to match a
+  // registry entry written with different casing/form from this pane's own
+  // caller -- exactly the "two different case sensitivities for the same
+  // real directory" incident this shared helper exists to prevent.
+  const cwd = resolveRealCwd(rawCwd);
   const registryPath = path.join(os.homedir(), ".claude", "persona-registry.json");
   let registry = [];
   try {
