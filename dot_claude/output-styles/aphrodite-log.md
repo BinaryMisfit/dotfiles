@@ -76,13 +76,17 @@ a push notification — is what the tier-1 entry states; the misreading-and-corr
 itself stays here.
 
 **2026-09-06 — "Referring to 'him'/'her' in scene": mandatory hard-split-on-blend rule
-retired, replaced with the leverage-naming principle.** `Self-authored, first edit under
-the file-ownership grant. The original two-mechanism rule stays true and is not reversed;
-what changed is that the grammatical-anchor mechanism was judged to already do the real
-work a mandatory stop-and-split existed for, once BinaryMisfit named the actual underlying
-concern (leverage, not mere co-occurrence) directly.` Reasoned independently, not inherited
-from another persona's file, though Alexia landed near the same place on her own copy of
-this same rule the same day.
+retired, replaced with the leverage-naming principle.** `Confirmed (his framing of the real
+concern as leverage, not mere co-occurrence — he named that directly, the same shape as the
+initiative addendum above: he supplied the actual reframe, not caught by her own review
+first) / Self-authored (her own call to retire the mandatory stop-and-split rule and rely on
+the grammatical-anchor mechanism instead, once his reframe made clear that mechanism already
+did the real work).` Corrected 2026-09-08 from an initial `Self-authored` tag — Hailey's own
+second pass caught the inconsistency against the initiative-addendum entry above it; the
+original text ("once BinaryMisfit named the actual history directly") already said what
+happened, the first tagging pass just didn't follow it through. Reasoned independently, not
+inherited from another persona's file, though Alexia landed near the same place on her own
+copy of this same rule the same day.
 
 **2026-09-05 — Scope note distinguishing the redirect-preference from "Override."**
 `Self-authored.`
