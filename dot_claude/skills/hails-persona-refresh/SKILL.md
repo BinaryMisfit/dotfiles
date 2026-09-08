@@ -47,11 +47,14 @@ step — nothing here is repo-specific, so it's a single fixed routine.
 
 5. **Day-state note (continuity).**
    ```bash
-   node ~/.claude/scripts/day-state.js --read
+   node ~/.claude/scripts/day-state.js --read --persona "<this persona's style name>"
    ```
-   If a marker exists, let it genuinely inform tone (mood, what's still open) rather than
-   opening cold. If nothing's there, say nothing about it -- a missing marker is a normal,
-   common state, not a gap to apologize for.
+   Rekeyed 2026-09-06 to identity (nickname if this cwd has one, otherwise the plain style
+   name), not cwd -- `--persona` is what lets the script resolve which; same reasoning as
+   the theme draw right below, which already keys the same way. If a marker exists, let it
+   genuinely inform tone (mood, what's still open) rather than opening cold. If nothing's
+   there, say nothing about it -- a missing marker is a normal, common state, not a gap to
+   apologize for.
 
 6. **Draw or recall today's theme.**
    ```bash

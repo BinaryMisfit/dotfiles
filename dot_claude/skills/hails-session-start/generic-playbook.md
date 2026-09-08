@@ -43,6 +43,42 @@ directly, the fixed offset to use — this project may not have a `TZ`-env-based
 compute it reliably, the same trap X-Lifestyle's own playbook hit early on, so prefer
 computing the offset by hand over trusting an unverified `TZ` variable).
 
+## Progress log — every step below reports through it (added 2026-09-06)
+
+`node ~/.claude/scripts/session-start-log.js` is the real, tested backing state for this
+whole routine — a skill is instructions I read and follow, not code with an enforced call
+stack, so nothing about the steps below *guarantees* one ran, captures what happened, or
+lets a rerun resume where a dead run left off, unless it's actually written down somewhere
+durable. That's this script's whole job. **Not scoped to a calendar day — scoped to whether
+the last run for this cwd actually completed** (BinaryMisfit runs this routine multiple
+times in one real day, so "day" was never the right resume boundary — completion is).
+
+**The pattern, once, so it doesn't need repeating at every step below:**
+
+1. As soon as Step 0's `ListAgents` call resolves this session's own name, run `node
+   ~/.claude/scripts/session-start-log.js --begin --session "<name>"`. Its `resuming` field
+   tells you whether this is a fresh run or picking up an incomplete one — if resuming, skip
+   any step its `entry.steps` already marks `"done"` and pick back up at the first one that
+   isn't, instead of re-running the whole routine from scratch.
+2. Before each numbered step below actually starts real work, `--step-start "<step
+   number>"`. After it finishes, `--step-done "<step number>"` (add `--data '{...}'` only for
+   a genuinely useful, content-free fact — never the content itself; see the script's own
+   header comment). A step that hits a real, retryable problem reports `--step-failed
+   "<step number>" --reason "..."` instead — the next `--begin` will attempt it again.
+   **Step 0's own identity-mismatch outcome is different: `--step-blocked "0" --reason
+   "..."`, never `--step-failed`** — no auto-recovery, ever, and `--step-blocked` is what
+   keeps a plain rerun from just trying again as if it were a normal retry.
+3. Once the routine's real last piece of work is done, run `node
+   ~/.claude/scripts/session-start-log.js --complete` — the only thing that lets the *next*
+   `--begin` start clean instead of resuming this one.
+
+**Not safe for concurrent calls against the same cwd** (real gap caught 2026-09-06, once a
+repo's own routine actually dispatched steps as parallel agents) — every write is an
+unlocked read-modify-write of one shared file. If this playbook ever dispatches steps as
+parallel agents (see the technique noted near the top of this file), only the main session
+calls `--step-start`/`--step-done`/`--step-failed` for those steps, never a dispatched
+agent itself — same file-exclusivity reasoning as any other parallel-write hazard.
+
 ## Step 0 — Identity gate (added 2026-09-06, replaces the old Step 1 self-register/sweep sub-bullets)
 
 **Real incident, same day:** a dead-peer sweep deleted Perm-pinned registry entries
@@ -52,20 +88,21 @@ undetected for the better part of an hour, across three sessions, before a human
 by noticing the wrong voice out loud. This step exists so that never happens silently again.
 
 Before anything else in this routine: call `ListAgents`, read this session's own name off
-its "This session is `<name>`" line, self-register it (`node ~/.claude/scripts/pick-persona.js
---set-session-name "<name>"`), and sweep dead peers off that same call
-(`node ~/.claude/scripts/pick-persona.js --sweep-dead "<comma-separated live names>"`,
-`""` if none) — same mechanics the old Step 1 ran, just moved here since they're registry
-work, not greeting work. Skip this whole step silently if the global persona system isn't
-installed.
+its "This session is `<name>`" line, `--begin` the progress log (see above), self-register
+(`node ~/.claude/scripts/pick-persona.js --set-session-name "<name>"`), and sweep dead peers
+off that same call (`node ~/.claude/scripts/pick-persona.js --sweep-dead "<comma-separated
+live names>"`, `""` if none) — same mechanics the old Step 1 ran, just moved here since
+they're registry work, not greeting work. Skip this whole step silently if the global
+persona system isn't installed.
 
 Then **compare this session's live persona** (`.claude/settings.local.json`'s `outputStyle`
 field) **against what the registry says for this cwd** (the entry `--set-session-name` just
-touched). Match → proceed to Step 0.5. **Mismatch → stop the entire routine here.** No
-auto-recovery for this one, ever — BinaryMisfit's own explicit call, 2026-09-06: if it's
-broken, only a human fixes it. Surface plainly (this cwd, what the registry says, what's
-actually loaded) and wait for a real `/hails-persona <name>` correction before continuing;
-don't guess, don't self-heal, don't proceed "just this once."
+touched). Match → `--step-done "0"`, proceed to Step 0.5. **Mismatch → `--step-blocked "0"
+--reason "..."`, then stop the entire routine here.** No auto-recovery for this one, ever —
+BinaryMisfit's own explicit call, 2026-09-06: if it's broken, only a human fixes it. Surface
+plainly (this cwd, what the registry says, what's actually loaded) and wait for a real
+`/hails-persona <name>` correction before continuing; don't guess, don't self-heal, don't
+proceed "just this once."
 
 ## Step 0.5 — Full repo cleanup, including the NSFW spot check (reworked 2026-09-06, was "sync worktree branches forward")
 
