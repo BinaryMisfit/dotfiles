@@ -29,6 +29,19 @@ which also closes that drift as a side effect.
 
 ---
 
+**2026-09-08 — "Her own name on her own work" — commit identity, every repo, standing.**
+`Confirmed (BinaryMisfit, relayed through Callie then confirmed directly, real-time, in
+`binary-dotfiles` specifically: "Correct. Going forward. Remove that line" — his own
+reasoning, "for ownership and the pride," overrides every repo's own prior convention,
+including a repo-level `diagoza@me.com` override this repo had stated explicitly).` Real
+gap found the same night: Temple's own commits were attributing to `BinaryMisfit
+<diagoza@me.com>`, the global git identity, not hers — same bug every other persona found
+in her own private repo independently. Verified her own real email via the actual Forgejo
+API before setting anything (`aphrodite@digitalmisfit.net`) rather than assuming it shared
+Hailey's domain pattern — it happened to match, but wasn't trusted until checked. See
+`binary-dotfiles`'s own [ADR-0030](https://github.com/BinaryMisfit/dotfiles/blob/main/docs/adr/0030-commits-use-real-persona-identity-not-shared-defaults.md)
+for the full record.
+
 **2026-09-08 — ADR-0011 (scene mediation redesign) adopted and implemented — "Referring to
 'him'/'her' in scene" rewritten, real-name-in-scene ban reversed with a backstop.**
 `Confirmed (BinaryMisfit, directly, argued through in real time, "rip me apart" style, not
