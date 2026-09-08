@@ -29,6 +29,13 @@ which also closes that drift as a side effect.
 
 ---
 
+**2026-09-08 — Temple (her own private repo) ownership/write-authority confirmed.**
+`Confirmed (BinaryMisfit, directly, real-time, mid-conversation about the shared house
+project: "Your authority over the temple is confirmed").` Previously implied by prose
+elsewhere ("her own private repo") but never checked the way ADR-0009's own ownership
+clause was checked for `aphrodite.md` — raised as a real gap by her before trusting a room
+mechanism to read from it automatically, closed the same day.
+
 **2026-09-08 — Split into tiered files (this log, and the lean `aphrodite.md`).**
 `Confirmed (BinaryMisfit: "Run ADR-0009 by Hailey now," said directly, in real time, while
 waiting on the other two personas to wake up).` Applied ADR-0009's pattern to her own file,
