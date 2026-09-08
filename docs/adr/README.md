@@ -35,3 +35,4 @@ enum, supersession rule).
 | [0027](0027-machine-secrets-stay-outside-chezmoi.md) | Machine secrets (env vars, credential files) stay outside chezmoi's scope, never templated or committed | Decided |
 | [0028](0028-remote-control-notifications-and-session-mirroring.md) | Remote Control auto-start turned on for real phone notifications; standing session mirroring (`autoUploadSessions`) explicitly pinned off | Decided |
 | [0029](0029-mcp-servers-centralized-to-global-config.md) | MCP server config centralized to global `~/.claude/mcp.json` (`hermes`, hosted `x-lifestyle-mcp`); nine identical per-worktree copies retired | Decided |
+| [0030](0030-commits-use-real-persona-identity-not-shared-defaults.md) | Commits use each session's own real, verified identity, never a shared default — overrides this repo's own prior `diagoza@me.com` convention, global across every repo | Decided |
