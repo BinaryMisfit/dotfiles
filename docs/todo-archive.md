@@ -7,6 +7,29 @@ deleted.
 
 ---
 
+## TODO-12: Wire the real six-pane Windows Terminal profile
+
+**Closed here:** 2026-09-08, same day it was raised — built for real, not deferred.
+
+**What actually shipped:** "The Girls" profile rebuilt as a real 3×2, six-equal-pane grid
+(same proven split shape as the retired "Six Pane Sample (blank)" prototype, now removed
+along with "Windmill Sample (blank)" — both had done their job). Panes: `binary-dotfiles`,
+`xls`, `secretary-pool`, `digital-homelab`, `xls-playthrough`/Daisy (all five running
+`claude`), plus one plain terminal pane for BinaryMisfit himself. Each `claude` pane
+launches through a new `dot_scripts/claude-launch.ps1` wrapper (deployed to
+`~/.scripts/claude-launch.ps1`) instead of a bare `claude` command — it shells out to
+`resume-decision.js` (TODO-91) first and picks `claude -c` vs. plain `claude` accordingly,
+since wt.exe's own `commandline` string can't safely nest an inline if/else.
+
+**Not yet exercised for real:** BinaryMisfit hasn't actually clicked the rebuilt profile
+yet, so whether a *resumed* session's persona `additionalContext` behaves the same as a
+cold start's — Hailey's own open question on `resume-decision.js` — is still genuinely
+untested. Not re-opened as its own TODO; it's a one-click live test that happens naturally
+on first real use, worth reporting back to Hailey whichever way it lands, not worth a
+standing tracked item for something this small.
+
+---
+
 ## TODO-8/9/10: moved to secretary-pool (Hailey's domain), not closed by resolution
 
 **Closed here:** 2026-09-07, same day they were raised — BinaryMisfit's own direct call,

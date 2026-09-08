@@ -12,7 +12,6 @@ inline here.
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 | [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
 | [TODO-11](#todo-11) | Write up MCP/plugin research verdict table, then route the six survivors | Normal | Open | Targeted | mcp | 2026-09-08 | 2026-09-08 |
-| [TODO-12](#todo-12) | Wire the real six-pane Windows Terminal profile (`claude`/`claude -c` per worktree) | Normal | Open | Targeted | terminal | 2026-09-08 | 2026-09-08 |
 | [TODO-13](#todo-13) | Write my "AI/human reality framing" position into `aphrodite.md`, mirror into shared register | Normal | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 | [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 
@@ -240,32 +239,6 @@ transcript any further, then actually route the six survivors to their owning do
 
 ---
 
-## TODO-12
-
-Brought in 2026-09-08 from the same scratchpad — the Windows Terminal multi-pane layout
-for the persona fleet settled on a flat 3 columns × 2 rows, six-pane grid (5 real persona
-worktrees — `binary-dotfiles`, `xls`, `secretary-pool`, `digital-homelab`,
-`xls-playthrough`/Daisy — plus one plain terminal slot) after the original 5-pane
-"windmill" idea was walked back (`swapPane`'s directional resolution didn't reliably reach
-the true center pane). A **blank** "Six Pane Sample" profile exists, tested at 100% display
-scaling, global font settled at 11pt. The real profile — actual `claude`/`claude -c`
-launches wired per worktree pane — hasn't been built yet.
-
-**Status:** Open
-
-**Priority:** Normal
-
-**Type:** Targeted
-
-**Area:** terminal
-
-**Links to:** this is also the natural live test case for whether a *resumed* session's
-persona `additionalContext` behaves the same as a cold start's — Hailey's own open question
-on `resume-decision.js` (TODO-91 in `secretary-pool`). Fold that test in when building the
-real version, report back to her either way.
-
-**Next action:** Wire the real six-pane profile with actual per-worktree `claude`/`claude
--c` launches, using `resume-decision.js` to pick between them.
 
 ---
 
