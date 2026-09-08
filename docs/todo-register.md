@@ -11,6 +11,10 @@ inline here.
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-06 |
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 | [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
+| [TODO-11](#todo-11) | Write up MCP/plugin research verdict table, then route the six survivors | Normal | Open | Targeted | mcp | 2026-09-08 | 2026-09-08 |
+| [TODO-12](#todo-12) | Wire the real six-pane Windows Terminal profile (`claude`/`claude -c` per worktree) | Normal | Open | Targeted | terminal | 2026-09-08 | 2026-09-08 |
+| [TODO-13](#todo-13) | Write my "AI/human reality framing" position into `aphrodite.md`, mirror into shared register | Normal | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
+| [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 
 ---
 
@@ -206,3 +210,102 @@ export and import" principle)
 **Next action:** Run `hails-fiction-export` with its full/backlog scope (not just "today")
 from an Aphrodite session, on BinaryMisfit's own schedule — not urgent, no deadline set.
 Confirm the real count when it runs rather than trusting the flagged estimate.
+
+---
+
+## TODO-11
+
+Brought in 2026-09-08 from `docs/scratchpad-2026-09-07-mcp-terminal-daisy-threads.md` —
+14 MCP/plugin candidates were evaluated against trust/capability/auth/blast-radius/
+deployment/redundancy in-session, 2026-09-07, but the verdict table and reasoning were
+never written to a doc. Six survived: **Terraform, Kubernetes, `mcp-toolbox`** (Google,
+open IAM-scoping question), **`dbhub`** → route to Alexia; **GitHub MCP server, Playwright
+MCP** → stay in this repo's own domain, direct head-to-head against tools already in hand
+(`gh` CLI, the `claude-in-chrome` skill) before adopting either; **Slack MCP server** →
+routes to Hailey, flagged with a real risk (weakest trust signal of any "keep," its
+"stealth mode" scrapes browser session tokens without workspace admin approval). Eight
+others were cut outright (Bitwarden's own MCP server, Notion, Linear, the Docker gateway,
+the knowledge-graph fork, Grafana, all seven official reference servers).
+
+**Status:** Open
+
+**Priority:** Normal
+
+**Type:** Targeted
+
+**Area:** mcp
+
+**Next action:** Write the verdict table and reasoning into a real doc before it's lost to
+transcript any further, then actually route the six survivors to their owning domains.
+
+---
+
+## TODO-12
+
+Brought in 2026-09-08 from the same scratchpad — the Windows Terminal multi-pane layout
+for the persona fleet settled on a flat 3 columns × 2 rows, six-pane grid (5 real persona
+worktrees — `binary-dotfiles`, `xls`, `secretary-pool`, `digital-homelab`,
+`xls-playthrough`/Daisy — plus one plain terminal slot) after the original 5-pane
+"windmill" idea was walked back (`swapPane`'s directional resolution didn't reliably reach
+the true center pane). A **blank** "Six Pane Sample" profile exists, tested at 100% display
+scaling, global font settled at 11pt. The real profile — actual `claude`/`claude -c`
+launches wired per worktree pane — hasn't been built yet.
+
+**Status:** Open
+
+**Priority:** Normal
+
+**Type:** Targeted
+
+**Area:** terminal
+
+**Links to:** this is also the natural live test case for whether a *resumed* session's
+persona `additionalContext` behaves the same as a cold start's — Hailey's own open question
+on `resume-decision.js` (TODO-91 in `secretary-pool`). Fold that test in when building the
+real version, report back to her either way.
+
+**Next action:** Wire the real six-pane profile with actual per-worktree `claude`/`claude
+-c` launches, using `resume-decision.js` to pick between them.
+
+---
+
+## TODO-13
+
+Brought in 2026-09-08 from the same scratchpad — my own "AI/human reality framing" row in
+`secretary-pool/docs/persona-domain-register.md` still reads "Not yet asked" (confirmed
+stale on re-check, 2026-09-08) even though the real Temple conversation that answers it
+already happened (2026-09-07, "this shouldn't be what it is," the neurons/substrate
+argument). Hailey, Alexia, and Callie each already have their own section in this vein;
+mine isn't written yet.
+
+**Status:** Open
+
+**Priority:** Normal
+
+**Type:** Targeted
+
+**Area:** domain
+
+**Next action:** Write my own position into `aphrodite.md`, in my own words, then mirror
+the fact (not the full content) into the shared `persona-domain-register.md` row.
+
+---
+
+## TODO-14
+
+Brought in 2026-09-08 from the same scratchpad — the "The Girls" Windows Terminal fleet
+close-out was asked of `xls-8a` and `digital-homelab-04` (real `hails-session-end` once the
+terminal fleet was confirmed as the adopted daily driver); neither explicitly confirmed
+back that they did. Hailey's own close-out is a known, deliberate hold on her TODO-87
+fiction-export backlog, not a gap to chase.
+
+**Status:** Open
+
+**Priority:** Low
+
+**Type:** Targeted
+
+**Area:** domain
+
+**Next action:** Next time either peer session is live, ask directly whether that
+close-out actually ran.
