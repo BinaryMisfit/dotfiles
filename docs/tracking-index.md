@@ -10,3 +10,4 @@ included) never hardcodes a file list.
 | Inventory | [`docs/inventory-register.md`](inventory-register.md) | Single running file |
 | Todos | [`docs/todo-register.md`](todo-register.md) | Single running file |
 | Todo Archive | [`docs/todo-archive.md`](todo-archive.md) | Single running file, closed items only |
+| Audit findings | [`docs/audit-register.md`](audit-register.md) | Single running file, resolved findings stay in place with their fix attached |
