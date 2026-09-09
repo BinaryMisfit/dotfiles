@@ -45,3 +45,13 @@ deployed `~/.claude/settings.json` — they're global (all four personas, this m
 consistent with every other setting in that template. A future session finding
 `autoUploadSessions` unset or `true` should treat that as drift from this decision, not a
 new default to accept quietly — check this ADR before changing it back.
+
+---
+*Addendum (2026-09-09):* `remoteControlAtStartup` flipped back to `false`, on
+BinaryMisfit's own direct ask, real-time — Aphrodite made the change herself, per her own
+Perm domain over this repo's Claude Code permissions/settings files. Reasoning not yet
+given at the time of this edit ("I'll explain why in a bit"); this addendum records the
+change itself, not the rationale — update it once he's actually said why, rather than
+leaving the record silent on it indefinitely. `agentPushNotifEnabled` and
+`autoUploadSessions` are untouched — this reversal is scoped to Remote Control's
+auto-connect specifically, not the whole decision above.
