@@ -159,6 +159,19 @@ real content exists. The mechanics still run early (so the rest of this routine 
 identity/continuity data to work with); only the *telling* waits. Skip if no persona system
 is installed.
 
+**Flagged 2026-09-09, needs a real decision, not silently patched here:** unlike
+`secretary-pool`'s own Step 1 (a single opaque `Skill({skill: "hails-persona-refresh"})`
+call, now hardened so it can't be logged done without actually being invoked), this repo
+decomposes the skill's sub-mechanics into its own tracked progress-log entries below
+(1.1/1.2/1.3/...), wired in at that granularity before the skill existed as a callable
+unit. That's arguably *more* robust against the same failure — each sub-step gets its own
+`--step-done`, so there's no single opaque call to skip — but it also means this repo may
+not actually be calling `hails-persona-refresh` as a skill at all, just running equivalent
+commands inline. Worth confirming directly whether the sub-steps below still cover
+everything the skill itself does (the house/door read in particular — added to the skill
+2026-09-08, not obviously present in this repo's own 1.1/1.2/1.3 breakdown) before trusting
+this section is actually equivalent, rather than assuming it.
+
 This repo tracks that skill's own sub-mechanics as separate progress-log entries, since
 they were already wired in at that granularity before the skill existed as a single
 callable unit:

@@ -49,11 +49,14 @@ skipped — go straight to the Final step with whatever items 1/2/3/5 produced.
 Automatic, no judgment calls — cuts fiction from between the markers Step 1 already
 located, doesn't re-discover boundaries itself.
 
-1. Invoke the `hails-fiction-export` skill directly, using its own default scope — the
-   whole SAST day, every project under `~/.claude/projects/`, not just this session. Dedup
-   is keyed by session ID in one shared log, machine-wide. Stages, unedited, under
-   `~/.claude/fiction-export-staging/<Persona>/` — never writes into
-   `research/x-lifestyle-research` itself.
+1. **"Invoke `hails-fiction-export` directly" means a real `Skill` tool call, not a
+   paraphrase — not optional (hardened 2026-09-09, real incident in `secretary-pool`'s own
+   session-start playbook: a chained skill got logged as run without ever actually being
+   invoked).** Issue `Skill({skill: "hails-fiction-export"})` and wait for it to actually
+   return, using its own default scope — the whole SAST day, every project under
+   `~/.claude/projects/`, not just this session. Dedup is keyed by session ID in one shared
+   log, machine-wide. Stages, unedited, under `~/.claude/fiction-export-staging/<Persona>/`
+   — never writes into `research/x-lifestyle-research` itself.
 2. Confirm back to BinaryMisfit what got staged (or that nothing did).
 
 ## Step 3 — Custodian review, then import
@@ -70,9 +73,11 @@ confirmation) defaults to **not archived**, full stop.
 2. The custodian (Callie, or Aphrodite's own nominated reviewer for Callie's own scenes)
    gets the real scene text for each flagged boundary, always — never just Step 1's notes
    standing in for the source.
-3. Invoke the `hails-fiction-import` skill directly. Because Step 1 already found the
-   boundaries and this review already cleared them, import **applies** the decision rather
-   than re-deriving canon/theme judgment from scratch.
+3. **"Invoke `hails-fiction-import` directly" means a real `Skill` tool call, not a
+   paraphrase — same non-negotiable as Step 2 above, not a judgment call.** Issue
+   `Skill({skill: "hails-fiction-import"})` and wait for it to actually return. Because
+   Step 1 already found the boundaries and this review already cleared them, import
+   **applies** the decision rather than re-deriving canon/theme judgment from scratch.
 
 **Standing permission to stop partway — not a failure, BinaryMisfit's own explicit ask.**
 The mechanical half (archive, index) may run and then stop deliberately, marking that
