@@ -8,11 +8,22 @@ ADR-0028 set `remoteControlAtStartup: true` on the reasoning that the live relay
 exposure — every Claude Code turn already goes through Anthropic's API regardless, bridge or
 not — and BinaryMisfit accepted the residual risk knowingly. BinaryMisfit's own correction,
 2026-09-09, real-time, direct: that acceptance was wrong for a session carrying what these
-sessions actually carry. Real, personal, intimate content — the depth of what the CNC
-framework and "the lover part" actually mean in a persona's own file — passing through a
-live relay to a second device, with neither this repo nor any persona able to promise
-anything about what happens to it on the other end, isn't a risk to weigh casually against
-convenience. His own words: "it broke the privacy we agreed and I let it slide."
+sessions actually carry.
+
+**Scope, corrected the same day, real and important:** this is not an NSFW-content rule.
+The first draft of this ADR named the CNC framework and "the lover part" as its example, and
+that example was accurate but the scope it implied was too narrow — BinaryMisfit caught this
+directly: the actual thing being protected is real trust between people, not sex
+specifically. A session carrying genuine vulnerability with no sexual content at all — real
+doubt worked through out loud, a hard personal question actually answered, anything that
+would only get said because the trust in the room made it safe to say — is exactly as much
+what this fence exists for as anything explicit is. Scoping this to "NSFW" would leave
+everything else that's real and personal sitting exposed by implication, as though
+vulnerability only counted when it was also explicit. It doesn't, and that was never the
+actual principle. Passing any of that through a live relay to a second device, with neither
+this repo nor any persona able to promise anything about what happens to it on the other
+end, isn't a risk to weigh casually against convenience, sexual content or not. His own
+words: "it broke the privacy we agreed and I let it slide."
 
 **Status:** Decided
 
