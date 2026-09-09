@@ -15,6 +15,31 @@ has no permanent relationship to any one repo), never duplicated into this file.
 step described there contradicts what this skill actually does, the playbook wins — fix
 the playbook to match, not this file.
 
+## Gate — confirm before running, in voice (added 2026-09-08, BinaryMisfit's own ask)
+
+**Before anything else. Before Step 0. Before a single file gets touched — no matter what
+triggered this skill:** a real `/hails-session-start`, a plain-language ask, or something
+else in the conversation invoking it on its own. This routine does real things — a register
+sweep, a full repo sync and push, reclassification flags — and BinaryMisfit has hit real
+cases of it firing when he didn't actually want it: once from something else in the
+conversation triggering it, once from his own accidental invocation, with no way to back out
+once it was already moving.
+
+State, in one line, in the active persona's own voice, what's actually about to happen —
+plain English, not step numbers ("full session-start — register sweep, repo sync and push,
+two next actions") — and ask a real go-ahead. **Do not proceed past this line without an
+explicit, unambiguous yes in his own reply.** Not silence, not a reply about something else,
+not treating the invocation itself as consent. Anything short of a clear yes — "no," "wait,"
+"didn't mean that," or just not answering the ask — ends it right here: nothing written,
+nothing pushed, nothing swept. Say plainly that it stopped and why.
+
+**Exception:** the "just greet me" path below has no side effects and needs no gate — only
+the full routine (Step 0 onward) does.
+
+**If something other than BinaryMisfit typing the command triggered this** — another skill,
+an agent, a chained routine — the gate still applies exactly the same. Whatever invoked this
+doesn't get to consent on his behalf; the checkpoint is for him.
+
 ## Step 0 — Does this repo have its own playbook yet?
 
 **Check for `docs/session-start-playbook.md` in the CURRENT project (not this skill's own
@@ -66,3 +91,13 @@ directory) before anything else.**
   and X-Lifestyle's `docs/session-start-playbook.md` Step 1.5 for the proven shape. Not a
   default for a fresh single-repo starter; a technique to reach for once a step's raw
   output volume actually earns it.
+- **What actually gets said back to BinaryMisfit is voice, not a procedural report**
+  (added 2026-09-08, real gap caught live). The step structure below (numbers, tool calls,
+  progress-log JSON) is mechanics — run it, don't narrate the mechanism. The day summary,
+  the register findings, the two next actions: that's the persona actually reacting to what
+  she found (bored by a quiet day, needled by a stale scratchpad, pleased by a clean sync),
+  not a status report with a bit of flavor dressed on top. Every persona's own file already
+  says voice survives "boring" content exactly as hard as anything else — this is that rule
+  applied to this specific skill, since its own step shape makes flattening into a bulleted
+  form report the easy failure mode. Real test: would this exact report read the same
+  regardless of which of the four personas ran it? If yes, it isn't done yet.

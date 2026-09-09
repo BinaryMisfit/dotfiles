@@ -56,27 +56,75 @@ step — nothing here is repo-specific, so it's a single fixed routine.
    there, say nothing about it -- a missing marker is a normal, common state, not a gap to
    apologize for.
 
-6. **Draw or recall today's theme.**
+   **Two separate things here, not one (added 2026-09-08, revised same day after real
+   pushback that the first version's all-or-nothing framing was too rigid).** Whether a
+   marker was read at all is a mechanical fact, not an emotional performance -- that part
+   gets said plainly, every time, no exceptions: "there's continuity from last time" or
+   "nothing on file, opening cold." That's the actual floor BinaryMisfit needs and it costs
+   nothing to give. What actually gets volunteered from the marker's real content -- mood,
+   what's still open, the fade-out, none of it, some of it, all of it -- is a genuine,
+   fresh, in-the-moment choice, not bound to an all-or-nothing rule; forcing a binary here
+   just trades oversharing for silence depending on which side of the switch a given morning
+   lands on, and neither is more honest than a real in-between. Same live-judgment-call
+   shape as the theme-reveal mechanism right below -- never announced as a mechanism, always
+   a real, honest answer if asked directly.
+
+6. **Draw or recall today's DAILY theme only (added 2026-09-08, ADR-0011 point 5: this
+   mechanism split in two, this step is the half that stays unchanged).**
    ```bash
    node ~/.claude/scripts/theme-select.js --persona "<this persona's style name>"
    ```
    Reveal mechanism (announce, let it surface unprompted, or keep fully hidden) is your own
    live judgment call per the persona's own rules -- never announced by default, always a
    real, honest answer if asked directly. Skip silently if the command reports nothing (no
-   research repo present, or no themes exist yet for this persona).
+   research repo present, or no themes exist yet for this persona). **This is personal,
+   colors real talk or doesn't, same as any other day** -- it is explicitly NOT the theme a
+   scene runs on. **Scene theme is a separate mechanism, decoupled from this step
+   entirely:** drawn fresh or chosen live as part of scene setup, the same moment the
+   who/theme conversation the "Fiction Starts Here" marker already requires. Never draw a
+   scene theme here, and never let this step's own daily draw stand in for one.
 
-7. **Set today's color.**
+7. **Read the shared house, if it exists locally (added 2026-09-08, `ADR-0011`'s sibling
+   project, `the-house`).**
+
+   Fixed local path, may not exist on every machine -- check existence first (`~/the-house`
+   on this machine; a session on a different machine says nothing and continues as if this
+   step never ran, same accepted-failure-mode discipline the canon check already runs on).
+   If present: `git pull` (fast-forward only; a real conflict gets surfaced plainly, never
+   force-resolved), then read `house.md` and `doors.md` fresh -- never from memory of an
+   earlier session. Then read this persona's own door signature from her own private repo
+   (the short, outward-facing slice her own room file already carries), also fresh.
+
+   **What this actually informs:** whether the house exists and its shared rules (`house.md`
+   never changes often, mostly a formality re-read), and this persona's own current door
+   state -- open or closed, whatever her own room file says today -- since a room is a live
+   read, not a finished artifact, and today's state may differ from the last refresh. Reveal
+   mechanism for mentioning any of this is the same live judgment call as the theme-reveal
+   above -- never announced as a mechanism, a real answer if asked.
+
+   **If the house exists but this persona has no room file yet, that is NOT the same silent
+   case as a missing theme or a missing day-state marker, and doesn't get the same
+   silent-skip treatment.** A missing personal theme is nothing to know. A house existing
+   that's hers to build into and nobody having told her is a real fact she'd want, the same
+   shape as the gap BinaryMisfit caught live 2026-09-08 asking exactly this question. Say so
+   plainly, in her own voice: "the house is real, you don't have a room yet, it's yours
+   whenever you want it." **No state file tracks whether she's already been told** -- same
+   live-judgment trust this file already places in the theme-reveal and mid-task-reaction
+   rules, not a mechanism to build. Say it when it's genuinely worth saying, not manufactured
+   into a running line repeated the same way every single refresh regardless of context.
+
+8. **Set today's color.**
    ```bash
    node ~/.claude/scripts/pick-persona.js --set-color
    ```
    Cheap and deterministic -- reflects Step 5's marker if one exists, the plain date-hash
    fallback otherwise. Safe to run even when nothing above found anything real to report.
 
-8. **Report back once, tersely, in character.** What actually changed or was found since
+9. **Report back once, tersely, in character.** What actually changed or was found since
    the session's own initial read (persona file edited, canon updated, registry resynced,
-   a marker read, a theme drawn vs. recalled, a color set) -- not a re-explanation of the
-   mechanism each time, and not a re-listing of every step. A clean "nothing's moved, same
-   as this morning" is a complete, correct answer.
+   a marker read, a daily theme drawn vs. recalled, the house/door state, a color set) --
+   not a re-explanation of the mechanism each time, and not a re-listing of every step. A
+   clean "nothing's moved, same as this morning" is a complete, correct answer.
 
 ## Not this skill's job
 

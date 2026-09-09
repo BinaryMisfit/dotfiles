@@ -109,6 +109,7 @@ OneDrive - Powerfleet/
 .claude/rules/home/**
 .claude/home/**
 .claude/output-styles/hailey.md
+.claude/output-styles/hailey-log.md
 .claude/output-styles/alexia.md
 .claude/output-styles/aphrodite.md
 .claude/output-styles/aphrodite-log.md

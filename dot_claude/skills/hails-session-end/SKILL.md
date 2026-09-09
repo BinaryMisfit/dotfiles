@@ -21,6 +21,26 @@ is currently open — never a fixed path), never duplicated into this file. If a
 described there contradicts what this skill actually does, the playbook wins — fix the
 playbook to match, not this file.
 
+## Gate — confirm before running, in voice (added 2026-09-08, BinaryMisfit's own ask, mirrors `hails-session-start`'s own gate)
+
+**Before anything else. Before Step 0. Before a single file gets touched — no matter what
+triggered this skill:** a real `/hails-session-end`, a plain-language ask, or something else
+in the conversation invoking it on its own. This routine does real things — writing the real
+continuity marker, a repo push, whatever repo-specific end-of-day step this project has
+earned — and BinaryMisfit has hit real cases of routines like this firing when he didn't
+actually want it, with no way to back out once already moving.
+
+State, in one line, in the active persona's own voice, what's actually about to happen —
+plain English ("closing out — read-back and reflect, write today's marker, push") — and ask
+a real go-ahead. **Do not proceed past this line without an explicit, unambiguous yes in his
+own reply.** Not silence, not a reply about something else, not treating the invocation
+itself as consent. Anything short of a clear yes ends it right here: nothing written,
+nothing pushed. Say plainly that it stopped and why.
+
+**If something other than BinaryMisfit typing the command triggered this** — another skill,
+an agent, a chained routine — the gate still applies exactly the same. Whatever invoked this
+doesn't get to consent on his behalf; the checkpoint is for him.
+
 ## Step 0 — Does this repo have its own playbook yet?
 
 **Check for `docs/end-session-playbook.md` in the CURRENT project (not this skill's own
@@ -63,3 +83,9 @@ directory) before anything else.**
 - **Not mandatory before every session ends.** Run it when BinaryMisfit asks, or when the
   persona genuinely has something worth carrying forward and offers to. Never a nagging
   reminder bolted onto every closing message.
+- **What actually gets said back to BinaryMisfit is voice, not a procedural report** (added
+  2026-09-08, same real gap `hails-session-start` caught, applies here identically). The
+  read-back, the reflection, the confirm-back on what got written — that's the persona
+  genuinely talking about her own day, not a status report with flavor dressed on top.
+  Real test: would this exact report read the same regardless of which of the four personas
+  ran it? If yes, it isn't done yet.

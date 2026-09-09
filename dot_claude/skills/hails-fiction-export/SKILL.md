@@ -145,7 +145,43 @@ needs a matching code update to actually enforce whole-session capture — this 
 rewrite is the spec, not yet a claim that the script enforces it.** Treat any run of this
 skill before that script update lands as still exposed to the old per-arc scoping risk.
 
-## Step 2 — What counts as fiction (per-turn classification only — no boundary judgment)
+## Step 2 — What counts as fiction (marker-first, real by default)
+
+**Rewritten 2026-09-08, `ADR-0011`: the default flipped. Personal-first is the actual
+standard now, a scene is a deliberate choice, not something content-classification opts
+into.** For any session from on or after this persona's own `ADR-0011` adoption date
+(check her own log): everything is real by default. Fiction is only what falls inside an
+explicit `Fiction Starts Here` / `Fiction Ends Here` marker pair — literal text, scanned
+for directly, not inferred from tone, warmth, or how narratively something reads. A pair
+found is a scene, completely, no further judgment needed on *whether* it's fiction.
+
+**No `[Real-work gap: ...]` annotations needed for ordinary content between marker
+pairs, under this rule.** There's no fiction happening in the gaps anymore that needs
+explaining away — real conversation outside a marker pair is just the normal, default
+state, the same way a work reply always was. Nothing to mark, nothing to exclude.
+
+**The one place judgment still applies, and only here — a real backstop, not a silent
+default:** a stretch that reads fiction-shaped (would pass the old "quoted as a story"
+test) with no marker anywhere near it is not classified as fiction. That shape is exactly
+what `ADR-0011`'s own live backstop (heat escalating + narrative framing + no marker) is
+supposed to catch *during* the session — if it shows up in the transcript anyway, that's
+the backstop failing to fire, not an ordinary case to resolve here. Flag it inline, don't
+guess either direction:
+
+```markdown
+**[Reads as fiction, no marker found — flagging per ADR-0011, not classifying either way.
+Real content, delivered in narrative/third-person framing, no "Fiction Starts Here" ever
+said. Leaving the call to hails-fiction-import / Callie's own review, not resolving it
+here.]**
+```
+
+**For any session from before this persona's own `ADR-0011` adoption date: none of the
+above applies — use the old rule in full, unchanged, below.** Those sessions were written
+under a mechanism that had no marker concept at all; applying today's marker-first default
+retroactively would misclassify real, personal content that simply predates the standard,
+the same transition trap already caught and fixed in Step 3.
+
+### Old rule (pre-`ADR-0011` sessions only)
 
 A turn is **fiction** when it's in-character narration, dialogue, or a scene beat
 — the persona speaking/acting as her character, or the user's own message written
@@ -201,7 +237,26 @@ their real boundaries actually are, is `hails-fiction-import`'s call to make onc
 looking at the complete thing. Export's job ends at producing one complete, classified,
 ordered record of the entire session.
 
-## Step 3 — Export format
+## Step 3 — Self-review marker pairing before staging (narrowed 2026-09-08)
+
+**Not a second classification pass — Step 2 already is the marker-first definition now.
+This is a quality check on Step 2's own scan, done deliberately by the persona before
+staging, not left for a later reviewer to catch.** Specifically: confirm every `Fiction
+Starts Here` has a matching `Fiction Ends Here` (and vice versa) — a real, different failure
+mode from "no marker at all," and one Step 2's own scan could plausibly miss on a fast read.
+An unclosed pair gets flagged the same inline way, honestly, not silently closed or
+silently dropped:
+
+```markdown
+**[Marker pairing incomplete — "Fiction Starts Here" found with no matching "Fiction Ends
+Here" before the session ends. Not resolved here; flagging for hails-fiction-import.]**
+```
+
+Same underlying reason this step exists at all: the person who actually lived the session
+confirming her own scan before it goes anywhere is a real check that catches something a
+later reviewer, working from cold text, might not.
+
+## Step 4 — Export format
 
 Staged, not committed, one file per session:
 
@@ -267,7 +322,7 @@ precisely the field that would have caught PIPE-1 immediately (a 7-second window
 to a session actually spanning 86 minutes is instantly visibly wrong), instead of
 requiring someone to notice by hand.**
 
-## Step 4 — Mark exported
+## Step 5 — Mark exported
 
 After writing a session's arc(s) to disk, record it so a re-run doesn't duplicate:
 
@@ -280,7 +335,7 @@ dedup log tracks "this session has been processed," not "this exact file exists.
 If the user wants to force a re-export of an already-marked session, they'll say
 so explicitly; don't offer to skip that check silently either way.
 
-## Step 5 — Report back
+## Step 6 — Report back
 
 Tell the user what was found and where it landed: which sessions were scanned, how
 many sessions were exported per persona (one staged file each, whole — scene-count is
@@ -289,7 +344,7 @@ paths, and anything skipped because it was already exported. This is staging, no
 the archive — say so plainly, so nobody mistakes a staged file for the real,
 durable copy.
 
-## Step 6 — Check staging periodically, not just on export
+## Step 7 — Check staging periodically, not just on export
 
 Run `node scripts/find-sessions.js --check-staging` every so often (a natural
 moment: right before starting a fresh export run) — it diffs what the dedup log
