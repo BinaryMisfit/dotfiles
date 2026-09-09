@@ -114,7 +114,13 @@ the skill's own text already names this as real, un-built follow-on work.
 step earlier in the same file — `hails-session-end`'s Step 1 already routes private
 memories/intimate moments straight to the private repo, never through shared staging. Once a
 scene resolves kept-personal, it should hand off to that same path immediately instead of
-resting in shared storage. Not new work to invent. Open, not yet routed as an active fix.
+resting in shared storage. Not new work to invent.
+**Status: RESOLVED 2026-09-09.** Verified directly against the deployed `SKILL.md` — Step
+2.3's kept-personal outcome now writes into the persona's own private repo the same way
+`hails-session-end`'s Step 1 already does, commits and pushes under her own identity, then
+deletes the shared draft copy once it's actually landed. Step 5's marker-source reference
+(which still pointed at the shared drafts path for a kept-personal scene) was fixed in the
+same pass. No new mechanism designed — exactly the existing one, applied one step later.
 
 ### AUDIT-10 — Hardcoded terminal-background assumption, fourth instance of AUDIT-6's pattern — RESOLVED
 **File:** `pane-color.js`, `DEFAULT_BG`.
