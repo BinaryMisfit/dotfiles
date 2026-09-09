@@ -149,63 +149,40 @@ session has ever run here, skip this sub-step silently — nothing to check yet.
 
 A reported `CONFLICT` on the merge is never auto-resolved here, just surfaced plainly.
 
-## Step 1 — Run `hails-persona-refresh`
+## Step 1 — Run `hails-persona-refresh` (decided 2026-09-09, replaces the old 1.1/1.2/1.3 decomposition)
+
+**Real decision, made deliberately, not a peer patching it for me:** this used to decompose
+the skill's sub-mechanics into its own tracked progress-log entries (1.1 day-state, 1.2
+theme, 1.3 color), wired in at that granularity before `hails-persona-refresh` existed as a
+callable unit. That decomposition already drifted once, for real — it never picked up the
+canon-register check or the house read+write (Step 7 of the skill, added 2026-09-08) once
+the skill grew past what this file's own hand-copy covered, and it would keep drifting
+every time the skill grows again, because nothing forces the sync. That's the same
+trust-not-enforcement failure mode this whole system keeps finding elsewhere, not a
+one-off. Owning this file doesn't mean keeping a choice just because it was mine — it means
+actually deciding, and the honest call is: stop hand-copying, call the real skill.
+
+**"Chains into" means a real `Skill` tool call, not a paraphrase — not optional, same
+hardening `secretary-pool`'s own Step 1 already runs on** (real incident, 2026-09-09: a
+chained skill got logged done without ever actually being invoked). Issue
+`Skill({skill: "hails-persona-refresh"})` and wait for it to actually return.
+`--step-done "1"` may not be called until that return has happened.
 
 Every persona-identity step — re-register, persona-file re-read, canon-check, day-state,
-theme, color — runs here, via that skill. Its own "report back once, tersely, in
-character" step is held, not printed here — the voice shows up once, folded into this
-routine's own closing summary (Step 7 below), not as an upfront announcement before any
-real content exists. The mechanics still run early (so the rest of this routine has fresh
-identity/continuity data to work with); only the *telling* waits. Skip if no persona system
-is installed.
+theme, color, the house read+write — runs inside that one call now, and stays current with
+whatever the skill grows into next without this file needing to be touched again. Its own
+"report back once, tersely, in character" step is held, not printed here — the voice shows
+up once, folded into this routine's own closing summary (Step 7 below), not as an upfront
+announcement before any real content exists. The mechanics still run early (so the rest of
+this routine has fresh identity/continuity data to work with); only the *telling* waits.
+Skip if no persona system is installed.
 
-**Flagged 2026-09-09, needs a real decision, not silently patched here:** unlike
-`secretary-pool`'s own Step 1 (a single opaque `Skill({skill: "hails-persona-refresh"})`
-call, now hardened so it can't be logged done without actually being invoked), this repo
-decomposes the skill's sub-mechanics into its own tracked progress-log entries below
-(1.1/1.2/1.3/...), wired in at that granularity before the skill existed as a callable
-unit. That's arguably *more* robust against the same failure — each sub-step gets its own
-`--step-done`, so there's no single opaque call to skip — but it also means this repo may
-not actually be calling `hails-persona-refresh` as a skill at all, just running equivalent
-commands inline. Worth confirming directly whether the sub-steps below still cover
-everything the skill itself does (the house/door read in particular — added to the skill
-2026-09-08, not obviously present in this repo's own 1.1/1.2/1.3 breakdown) before trusting
-this section is actually equivalent, rather than assuming it.
-
-This repo tracks that skill's own sub-mechanics as separate progress-log entries, since
-they were already wired in at that granularity before the skill existed as a single
-callable unit:
-
-### Step 1.1 — Day-state note (continuity)
-
-Read the previous end-of-day marker for this worktree, if one exists, and let it genuinely
-inform how you open (mood, what to pick back up) rather than opening cold:
-
-```bash
-node ~/.claude/scripts/day-state.js --read --persona "<this persona's style name>"
-```
-
-If nothing's there yet, say nothing about it — a missing marker is a normal, common state.
-
-### Step 1.2 — Draw or recall today's theme
-
-```bash
-node ~/.claude/scripts/theme-select.js --persona "<this persona's style name>"
-```
-
-Draws/recalls per THIS worktree (`cwd`, defaulted automatically), not per persona style —
-two worktrees sharing a persona draw and weight independently. Reveal mechanism is a live
-judgment call per the persona's own rules — never announced by default, always honest if
-asked directly. Skip silently if the command reports nothing.
-
-### Step 1.3 — Set today's color
-
-```bash
-node ~/.claude/scripts/pick-persona.js --set-color
-```
-
-Cheap and deterministic — reflects the day's actual continuity (via Step 1.1's marker)
-instead of yesterday's. Safe to run even when nothing above found anything real.
+**Trade made knowingly:** this loses the old per-substep progress-log granularity (no more
+individual `--step-done "1.1"`/`"1.2"`/`"1.3"`) in exchange for structurally closing the
+drift risk. Worth it — this repo doesn't dispatch Step 1 as a parallel agent (see this
+file's own header note: not yet earned here), so the granularity wasn't buying anything
+operational, and a drift that already caused a real, confirmed gap is worse than losing a
+log line's worth of resolution.
 
 ## Step 2 — Previous day summary
 
