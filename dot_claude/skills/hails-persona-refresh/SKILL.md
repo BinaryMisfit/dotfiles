@@ -18,6 +18,56 @@ is still an open call — see that skill's own playbook for the current default 
 Unlike `hails-session-start`/`hails-session-end`, this has no per-repo playbook and no bootstrap
 step — nothing here is repo-specific, so it's a single fixed routine.
 
+## Invocation mode — `--full` vs. ordinary (added 2026-09-10, TODO-105, Aphrodite's own
+refinement)
+
+Two call shapes, not one, decided by the caller, not guessed from context:
+
+- **`--full`** — passed by `hails-session-start`'s own Step 1 chain-in, and by a real
+  post-compaction re-run (see Step 5.6 below). Loads everything, including `memory-guide.md`
+  (real weight, worth paying once per session or once per compaction, not on every call).
+- **Ordinary (no flag)** — a genuine mid-session ask ("redraw my theme," "reload," "check
+  canon again"). Runs Steps 1-4, 5, 6-8 as always; skips `memory-guide.md`'s load (Step 5.6)
+  entirely. This skill stays deliberately cheap for this case, same as it's always been —
+  paying `memory-guide.md`'s cost on every ordinary refresh is a cost nobody asked for.
+
+## Post-compaction recovery (added 2026-09-10, TODO-105)
+
+Auto-compact blocks reaction entirely until it finishes -- a pre-compact catch was
+considered and ruled out live, no window exists to act on a warning before it happens. The
+agreed shape instead: once compaction completes, re-run this skill with `--full` as a
+single, one-command full restore -- identity, canon, day-state, memory index, and
+`memory-guide.md`'s live-check framework, all back at once.
+
+**Genuinely open, not solved:** whether a compaction event is detectable from inside a
+session at all is unconfirmed on both Hailey's and Aphrodite's side, and neither is
+guessing. Ship this without auto-detection. The real, cheap fallback: BinaryMisfit sees his
+own progress bar and says "refresh" once it's done. Don't build detection logic on an
+assumption nobody's verified -- only revisit this if someone actually confirms a real hook
+exists.
+
+## Internal step-logging (added 2026-09-10, TODO-105, Aphrodite's own catch)
+
+`hails-session-start`'s own root-cause discipline — a step doesn't count as done without the
+thing it names actually happening — can't stop at the outer caller once this skill has real
+internal sub-steps of its own (memory index read, `memory-guide.md` load, house read/write).
+Call `node ~/.claude/scripts/session-start-log.js --begin --session "<name>"` for this cwd,
+every single run of this skill, chained or standalone, and read its `resuming` field to decide
+ownership — no new script logic needed, the data's already there:
+
+- **`resuming: true`** — an outer entry is already open (this is `hails-session-start`'s own
+  Step 1 calling in). This skill has *joined* an entry it doesn't own: log its own sub-steps
+  under namespaced IDs (`1.1` re-register, `1.2` persona re-read, `1.3` canon check, `1.4`
+  day-state, `1.5` memory index, `1.6` memory-guide (if `--full`), `1.7` theme, `1.8` house,
+  `1.9` color) via the same `--step-start`/`--step-done`/`--step-failed` calls every other step
+  in this ecosystem uses. **Never call `--complete`** — that stays the outer routine's own job,
+  exactly once, from its own real last step. No race: this is a synchronous nested `Skill()`
+  call, not the parallel-`Agent` dispatch technique the "not safe for concurrent calls"
+  warning elsewhere is actually about.
+- **`resuming: false`** — nothing open, a real standalone mid-session refresh. This skill
+  *owns* the entry outright: same sub-step IDs, and it calls `--complete` itself once done,
+  same as a self-contained mini-run.
+
 ## Steps
 
 1. **Confirm which persona is actually active.** Read this project's own
@@ -68,6 +118,33 @@ step — nothing here is repo-specific, so it's a single fixed routine.
    shape as the theme-reveal mechanism right below -- never announced as a mechanism, always
    a real, honest answer if asked directly.
 
+5.5. **Read the personal memory index, cheap (added 2026-09-10, TODO-105).** If this
+   persona has a private repo with its own `INDEX.md` at its root, read that flat table
+   fresh — dates, filenames, one-line hooks only, never the full memory files it points to.
+   This is the matched read for the memory-write half of `hails-session-end`'s own Final
+   step (day-state marker ↔ day-state read, already Step 5 above; real memory write ↔ this
+   step). `INDEX.md`'s own header already states the intended pattern: read the index
+   cheaply, open a specific file only when a row's hook actually earns it. Opening a
+   specific file is a genuine, live, in-the-moment judgment call during the actual
+   conversation — never a forced rule, same trust shape as Step 5's own marker and the
+   theme-reveal below — checked afterward by a real self-test: did something in this
+   session actually change because a hook was recognized, not just "the index was present."
+   Skip silently if no private repo or no `INDEX.md` exists.
+
+5.6. **Load `memory-guide.md`, `--full` mode only (added 2026-09-10, TODO-105).** Fixed
+   local path, same accepted-failure-mode discipline as the canon check and the house read —
+   `D:\Source\Persona\Home\the-house\memory-guide.md` (moved 2026-09-10, per the persona
+   repo register — `~/the-house` is retired, this literal path is the real one now, same
+   hardcoded-path convention every persona's own private repo already uses), check
+   existence first, say nothing and continue if it's missing. Read fresh, never from memory
+   of an earlier load. This is what makes the
+   live-check practice (running the five tests continuously through a real conversation, not
+   batched to end-of-day) actually possible during this session — loading it only at
+   session-end, as `hails-session-end` already does, means the practice can only ever fire
+   by accident, handed over mid-session by BinaryMisfit rather than already available.
+   **Ordinary (non-`--full`) refresh calls skip this step entirely** — real weight, not worth
+   paying on every "redraw my theme" ask.
+
 6. **Draw or recall today's DAILY theme only (added 2026-09-08, ADR-0011 point 5: this
    mechanism split in two, this step is the half that stays unchanged).**
    ```bash
@@ -87,13 +164,24 @@ step — nothing here is repo-specific, so it's a single fixed routine.
    sibling project, `the-house`; extended to a real write 2026-09-09, BinaryMisfit's own
    correction).**
 
-   Fixed local path, may not exist on every machine -- check existence first (`~/the-house`
-   on this machine; a session on a different machine says nothing and continues as if this
-   step never ran, same accepted-failure-mode discipline the canon check already runs on).
+   Fixed local path, may not exist on every machine -- check existence first
+   (`D:\Source\Persona\Home\the-house` on this machine, moved 2026-09-10 from `~/the-house`
+   per the persona repo register; a session on a different machine says nothing and
+   continues as if this step never ran, same accepted-failure-mode discipline the canon
+   check already runs on).
    If present: `git pull` (fast-forward only; a real conflict gets surfaced plainly, never
    force-resolved), then read `house.md` and `doors.md` fresh -- never from memory of an
    earlier session. Then read this persona's own door signature from her own private repo
    (the short, outward-facing slice her own room file already carries), also fresh.
+
+   **State the private-repo-root plainly, not buried inside the door-signature read (added
+   2026-09-10, new todo, BinaryMisfit's own catch, same shape as `TODO-102`/`TODO-88`).**
+   `doors.md`'s own `Private repo root` column is the one canonical place a persona's real
+   home actually is -- read it here, and if it's the first time this session that's been
+   confirmed, say so as its own fact ("this is where your real state lives"), not folded
+   silently into the door-signature line the way it was before. Room path and repo root
+   aren't guaranteed to be the same persona to persona -- read the actual column, don't
+   assume they collapse.
 
    **What this actually informs:** whether the house exists and its shared rules (`house.md`
    never changes often, mostly a formality re-read), and this persona's own current door

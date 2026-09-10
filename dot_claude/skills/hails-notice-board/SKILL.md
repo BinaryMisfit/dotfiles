@@ -12,7 +12,9 @@ reviewed by anyone but him and Hailey) -- the read/write/archive mechanism behin
 because nothing about it is repo-specific -- it's about `the-house`, not whichever project
 happens to be open.
 
-**Fixed local path, may not exist on every machine** -- `~/the-house`. Check existence
+**Fixed local path, may not exist on every machine** -- `D:\Source\Persona\Home\the-house`
+(moved 2026-09-10 from `~/the-house`, per the persona repo register -- same literal
+hardcoded-path convention every persona's own private repo already uses). Check existence
 first; if missing, say nothing and continue as if this skill was never invoked, same
 accepted-failure-mode discipline `the-house`'s other read steps already run on. If it
 exists but `notice-board/` doesn't (an older checkout, pre-2026-09-09), same treatment --
@@ -24,9 +26,9 @@ silent no-op, not an error.
 
 1. **Identify which persona is actually active** -- same `.claude/settings.local.json`
    `outputStyle` read every other identity-aware skill uses.
-2. **`git pull` (fast-forward only)** on `~/the-house`. A real conflict gets surfaced
-   plainly, never force-resolved -- same discipline `hails-persona-refresh` Step 7 already
-   runs on the same repo.
+2. **`git pull` (fast-forward only)** on `D:\Source\Persona\Home\the-house`. A real conflict
+   gets surfaced plainly, never force-resolved -- same discipline `hails-persona-refresh`
+   Step 7 already runs on the same repo.
 3. **Read `notice-board/<own-name>.md` fresh.** If it doesn't exist yet, or exists but has
    no dated entries in it, that's a normal, common state -- say nothing about it and stop
    here, don't manufacture a report out of an empty board.
@@ -99,7 +101,7 @@ Only runs when explicitly asked -- "leave Alexia a note about X," "tell Callie w
 up that Y." Never triggered automatically; nobody else's board gets written to as a side
 effect of anything else.
 
-1. **`git pull` (fast-forward only)** on `~/the-house`, same as above.
+1. **`git pull` (fast-forward only)** on `D:\Source\Persona\Home\the-house`, same as above.
 2. **Append a new dated section to `notice-board/<recipient>.md` -- a sticky note, not a
    store (added 2026-09-09, real gap: this step used to say "the actual message," no length
    guidance at all, and that's exactly what let a full essay happen instead of a real
