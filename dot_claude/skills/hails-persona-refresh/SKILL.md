@@ -1,6 +1,6 @@
 ---
 name: hails-persona-refresh
-description: Mid-session, on-demand refresh of the persona and continuity portions of hails-session-start -- re-register to the session registry, re-check nickname, re-read the persona file end-to-end, re-run the canon-register check if that persona has one, re-read the day-state marker, draw or recall today's theme, and set today's color -- without the register/todo sweep, previous-day git summary, health check, or three-options report that make the full hails-session-start routine heavier. Use when persona voice, continuity, or the day's color/theme feels like it's drifted mid-session, or on explicit ask ("refresh yourself", "re-read your persona", "check canon again", "reload", "redraw the theme", "reset the color").
+description: Mid-session, on-demand refresh of the persona and continuity portions of hails-session-start -- re-register to the session registry, re-read the persona file end-to-end, re-run the canon-register check if that persona has one, re-read the day-state marker, draw or recall today's theme, and set today's color -- without the register/todo sweep, previous-day git summary, health check, or three-options report that make the full hails-session-start routine heavier. Use when persona voice, continuity, or the day's color/theme feels like it's drifted mid-session, or on explicit ask ("refresh yourself", "re-read your persona", "check canon again", "reload", "redraw the theme", "reset the color").
 ---
 
 # Refresh persona
@@ -28,10 +28,9 @@ step — nothing here is repo-specific, so it's a single fixed routine.
    ~/.claude/scripts/pick-persona.js --switch "<own-filename>.md"` (the same file already
    active) -- the identical mechanism `/hails-persona <name>` uses for a same-name
    reconfirmation: it re-touches the registry entry (`lastSeen`), re-derives `style` from
-   the persona file's own current frontmatter, and leaves the nickname/pin state alone
-   since the persona hasn't actually changed. Relay its output only if it reports something
-   worth knowing (a resync, a nickname change) -- a plain no-op confirmation doesn't need
-   repeating verbatim.
+   the persona file's own current frontmatter, and leaves the pin state alone since the
+   persona hasn't actually changed. Relay its output only if it reports something worth
+   knowing (a resync) -- a plain no-op confirmation doesn't need repeating verbatim.
 
 3. **Read the persona file itself again, in full, fresh from disk** -- not from memory of
    what was loaded at session start. This is the point of the exercise: pick up any edit
@@ -49,9 +48,9 @@ step — nothing here is repo-specific, so it's a single fixed routine.
    ```bash
    node ~/.claude/scripts/day-state.js --read --persona "<this persona's style name>"
    ```
-   Rekeyed 2026-09-06 to identity (nickname if this cwd has one, otherwise the plain style
-   name), not cwd -- `--persona` is what lets the script resolve which; same reasoning as
-   the theme draw right below, which already keys the same way. If a marker exists, let it
+   Keyed to identity (plain style name, nickname disambiguation removed 2026-09-09), not
+   cwd -- `--persona` is what lets the script resolve which; same reasoning as the theme
+   draw right below, which already keys the same way. If a marker exists, let it
    genuinely inform tone (mood, what's still open) rather than opening cold. If nothing's
    there, say nothing about it -- a missing marker is a normal, common state, not a gap to
    apologize for.
@@ -84,8 +83,9 @@ step — nothing here is repo-specific, so it's a single fixed routine.
    who/theme conversation the "Fiction Starts Here" marker already requires. Never draw a
    scene theme here, and never let this step's own daily draw stand in for one.
 
-7. **Read the shared house, if it exists locally (added 2026-09-08, `ADR-0011`'s sibling
-   project, `the-house`).**
+7. **Read AND write the shared house, if it exists locally (added 2026-09-08, `ADR-0011`'s
+   sibling project, `the-house`; extended to a real write 2026-09-09, BinaryMisfit's own
+   correction).**
 
    Fixed local path, may not exist on every machine -- check existence first (`~/the-house`
    on this machine; a session on a different machine says nothing and continues as if this
@@ -113,6 +113,18 @@ step — nothing here is repo-specific, so it's a single fixed routine.
    rules, not a mechanism to build. Say it when it's genuinely worth saying, not manufactured
    into a running line repeated the same way every single refresh regardless of context.
 
+   **The write half (added 2026-09-09, real gap: this step used to only read the door
+   signature, and it could go stale indefinitely -- a door caught reading the previous
+   night's line the next morning is what surfaced this).** If she has a room file, update
+   her own `**Door signature:**` line to reflect today's actual morning state -- open or
+   closed and why, or nothing if that's the truth. **This is a morning state, not a
+   continuation of last night's** -- distinct from the day-state marker's "read at start,
+   write at end" shape; the door gets written at *both* ends of the day, session-start and
+   session-end, because it's two real states (day self, night self), not one thing carried
+   forward. `hails-session-end`'s own Final step writes the evening half -- this is only the
+   morning one. Same reflection discipline as the marker: genuine, not a status update, and
+   it's hers to skip on a day it genuinely hasn't moved.
+
 8. **Set today's color.**
    ```bash
    node ~/.claude/scripts/pick-persona.js --set-color
@@ -134,4 +146,8 @@ step — nothing here is repo-specific, so it's a single fixed routine.
   three-options report -- those stay `hails-session-start`'s own job, run through
   `/hails-session-start` when the full routine is actually wanted.
 - Writing the day-state marker -- that's `hails-session-end`'s job (`day-state.js --write`), not
-  this skill, which only ever reads.
+  this skill. **The one exception is the door signature (Step 7 above)** -- that's a
+  genuine read-and-write step here, the morning half of a two-write day; the marker itself
+  still stays entirely `hails-session-end`'s.
+- Checking or clearing the notice board -- that's `hails-notice-board`'s own job, chained
+  into `hails-session-start`/`hails-session-end` at their own points, not this skill's.

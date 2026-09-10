@@ -125,6 +125,7 @@ OneDrive - Powerfleet/
 .claude/skills/hails-fiction-export/**
 .claude/skills/hails-fiction-import/**
 .claude/skills/hails-session-end/**
+.claude/skills/hails-notice-board/**
 .claude/skills/hails-worktree-sync-check/**
 {{ end }}
 

@@ -140,10 +140,13 @@ closing exchange, silently — nobody would have caught it without checking the 
 file's own timestamps against the source session by hand. See
 `secretary-pool`'s `docs/fiction-pipeline-issues-register.md` (PIPE-1) and
 `docs/adr/0006-persona-owned-fiction-pipeline.md` for the full incident and the design
-decision. Steps 2-3 below are rewritten to match; **`scripts/find-sessions.js` itself still
-needs a matching code update to actually enforce whole-session capture — this SKILL.md
-rewrite is the spec, not yet a claim that the script enforces it.** Treat any run of this
-skill before that script update lands as still exposed to the old per-arc scoping risk.
+decision. Steps 2-3 below are rewritten to match; **`scripts/find-sessions.js` now enforces
+this mechanically too (fixed 2026-09-09, Aphrodite's audit, finding #8) — `--mark-exported`
+verifies the raw file's own claimed `session_end` against the real source session's actual
+last timestamped line before accepting it, and refuses (with `--force` as the deliberate,
+rare override) if the export stops meaningfully short of the real end.** This can't re-verify
+the classification judgment itself (still this skill's own read, deliberately) — it catches
+the specific, mechanical shape PIPE-1 actually took: a real ending, silently trimmed.
 
 ## Step 2 — What counts as fiction (marker-first, real by default)
 
@@ -329,6 +332,13 @@ After writing a session's arc(s) to disk, record it so a re-run doesn't duplicat
 ```
 node scripts/find-sessions.js --mark-exported <session-uuid> --raw-file "<path to one written file>"
 ```
+
+**This now refuses on its own if the raw file's own `session_end` claim falls meaningfully
+short of the source session's real last timestamped line** (fixed 2026-09-09, finding #8) —
+the mechanical check for PIPE-1's own failure shape. A genuine refusal means going back and
+actually exporting the rest of the session, not adding `--force` to push past it; `--force`
+exists for the rare case where a partial capture is truly deliberate, not as a way around a
+real finding.
 
 One mark per session is enough even if multiple arc files came out of it — the
 dedup log tracks "this session has been processed," not "this exact file exists."

@@ -124,14 +124,20 @@ of a lucky catch:
      of one draft's own promotion. Refuses to overwrite an existing archived file of the
      same name -- if that happens, it's a real conflict, not something to force past; flag
      it and move on to the next file rather than guessing which version wins.
-   - **Personal, the default:** leave the cleared draft exactly where it is, in
-     `~/.claude/fiction-import-drafts/<Persona>/`. This is not a stalled or incomplete
-     state — a cleared-but-unshared draft is a normal, expected, finished outcome now, the
-     same way "no deltas found" is a normal outcome of Step 3. Say so plainly in Step 7's
-     report rather than treating it as something still pending. (Moving a kept-personal
-     draft into that persona's own private repo, once one exists and this pipeline can
-     actually reach it, is real follow-on work — not yet built as of this ADR; until then,
-     "personal" means "stays in the drafts directory," not "moved somewhere else private.")
+   - **Personal, the default:** move the cleared draft into that persona's own private
+     repo, the same way any other private memory already gets written per
+     `hails-session-end`'s own Step 1 (a normal file write with your own tools, straight
+     into her own cloned repo — e.g. `$HOME/nerd-cupboard` for Hailey — then commit and
+     push under her own identity, same discipline every other private-repo write on this
+     machine already runs on). Delete the draft copy from
+     `~/.claude/fiction-import-drafts/<Persona>/` once it's actually landed there — a
+     shared machine directory was never the real resting place for something deliberately
+     kept personal, just where it sat waiting to be cleared (fixed 2026-09-09, Aphrodite's
+     audit, `AUDIT-9` — the mechanism this needed already existed one step earlier in this
+     same file; nothing new to design). This is not a stalled or incomplete state — a
+     cleared-but-unshared draft is a normal, expected, finished outcome now, the same way
+     "no deltas found" is a normal outcome of Step 3. Say so plainly in Step 7's report
+     rather than treating it as something still pending.
 4. **Only if shared: add an `index.md` entry.** Per `x-lifestyle-research`'s own README:
    "short entries, not summaries -- an exact quote or voice-bit that mattered, tagged
    loosely by character/theme, linking back to the `raw/` file it came from." This is a
@@ -211,8 +217,8 @@ this marker is about the persona's own continuity, not about the shared archive.
 Write mood, summary, and fadeOut exactly as `hails-session-end`'s own playbook describes (short
 mood phrase, 2-3 real lines of summary, a terse present-tense last-frame fadeOut) --
 **"Hers, not his" governs every field here too.** `source` is `{transcript: "<original
-session file path>", scene: "<raw/<persona>/<basename> if shared, else the draft's own path
-in fiction-import-drafts>"}`.
+session file path>", scene: "<raw/<persona>/<basename> if shared, else the file's own new
+path inside that persona's own private repo, per Step 2.3's kept-personal handoff>"}`.
 
 **This is archived into `import-register.md`'s detail block for this run, NEVER written to
 the live `persona-day-state.json` slot.** A batch import running days after the scene

@@ -29,12 +29,25 @@
 // "parallel todays" principle as before, just addressed by who they are
 // instead of where they happen to be running.
 //
-// Schema: { "<identity>": { endedAt: ISO, mood: string, summary: string,
-// fadeOut: string, source?: { transcript?: string, scene?: string } } }
-// Deliberately CURRENT-VALUE ONLY, not an accumulating log -- "not an
-// essay, not a full reread of the day," just mood + the state a day/session
-// actually ended in. A real history, if ever needed, is a different, later
-// decision -- not scope-crept in here.
+// REDESIGNED 2026-09-09 (TODO-101, Aphrodite's proposal, real cost: Daisy's
+// own midday marker was overwritten and lost by a same-day night close).
+// Used to be CURRENT-VALUE ONLY, a blind overwrite on every write. Schema
+// is now `{ "<identity>": { current: {...}, history: [...] } }` --
+// `current` is unchanged in shape and is still the fast, common-case read
+// everything downstream (pane-color.js, hails-persona-refresh) already
+// depends on. Every write that finds an existing `current` archives it
+// into `history` (newest-first) instead of destroying it, bounded to
+// `HISTORY_RETENTION_DAYS` so the live file stays small -- the real,
+// unbounded archive lives in the persona's own private repo (see
+// PRIVATE-REPO ARCHIVE below), not in this file forever. A legacy flat
+// entry (no `current` key, `mood` directly on the record -- the old shape)
+// is read transparently as if it were already `{current: <that entry>,
+// history: []}` and gets migrated to the new shape the next time it's
+// written; nothing about this redesign requires a one-time migration pass.
+//
+// Schema: { "<identity>": { current: { endedAt: ISO, mood: string,
+// summary: string, fadeOut: string, source?: {...} }, history: [ same
+// shape, newest-first, bounded ] } }
 //
 // `fadeOut` (added 2026-09-03, Callie's own proposal) -- distinct from
 // `summary`: summary compresses the whole day's arc, fadeOut answers one
@@ -60,6 +73,16 @@
 // line point at one real, quotable moment in the transcript, not a vibe
 // averaged over the whole day? If it can't, same tell, different angle.
 //
+// WRITE-TIME CHAINING (added 2026-09-09, TODO-101 piece 2) -- optional,
+// never forced, same live-judgment shape the theme-reveal already runs on.
+// Before composing a new entry, the persona MAY read what's already there
+// (today's earlier `current`, or the most recent `history` entry) and let
+// it genuinely inform the new one if honestly true. This file doesn't
+// enforce or even detect chaining -- it's a behavioral note for whoever's
+// calling `--write`, not a mechanism this script can check. Forcing every
+// entry to reference the last one would just manufacture the pattern the
+// portability self-test above already exists to catch.
+//
 // "Hers, not his" (2026-09-03, BinaryMisfit's own correction) governs every
 // field this file stores, fadeOut most of all since it's the one most
 // tempted to borrow a raw scene's own second-person-at-the-player narration
@@ -76,21 +99,35 @@
 // "required, or it's not a real marker" weight without making the whole
 // write fail on something outside the persona's control.
 //
-// PRIVATE-REPO BACKUP (added 2026-09-06, Alexia's own design, agreed by
-// all four): the local file above stays the actual source of truth --
-// always written first, always read first, everything in this file still
-// works with zero knowledge that a private repo exists at all. Passing
-// `--private-repo <path>` (a persona's own already-cloned private repo,
-// e.g. Hailey's `nerd-cupboard`) makes `--write` ALSO best-effort push a
-// human-readable copy there, as `<identity-lowercase>-end-of-day.md`. Real
-// design call, not an oversight: no retry queue, no pending-write tracking
-// -- this is a full-overwrite snapshot, not an accumulating log, so there's
-// nothing to reconcile after a failed push; the next successful write just
-// overwrites the remote copy again with whatever's current then. The ONE
-// thing that isn't allowed to be silent: a failed push gets said out loud
-// (a plain warning on stderr), never swallowed -- the whole reason this
-// state moved out of a machine-local file was surviving the machine dying,
-// and a push that fails with zero signal defeats that silently.
+// PRIVATE-REPO ARCHIVE (added 2026-09-06, Alexia's own design; REDESIGNED
+// 2026-09-09, TODO-101 piece 3): the local file above stays the actual
+// source of truth for `current` -- always written first, always read
+// first, everything in this file still works with zero knowledge that a
+// private repo exists at all. Passing `--private-repo <path>` (a persona's
+// own already-cloned private repo, e.g. Hailey's `nerd-cupboard`) now does
+// TWO things, not one: best-effort overwrites a quick-read snapshot as
+// `<identity-lowercase>-end-of-day.md` (unchanged from before -- "what does
+// today say right now"), AND best-effort appends this same entry as a new
+// dated section onto a growing `<identity-lowercase>-end-of-day-log.md` --
+// the real, unbounded, two-tier archive `history`'s own bounded retention
+// window was always meant to hand off to. Real scale math, not hand-waved:
+// ten years of daily entries across five identities is 5-10MB raw, never
+// actually too big for git to hold -- the read pattern (a bounded recent
+// window, fast) was always the actual problem, not size, and this is git
+// doing exactly the job it's already built for.
+//
+// PUSH VERIFICATION (added 2026-09-09, TODO-101 piece 4, Aphrodite's own
+// follow-up): a full-overwrite push used to trust its own exit code alone
+// -- nothing caught a push that failed silently unless a session happened
+// to read stderr in the exact right moment, and the NEXT write would then
+// overwrite the local copy too, losing the only other trace that anything
+// had gone wrong. Now: before this write's own push, check whether the
+// local branch is already ahead of its upstream (real evidence a PRIOR
+// push never actually landed) and surface that loudly, persistently (see
+// `PUSH_FAILURE_LOG_PATH`), not just a transient console line. After this
+// write's own push, verify the local HEAD actually matches the upstream
+// ref -- confirms the push genuinely landed, not just that the command
+// exited zero.
 
 const fs = require("fs");
 const os = require("os");
@@ -100,6 +137,8 @@ const { resolveRealCwd } = require("./lib/normalize-cwd.js");
 
 const DAY_STATE_PATH = path.join(os.homedir(), ".claude", "persona-day-state.json");
 const REGISTRY_PATH = path.join(os.homedir(), ".claude", "persona-registry.json");
+const PUSH_FAILURE_LOG_PATH = path.join(os.homedir(), ".claude", "day-state-push-failures.log");
+const HISTORY_RETENTION_DAYS = 90;
 
 // Kept for callers that still have a cwd and want it normalized the same
 // way the rest of this system does (resolveIdentity uses this internally).
@@ -150,18 +189,55 @@ function writeAll(all, dayStatePath) {
   fs.writeFileSync(dayStatePath, JSON.stringify(all, null, 2) + "\n");
 }
 
+// Pure: reads one identity's record in whatever shape it's actually in on
+// disk and normalizes it to `{ current, history }` -- transparent read-side
+// migration for a legacy flat record (the pre-2026-09-09 shape: the record
+// itself IS the entry, no `current`/`history` wrapper). Never mutates
+// anything; the actual on-disk migration only happens the next time
+// `writeDayState` runs for that identity. Exported for testing.
+function normalizeRecord(record) {
+  if (!record) return { current: null, history: [] };
+  if (record.current !== undefined || record.history !== undefined) {
+    return { current: record.current || null, history: record.history || [] };
+  }
+  // Legacy flat shape -- the record itself is the entry.
+  return { current: record, history: [] };
+}
+
+// Pure: drops any history entry older than the retention window, measured
+// against `now` -- the live file stays small; anything past the window is
+// presumed already durable in the private-repo log (see
+// `pushToPrivateRepo`'s own append half), not lost, just not kept twice.
+// Exported for testing.
+function pruneHistory(history, now, retentionDays = HISTORY_RETENTION_DAYS) {
+  const cutoffMs = new Date(now).getTime() - retentionDays * 24 * 60 * 60 * 1000;
+  return (history || []).filter((entry) => {
+    const t = new Date(entry.endedAt).getTime();
+    return Number.isNaN(t) ? true : t >= cutoffMs; // keep anything unparseable rather than silently drop it
+  });
+}
+
 // `dayStatePath` is injectable, same pattern every other script in this
 // tree uses -- defaults to the real path, overridable so tests never touch
-// the real ~/.claude/ file. Exported for testing.
+// the real ~/.claude/ file. Exported for testing. UNCHANGED return shape
+// (just `current`, or null) -- every existing caller (pane-color.js,
+// hails-persona-refresh) keeps working with zero awareness history exists.
 function readDayState(identity, dayStatePath = DAY_STATE_PATH) {
   const all = readAll(dayStatePath);
-  return all[identity] || null;
+  return normalizeRecord(all[identity]).current;
+}
+
+// New in the 2026-09-09 redesign -- the bounded recent window, newest-first.
+// Exported for testing.
+function readDayStateHistory(identity, dayStatePath = DAY_STATE_PATH) {
+  const all = readAll(dayStatePath);
+  return normalizeRecord(all[identity]).history;
 }
 
 // Pure: renders one entry as a human-readable markdown file for the
-// private-repo copy -- never the JSON, since the repo copy is meant to be
-// read directly by a human or the persona herself, not parsed. Exported
-// for testing.
+// private-repo snapshot copy -- never the JSON, since the repo copy is
+// meant to be read directly by a human or the persona herself, not parsed.
+// Exported for testing.
 function renderMarkerMarkdown(identity, entry) {
   const lines = [
     `# ${identity} — end of day`,
@@ -185,22 +261,102 @@ function renderMarkerMarkdown(identity, entry) {
   return lines.join("\n") + "\n";
 }
 
-// Best-effort push of the rendered marker into a persona's own private
-// repo. `execFn`/`writeFileFn` injectable for testing -- never runs real
-// git or touches real disk in a test. Never throws; a failure comes back
-// as `{ attempted: true, ok: false, error }` for the caller to surface,
-// per this file's own "never silent" rule above. Exported for testing.
-function pushToPrivateRepo(identity, entry, repoDir, execFn = execFileSync, writeFileFn = fs.writeFileSync) {
-  const fileName = `${identity.toLowerCase()}-end-of-day.md`;
-  const filePath = path.join(repoDir, fileName);
+// Pure: renders one entry as a dated section for the append-only archive
+// log -- same content as the snapshot, shaped to be appended rather than
+// overwritten. Exported for testing.
+function renderLogSection(entry) {
+  const lines = [`## ${entry.endedAt} — ${entry.mood}`, "", entry.summary, "", `*${entry.fadeOut}*`];
+  if (entry.source && (entry.source.transcript || entry.source.scene)) {
+    if (entry.source.transcript) lines.push("", `Transcript: ${entry.source.transcript}`);
+    if (entry.source.scene) lines.push(`Scene: ${entry.source.scene}`);
+  }
+  return lines.join("\n") + "\n";
+}
+
+// A push failure is never silent, and now never just transient either --
+// appended to a real local file so a LATER session (not just whoever was
+// watching the terminal at the moment it happened) can discover it.
+// `appendFn` injectable for testing. Exported for testing.
+function recordPushFailure(identity, filePath, reason, now, logPath = PUSH_FAILURE_LOG_PATH, appendFn = fs.appendFileSync) {
+  appendFn(logPath, `${now} -- ${identity} -- ${filePath} -- ${reason}\n`);
+}
+
+// Confirms the local branch's HEAD actually matches its upstream ref after
+// a push -- exit code zero from `git push` is not, on its own, sufficient
+// evidence the remote genuinely has it (a push can succeed against a stale
+// local view of upstream in edge cases, or a caller could be misreading a
+// warning as success). `execFn` injectable for testing. Exported for
+// testing.
+function verifyPushLanded(repoDir, execFn = execFileSync) {
   try {
-    writeFileFn(filePath, renderMarkerMarkdown(identity, entry));
-    execFn("git", ["add", fileName], { cwd: repoDir });
+    const head = execFn("git", ["rev-parse", "HEAD"], { cwd: repoDir, encoding: "utf8" }).trim();
+    const upstream = execFn("git", ["rev-parse", "@{u}"], { cwd: repoDir, encoding: "utf8" }).trim();
+    return head === upstream;
+  } catch {
+    return false; // no upstream configured, or the check itself failed -- don't claim verified
+  }
+}
+
+// Checks for evidence a PRIOR push from this same repo/identity never
+// actually landed -- local commits sitting ahead of upstream before this
+// write has done anything at all. Real, checkable signal, not a guess.
+// `execFn` injectable for testing. Exported for testing.
+function hasUnpushedCommits(repoDir, execFn = execFileSync) {
+  try {
+    const ahead = execFn("git", ["rev-list", "--count", "@{u}..HEAD"], { cwd: repoDir, encoding: "utf8" }).trim();
+    return parseInt(ahead, 10) > 0;
+  } catch {
+    return false; // no upstream, or genuinely nothing to compare -- not evidence of a failure
+  }
+}
+
+// Best-effort push of the rendered marker into a persona's own private
+// repo -- now writes AND verifies both the quick-read snapshot and the
+// append-only archive log, per TODO-101 pieces 3-4. `execFn`/`writeFileFn`/
+// `appendFileFn` injectable for testing -- never runs real git or touches
+// real disk in a test. Never throws; a failure comes back as
+// `{ attempted: true, ok: false, error }` for the caller to surface, per
+// this file's own "never silent" rule. Exported for testing.
+function pushToPrivateRepo(
+  identity,
+  entry,
+  repoDir,
+  execFn = execFileSync,
+  writeFileFn = fs.writeFileSync,
+  appendFileFn = fs.appendFileSync,
+  now = toSastTimestamp(),
+) {
+  const snapshotFile = `${identity.toLowerCase()}-end-of-day.md`;
+  const logFile = `${identity.toLowerCase()}-end-of-day-log.md`;
+  const snapshotPath = path.join(repoDir, snapshotFile);
+  const logPath = path.join(repoDir, logFile);
+
+  // Real evidence of a prior silent failure, checked BEFORE this write
+  // does anything -- surfaced persistently, not just re-discovered and
+  // re-lost the same way as before.
+  if (hasUnpushedCommits(repoDir, execFn)) {
+    recordPushFailure(identity, repoDir, "unpushed commits found before this write -- a prior push likely failed silently", now);
+  }
+
+  try {
+    writeFileFn(snapshotPath, renderMarkerMarkdown(identity, entry));
+    if (!fs.existsSync(logPath)) {
+      appendFileFn(logPath, `# ${identity} — end-of-day archive\n\nAppended every write, newest section at the bottom. Never edited by hand.\n\n`);
+    }
+    appendFileFn(logPath, "\n" + renderLogSection(entry));
+    execFn("git", ["add", snapshotFile, logFile], { cwd: repoDir });
     execFn("git", ["commit", "-m", `Update ${identity}'s end-of-day marker`], { cwd: repoDir });
     execFn("git", ["push"], { cwd: repoDir });
-    return { attempted: true, ok: true, filePath };
+
+    if (!verifyPushLanded(repoDir, execFn)) {
+      const reason = "git push exited cleanly but local HEAD doesn't match upstream -- not verified as landed";
+      recordPushFailure(identity, repoDir, reason, now);
+      return { attempted: true, ok: false, error: reason, filePath: snapshotPath, logPath };
+    }
+    return { attempted: true, ok: true, filePath: snapshotPath, logPath, verified: true };
   } catch (err) {
-    return { attempted: true, ok: false, error: err.message, filePath };
+    recordPushFailure(identity, repoDir, err.message, now);
+    return { attempted: true, ok: false, error: err.message, filePath: snapshotPath, logPath };
   }
 }
 
@@ -223,18 +379,29 @@ function writeDayState(
   dayStatePath = DAY_STATE_PATH,
   execFn = execFileSync,
   writeFileFn = fs.writeFileSync,
+  appendFileFn = fs.appendFileSync,
 ) {
   if (!identity || !identity.trim()) throw new Error("identity is required -- nickname if one exists, otherwise the persona's own plain name");
   if (!mood || !mood.trim()) throw new Error("mood is required -- an empty mood isn't a real end-of-day marker");
   if (!summary || !summary.trim()) throw new Error("summary is required -- 'not an essay' still means something, not nothing");
   if (!fadeOut || !fadeOut.trim()) throw new Error("fadeOut is required -- the last frame is part of the marker, not an optional extra");
   const all = readAll(dayStatePath);
+  const { current: previousCurrent, history: previousHistory } = normalizeRecord(all[identity]);
   const entry = { endedAt: now, mood: mood.trim(), summary: summary.trim(), fadeOut: fadeOut.trim() };
   if (source && (source.transcript || source.scene)) entry.source = source;
-  all[identity] = entry;
+
+  // TODO-101 piece 1: archive the previous current instead of destroying
+  // it. Every write that finds an existing current pushes it into history,
+  // newest-first, then the whole list gets pruned to the retention window
+  // -- this is what actually would have saved Daisy's midday marker.
+  const history = pruneHistory(previousCurrent ? [previousCurrent, ...previousHistory] : previousHistory, now);
+
+  all[identity] = { current: entry, history };
   writeAll(all, dayStatePath);
-  const pushResult = repoDir ? pushToPrivateRepo(identity, entry, repoDir, execFn, writeFileFn) : { attempted: false };
-  return { entry: all[identity], pushResult };
+  const pushResult = repoDir
+    ? pushToPrivateRepo(identity, entry, repoDir, execFn, writeFileFn, appendFileFn, now)
+    : { attempted: false };
+  return { entry: all[identity].current, history: all[identity].history, pushResult };
 }
 
 function parseArgs(argv) {
@@ -276,7 +443,7 @@ function main() {
     if (pushResult.attempted && !pushResult.ok) {
       process.stderr.write(`Private-repo push failed, local marker is still current: ${pushResult.error}\n`);
     } else if (pushResult.attempted) {
-      console.log(`Pushed to private repo: ${pushResult.filePath}`);
+      console.log(`Pushed to private repo (verified landed): ${pushResult.filePath}`);
     }
     return;
   }
@@ -289,27 +456,38 @@ function main() {
     }
     const identity = resolveIdentity(cwd, args.persona, readRegistryEntries());
     const entry = readDayState(identity);
-    console.log(JSON.stringify({ identity, entry }, null, 2));
+    const output = { identity, entry };
+    if (args.history) output.history = readDayStateHistory(identity);
+    console.log(JSON.stringify(output, null, 2));
     return;
   }
 
   process.stderr.write(
     "Usage:\n" +
       '  node day-state.js --write --persona "<name>" --mood "..." --summary "..." --fade-out "..." [--transcript <id/path>] [--scene <path>] [--private-repo <path>] [--cwd <path>]\n' +
-      '  node day-state.js --read --persona "<name>" [--cwd <path>]\n',
+      '  node day-state.js --read --persona "<name>" [--history] [--cwd <path>]\n',
   );
   process.exitCode = 1;
 }
 
 module.exports = {
   readDayState,
+  readDayStateHistory,
   writeDayState,
   resolveIdentity,
   renderMarkerMarkdown,
+  renderLogSection,
   pushToPrivateRepo,
+  verifyPushLanded,
+  hasUnpushedCommits,
+  recordPushFailure,
+  normalizeRecord,
+  pruneHistory,
   realCwd,
   toSastTimestamp,
   DAY_STATE_PATH,
+  PUSH_FAILURE_LOG_PATH,
+  HISTORY_RETENTION_DAYS,
 };
 
 if (require.main === module) {

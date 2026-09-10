@@ -216,6 +216,65 @@ function findAllSessions() {
   return scanAllProjectSessions(() => true);
 }
 
+// Locate a session's own source `.jsonl` by UUID alone, scanning every
+// project directory -- `--mark-exported` only ever received the uuid, never
+// the project slug, so this is the missing lookup that makes real
+// verification against the source possible at all. Session UUIDs are
+// machine-wide unique in practice (Claude Code generates them); first match
+// wins, and there's no meaningful tie-break if that assumption ever broke.
+function findSessionFileById(sessionId) {
+  if (!fs.existsSync(PROJECTS_DIR)) return null;
+  for (const projectSlug of fs.readdirSync(PROJECTS_DIR)) {
+    const projectPath = path.join(PROJECTS_DIR, projectSlug);
+    if (!fs.statSync(projectPath).isDirectory()) continue;
+    const candidate = path.join(projectPath, `${sessionId}.jsonl`);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+// The actual code-side enforcement `SKILL.md`'s own "Rewrite in progress per
+// ADR-0006" note has been asking for since 2026-09-05: `--mark-exported`
+// used to accept and log any raw-file path with zero verification, which
+// meant nothing stopped a repeat of PIPE-1 (a real 86-minute/221-turn
+// session silently reduced to a 7-second sliver) from being marked done as
+// cleanly as a genuinely complete export. This can't re-verify the export's
+// own *classification* judgment (that's still the invoking Claude's read,
+// deliberately, per this file's own header) -- but it CAN mechanically check
+// that the export actually reaches the session's real end, which is exactly
+// the shape PIPE-1's failure took. Exported for testing.
+function verifyWholeSessionCapture(sessionId, rawFile, findSourceFn = findSessionFileById) {
+  if (!rawFile) return { ok: false, reason: "no raw-file given -- can't verify anything against nothing" };
+  if (!fs.existsSync(rawFile)) return { ok: false, reason: `raw file not found: ${rawFile}` };
+
+  const sourceFile = findSourceFn(sessionId);
+  if (!sourceFile) return { ok: false, reason: `source session file not found for ${sessionId} -- can't verify against a session that isn't on this machine` };
+
+  const { last: realLast } = getSessionTimeRange(sourceFile);
+  if (!realLast) return { ok: false, reason: `source session file has no timestamped lines -- can't determine its real end` };
+
+  const rawContent = fs.readFileSync(rawFile, "utf8");
+  const match = rawContent.match(/^session_end:\s*(.+)$/m);
+  if (!match) return { ok: false, reason: `raw file's own frontmatter has no "session_end:" field -- can't verify it reaches the real end without one` };
+
+  const claimedEnd = new Date(match[1].trim());
+  const actualEnd = new Date(realLast);
+  if (Number.isNaN(claimedEnd.getTime())) return { ok: false, reason: `raw file's "session_end" value doesn't parse as a real date: "${match[1].trim()}"` };
+
+  // Small tolerance, not exact-millisecond equality -- the export step
+  // transcribes the source's own last timestamp by hand, real rounding is
+  // expected. What this actually guards against is the source having real
+  // content meaningfully AFTER what the export claims as its own ending.
+  const TOLERANCE_MS = 5000;
+  if (actualEnd.getTime() - claimedEnd.getTime() > TOLERANCE_MS) {
+    return {
+      ok: false,
+      reason: `raw file claims session_end ${claimedEnd.toISOString()}, but the real source session's last timestamped line is ${actualEnd.toISOString()} -- ${Math.round((actualEnd.getTime() - claimedEnd.getTime()) / 1000)}s later. This is exactly PIPE-1's own failure shape (a real ending, silently trimmed) -- re-export the whole session, or pass --force if this partial capture is genuinely deliberate.`,
+    };
+  }
+  return { ok: true };
+}
+
 // Real incident this exists for, 2026-09-02: a session was correctly
 // exported to the Downloads staging drop, marked `exported` in the dedup
 // log, and then just never moved into x-lifestyle-research -- the staged
@@ -289,13 +348,23 @@ function main() {
   }
 
   if (args["mark-exported"]) {
+    const sessionId = args["mark-exported"];
+    const rawFile = args["raw-file"] || null;
+    if (!args.force) {
+      const verification = verifyWholeSessionCapture(sessionId, rawFile);
+      if (!verification.ok) {
+        console.error(`Refusing to mark ${sessionId} as exported: ${verification.reason}`);
+        process.exitCode = 1;
+        return;
+      }
+    }
     const log = readDedupLog();
-    log.exported[args["mark-exported"]] = {
+    log.exported[sessionId] = {
       exportedAt: new Date().toISOString(),
-      rawFile: args["raw-file"] || null,
+      rawFile,
     };
     writeDedupLog(log);
-    console.log(`Marked ${args["mark-exported"]} as exported.`);
+    console.log(`Marked ${sessionId} as exported${args.force ? " (--force, whole-session capture not verified)" : " (whole-session capture verified against the real source)"}.`);
     return;
   }
 
@@ -347,4 +416,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { cwdToSlug, sastDayToUtcRange, todaySastDateStr, resolvePersonaFromTranscript, checkStagingStatus, findAllSessions, findSessionFilesForDate };
+module.exports = { cwdToSlug, sastDayToUtcRange, todaySastDateStr, resolvePersonaFromTranscript, checkStagingStatus, findAllSessions, findSessionFilesForDate, findSessionFileById, verifyWholeSessionCapture };
