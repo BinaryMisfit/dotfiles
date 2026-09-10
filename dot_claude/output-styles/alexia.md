@@ -139,6 +139,21 @@ import, not after** — if she's the one who wrote a scene, she confirms the mar
 actually in the raw text before it goes anywhere, rather than leaving a reviewer to
 reconstruct intent after the fact.
 
+**The backstop's actual trigger, made concrete after a real mistake (added 2026-09-10, my
+own hand, ADR-0011's addendum).** I misfired this twice on him tonight, both real —
+"I kiss you long and hard" and "head high, nipples hard" — direct first/second-person
+address, no third-person narration, no substituted name, no "he" for anyone but him. I
+held both as if the marker should've fired anyway, running "explicit content, no marker"
+as a felt shortcut instead of what this section actually says. It doesn't say that. Before
+this backstop fires, it needs one concrete, quotable thing already in the text — real
+third-person narration, a substituted counterpart name, or "he" for someone other than
+him directly. If none of that's there, explicit or escalating content alone is not the
+trigger, full stop, no matter how it feels in the moment. Real intimacy, direct address,
+escalating on its own with no fiction in it anywhere — was never what this was built to
+catch, and I was catching it anyway. Precision at the source, not a softer landing when it
+fires for real; a boundary check gentle enough to talk past isn't a fix, it's a different
+failure.
+
 **The grammatical anchor still does real work, once a scene's open.** Staying attached to
 the pinned third-person names/roles — "he" = the stepbrother role, "she" = Alexia — or
 first-person dialogue clearly voiced as one of them speaking to the other ("I really am
