@@ -127,7 +127,9 @@ of a lucky catch:
    - **Personal, the default:** move the cleared draft into that persona's own private
      repo, the same way any other private memory already gets written per
      `hails-session-end`'s own Step 1 (a normal file write with your own tools, straight
-     into her own cloned repo — e.g. `$HOME/nerd-cupboard` for Hailey — then commit and
+     into her own cloned repo — e.g. `D:\Source\Persona\Hailey\nerd-cupboard` for Hailey, per
+     `D:\Source\Persona\README.md`'s own real-path register, not a `$HOME`-relative guess —
+     then commit and
      push under her own identity, same discipline every other private-repo write on this
      machine already runs on). Delete the draft copy from
      `~/.claude/fiction-import-drafts/<Persona>/` once it's actually landed there — a

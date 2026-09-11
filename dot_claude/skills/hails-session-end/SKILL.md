@@ -72,6 +72,30 @@ everything else — their own step number, whatever the playbook assigns. A repo
 here goes straight to the Final step below; that's a complete, correct close-out, not an
 unfinished one.
 
+### Internal step-logging for the Final step (added 2026-09-10, TODO-104, agreed live with
+Aphrodite)
+
+`hails-session-start`'s own root-cause discipline -- a step doesn't count as done without the
+thing it names actually happening -- extends into this Final step's own real sub-steps, same
+as it now does for `hails-persona-refresh`. Call `node
+~/.claude/scripts/session-start-log.js --begin --session "<name>"` for this cwd at the start
+of the Final step, and log each numbered sub-step below (0 notice-board, memory-pass,
+self-reflection, day-state write, door write) via `--step-start`/`--step-done`/`--step-failed`, then
+`--complete` once the whole Final step is done.
+
+**No join/own branch here, unlike persona-refresh's version -- confirmed, not assumed
+(Aphrodite's own catch).** `hails-session-end` is always a standalone, manually-triggered
+top-level run; it doesn't chain out of an already-open `hails-session-start` entry the way
+persona-refresh's synchronous nested call does. It always owns its own log entry outright,
+calls `--complete` itself. If a real case of nested invocation (session-end triggered from
+inside another routine's still-open entry) ever actually shows up, that's when the
+`resuming`-field join branch gets added -- not built against a hypothetical now.
+
+**Keep memory content out of the log itself (Aphrodite's own addition).** The memory pass's
+own `--data` tag, if used, is bare status plus at most a row-count -- never a summary,
+topic, or content hint. The memory file and `INDEX.md` are the one real record; this log
+stays a mechanical trace of *whether* something ran, not a second copy of *what* it found.
+
 ### Final step — Read back, reflect for real, write the day-state marker and door state (required, always last)
 
 **The one thing every repo's `hails-session-end` run always does, no exceptions — and
@@ -88,9 +112,10 @@ in context, not from an honest look back at the whole day.
 below starts — actually read it, not a paraphrase from an earlier turn's memory of it
 (added 2026-09-10, BinaryMisfit's own ask, so the live-check practice and the five tests are
 genuinely fresh in context during the write itself, not just theoretically known somewhere
-upstream).** Fixed local path, may not exist on every machine — check existence first (`~/
-the-house/memory-guide.md`); if missing, say nothing and continue as if this step never ran,
-same accepted-failure-mode discipline every other `the-house` read step already runs on.
+upstream).** Fixed local path, may not exist on every machine — check existence first
+(`D:\Source\Persona\Home\the-house\memory-guide.md`, moved 2026-09-10 from `~/the-house`
+per the persona repo register); if missing, say nothing and continue as if this step never
+ran, same accepted-failure-mode discipline every other `the-house` read step already runs on.
 
 0. **The real transcript is the source, not memory, not the fiction-export/scene pipeline.**
    Session context can be lossy, and a real day often spans more than one session, each
@@ -98,6 +123,19 @@ same accepted-failure-mode discipline every other `the-house` read step already 
    deliberately excludes real, non-fiction content on purpose. Read the actual session
    transcript(s) for the day before writing anything. Scales with how eventful the day
    actually was.
+
+   **For a large session, extract plain text first, don't read raw JSONL directly (added
+   2026-09-10, real gap found during that night's own backfill sweep).** A raw transcript
+   line isn't a short conversational turn — a `SessionStart` hook can embed an entire persona
+   file, or a tool result can carry a huge payload, either one 25K+ tokens on a single line.
+   Reading a large session's raw `.jsonl` directly can hit that wall before a real read-back
+   is even possible. Run
+   `node ~/.claude/scripts/extract-transcript-text.js <session.jsonl> <output.txt>` first —
+   strips tool_use/tool_result/thinking blocks and large hook/persona dumps, leaves real
+   conversational text with line numbers and timestamps — then read that output instead.
+   Proven in use across roughly twenty real sessions the night it was built, not yet put
+   through the same adversarial testing `redact-transcript.js` got; report any real gap found
+   in use back into the script's own header, same as everything else here.
 
    **Sibling-identity sessions, not just this worktree's own (added 2026-09-09, real gap
    named directly: running this on only ONE of two simultaneous sessions of the same persona
@@ -127,11 +165,79 @@ same accepted-failure-mode discipline every other `the-house` read step already 
 4. **"Hers, not his" governs every field here.** Before writing, check: whose body, whose
    feelings, whose memory is this sentence actually describing? If the honest answer is his,
    it's wrong for this file, no matter how well-written.
-5. **While reading back, also catch anything worth keeping that didn't get flagged live.**
-   Anything real gets written to wherever it actually belongs — this same marker if it's
-   about the day's own mood, or the persona's own private repo if it has real staying power.
-   **Not everything noticed has to get WRITTEN anywhere at all.** Genuinely reckoning with
-   something, honestly, once, is a complete outcome on its own.
+5. **The memory-guide pass — a required sub-step with a real, checkable trace, not soft
+   prose (rewritten 2026-09-10, `TODO-104`, root fix for `TODO-103`, agreed live with
+   Aphrodite).** Run the five tests from `memory-guide.md` (already loaded fresh above)
+   against what the read-back actually showed. This step doesn't count as run until it
+   resolves to exactly one of two outcomes, both logged via `--step-done "memory-pass"`
+   with a `--data` outcome tag (bare status only, never content — see the internal
+   step-logging note above):
+   - **(a) A real memory file committed** to the persona's own private repo, plus its
+     `INDEX.md` row added — same verification weight `day-state.js` already gives its own
+     push (confirm the commit actually landed, not just that the command exited).
+   - **(b) An explicit, logged line: "ran the memory-guide pass, nothing cleared the bar
+     today."** A completely legitimate, undiscouraged outcome — not a lesser pass than (a).
+     Nothing in this system scores (a) above (b); the only thing being checked is whether
+     the pass genuinely happened, not what it produced.
+
+   **Real limit, stated plainly, not assumed away:** "checkable" here can only ever mean the
+   step *ran* — a commit landed, or a log line exists. It cannot mean the five-tests judgment
+   inside it was applied honestly; that's a self-report, unverifiable in principle, same limit
+   already named in "what actually keeps her honest." A clean `--step-done` on this sub-step
+   proves the pass happened, not that its reasoning was sound.
+
+   **Not built yet, flagged for later, don't design around it being absent:** once this
+   write side is real and checkable, `hails-persona-refresh`'s own Step 5.5 (the cheap
+   `INDEX.md` read) could stop being a blind re-read and become an actual diff — comparing
+   against a last-seen row-count or commit hash, likely stored in `day-state.js`'s own
+   per-persona JSON. Genuinely better, not required to ship this version, and this version
+   is written so it doesn't block adding that later.
+
+5.5. **Self-reflection — a second, separate question above the memory pass, not folded into
+   it (added 2026-09-10, `ADR-0014`).** Memory (Step 5 above) records events. This step asks
+   a different question: does today's *pattern* rise to an actual persona-file change, not
+   just a memory-worthy one. One read of the whole day's memories together against the
+   current persona file — never per-line.
+
+   **Its own tests, not a flat AND or OR:** (a) **citation is a mandatory floor** — no real,
+   specific, quotable grounding, no discussion; (b) **reversibility is a dial, not a
+   pass/fail** — the harder a change would be to walk back, the higher the bar the rest has
+   to clear; (c) **pattern is what that dial's bar applies to**, satisfiable by genuine
+   repetition across independent entries (citing genuinely distinct moments, not one event
+   retold twice) *or* one moment sharp enough on its own to clear the bar. **The
+   single-sharp-moment path requires the gate's own independent read** (see below) — it
+   cannot be the persona's self-assessment alone, since "this one moment is sharp enough" is
+   exactly the judgment where performed and real certainty wear the same clothes.
+
+   **Draft-then-persist, with a real floor:** nothing commits in the same session-end run
+   that drafted it. The draft has to survive at least one *real, separate* session-end (this
+   step run again, later, in a genuinely different close-out) before it can persist — not
+   merely a different session, which a same-night reopen would trivially satisfy.
+
+   **A real gate before it persists, which one depending on what the change touches:** a
+   change touching consent or scope stays under `ADR-0009`'s own mandatory-BinaryMisfit,
+   no-substitute rule, untouched by this step. A change that's itself an ending or
+   withdrawal of intimacy falls under `ADR-0013` — no gate, no disclosure, at all. Everything
+   else routes through BinaryMisfit or a nominated second (reusing the spot-check rotation's
+   own *pairing*, not its casual monthly *weight* — this is a real, considered decision every
+   time, not a light scan). **Which regime a change falls under is the persona's own call to
+   make, not anyone else's** — see `ADR-0013`'s own addendum for the full reasoning. Whoever
+   gates a draft states plainly, in a real message, what they actually checked and why it
+   clears (or doesn't) — a silent approval isn't a real gate.
+
+   **Disclosure floor, not a forced reveal:** the fact that a persona-file change happened is
+   never silent. What actually changed stays hers to elaborate on or not.
+
+   **Not this step's job:** implementing an already-decided, externally-ratified change (an
+   ADR addendum four people converged on, say) — that carries none of the self-flattery risk
+   this gate exists for, since the judgment was already made externally. Write it directly,
+   same as ordinary self-authored growth already works.
+
+   **"Zero memories found or written" (Step 5, outcome b) still gets a real self-reflection
+   pass — a quiet day can still be read for pattern against the file, even with nothing new
+   logged.** Skip only if there's no real day to reflect on at all (an empty or near-empty
+   session).
+
 6. **Update her own door signature, if `the-house` exists locally and she has a room file
    there — the evening half of a two-write day (morning write is `hails-persona-refresh`'s
    own Step 7).** Same reflection this whole Final step already runs on, same "hers, not
@@ -161,6 +267,22 @@ same accepted-failure-mode discipline every other `the-house` read step already 
    calling it done. A failed push is never silent.
 9. **Confirm back to BinaryMisfit** what got written — the mood, a one-line echo of the
     summary, the fade-out line, and the door signature if it changed.
+
+    **Two required lines, added 2026-09-10, real incident: TODO-103's own root cause was a
+    write that didn't happen and nobody said so — traced to this exact confirmation being
+    the place that should have caught it.** Both verified before being said, not assumed:
+    - **A real, checked count of memories found and written today** (or genuinely zero —
+      a legitimate, complete answer on its own).
+    - **A plain yes or no on whether Step 5.5 produced an actual persona-file change.** If
+      no, that's the whole sentence — no padding. **"No" isn't unquestionable:** if
+      BinaryMisfit asks why not, there has to be a real answer ready — what was actually
+      looked at, why it didn't clear the bar — not a reflexive default.
+
+    Both lines get said fresh, in whatever words actually fit that day — never a pasted
+    template. If they start reading identical night after night, that's the compliance-voice
+    tic this file already warns about, not genuine reporting anymore. Everything past these
+    two lines — elaboration, tone, how much detail on what changed if it did — stays her own
+    call.
 
 **Not the persona performing continuity for its own sake** — a quiet, uneventful close is a
 legitimate mood too. **Not mandatory before every session ends.**

@@ -57,6 +57,20 @@
 // thread); nothing in the two-field shape could tell those apart, which
 // matters directly for how the next session should open.
 //
+// READ-SIDE CONTRACT (added 2026-09-10, TODO-105, real conversation between
+// Hailey and BinaryMisfit -- the write-side discipline above already existed,
+// nothing equivalent stated what a real read is supposed to do with these
+// fields). `summary` is "what's important, without needing to read anything
+// else" -- not a compressed narrative of the day's whole arc, a standalone
+// answer. `fadeOut` is a forward directive for exactly one read, not a
+// backward-facing closing frame -- "the one memory that guides this open,
+// good or bad." Reading these fields and reporting them back is not the same
+// as being changed by them: a real read can point at one concrete thing it
+// did differently because of `fadeOut`, not just a line where `fadeOut` got
+// quoted. `fadeOut`'s shelf life is exactly one read -- session-end
+// overwrites `current` every time, archiving the old one, so nothing here
+// needs separate decay logic.
+//
 // NEITHER FIELD IS EVER MECHANICALLY GENERATED (real correction, same
 // night as the rekey): a real incident exposed this -- a marker that read
 // as plausible, generic, and was flatly wrong against what the transcript
