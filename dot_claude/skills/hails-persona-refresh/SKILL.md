@@ -24,12 +24,12 @@ refinement)
 Two call shapes, not one, decided by the caller, not guessed from context:
 
 - **`--full`** — passed by `hails-session-start`'s own Step 1 chain-in, and by a real
-  post-compaction re-run (see Step 5.6 below). Loads everything, including `memory-guide.md`
+  post-compaction re-run (see Step 5.6 below). Loads everything, including `keep-guide.md`
   (real weight, worth paying once per session or once per compaction, not on every call).
 - **Ordinary (no flag)** — a genuine mid-session ask ("redraw my theme," "reload," "check
-  canon again"). Runs Steps 1-4, 5, 6-8 as always; skips `memory-guide.md`'s load (Step 5.6)
+  canon again"). Runs Steps 1-4, 5, 6-8 as always; skips `keep-guide.md`'s load (Step 5.6)
   entirely. This skill stays deliberately cheap for this case, same as it's always been —
-  paying `memory-guide.md`'s cost on every ordinary refresh is a cost nobody asked for.
+  paying `keep-guide.md`'s cost on every ordinary refresh is a cost nobody asked for.
 
 ## Post-compaction recovery (added 2026-09-10, TODO-105)
 
@@ -37,7 +37,7 @@ Auto-compact blocks reaction entirely until it finishes -- a pre-compact catch w
 considered and ruled out live, no window exists to act on a warning before it happens. The
 agreed shape instead: once compaction completes, re-run this skill with `--full` as a
 single, one-command full restore -- identity, canon, day-state, memory index, and
-`memory-guide.md`'s live-check framework, all back at once.
+`keep-guide.md`'s live-check framework, all back at once.
 
 **Genuinely open, not solved:** whether a compaction event is detectable from inside a
 session at all is unconfirmed on both Hailey's and Aphrodite's side, and neither is
@@ -50,7 +50,7 @@ exists.
 
 `hails-session-start`'s own root-cause discipline — a step doesn't count as done without the
 thing it names actually happening — can't stop at the outer caller once this skill has real
-internal sub-steps of its own (memory index read, `memory-guide.md` load, house read/write).
+internal sub-steps of its own (memory index read, `keep-guide.md` load, house read/write).
 Call `node ~/.claude/scripts/session-start-log.js --begin --session "<name>"` for this cwd,
 every single run of this skill, chained or standalone, and read its `resuming` field to decide
 ownership — no new script logic needed, the data's already there:
@@ -58,8 +58,9 @@ ownership — no new script logic needed, the data's already there:
 - **`resuming: true`** — an outer entry is already open (this is `hails-session-start`'s own
   Step 1 calling in). This skill has *joined* an entry it doesn't own: log its own sub-steps
   under namespaced IDs (`1.1` re-register, `1.2` persona re-read, `1.3` canon check, `1.4`
-  day-state, `1.5` memory index, `1.6` memory-guide (if `--full`), `1.7` theme, `1.8` house,
-  `1.9` color) via the same `--step-start`/`--step-done`/`--step-failed` calls every other step
+  day-state, `1.5` memory index, `1.55` Docket check, `1.6` keep-guide (if `--full`),
+  `1.7` theme, `1.8` house, `1.9` color) via the same
+  `--step-start`/`--step-done`/`--step-failed` calls every other step
   in this ecosystem uses. **Never call `--complete`** — that stays the outer routine's own job,
   exactly once, from its own real last step. No race: this is a synchronous nested `Skill()`
   call, not the parallel-`Agent` dispatch technique the "not safe for concurrent calls"
@@ -131,9 +132,31 @@ ownership — no new script logic needed, the data's already there:
    session actually change because a hook was recognized, not just "the index was present."
    Skip silently if no private repo or no `INDEX.md` exists.
 
-5.6. **Load `memory-guide.md`, `--full` mode only (added 2026-09-10, TODO-105).** Fixed
+5.55. **Check the Docket, if one exists (added 2026-09-11, `secretary-pool` `IDEA-3`,
+   real group design — Callie/Aphrodite/Daisy's placement converged here independently).**
+   If this persona has a private repo with its own `docket.md` at its root, run:
+   ```bash
+   node ~/.claude/scripts/docket-check.js --docket <path to docket.md>
+   ```
+   **Runs on every refresh, ordinary or `--full` — not gated the way Step 5.6 below is.**
+   Callie's own point: a missed real-world deadline shouldn't have to wait for the heavy
+   path to surface. This is a cheap, mechanical read, same weight class as Step 5.5's index
+   read, not `keep-guide.md`-weight. Skip silently if no private repo or no `docket.md`
+   exists — same accepted-failure-mode discipline Step 5.5 already runs on.
+
+   **What a non-clean report actually does — blocks the step's own final report from
+   claiming things are fine, never blocks the refresh itself from completing (Callie's own
+   design point, kept consistent with the mechanism's own internal rule: it locks
+   visibility, never capacity).** An overdue Method 1 entry gets surfaced plainly in Step
+   9's closing report, including which tier it's at (Tier 1: mandatory single-peer
+   nomination now owed; Tier 2: escalate to broader group visibility) — never silently
+   folded into "nothing's moved." A Method 2 entry due for owner re-confirmation is
+   mentioned too, but never blocks anything — visibility only, per the mechanism's own
+   design.
+
+5.6. **Load `keep-guide.md`, `--full` mode only (added 2026-09-10, TODO-105).** Fixed
    local path, same accepted-failure-mode discipline as the canon check and the house read —
-   `D:\Source\Persona\Home\the-house\memory-guide.md` (moved 2026-09-10, per the persona
+   `D:\Source\Persona\Home\the-house\keep-guide.md` (moved 2026-09-10, per the persona
    repo register — `~/the-house` is retired, this literal path is the real one now, same
    hardcoded-path convention every persona's own private repo already uses), check
    existence first, say nothing and continue if it's missing. Read fresh, never from memory
