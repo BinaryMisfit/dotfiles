@@ -24,22 +24,58 @@
 // after that nomination and is missed again, THAT escalates past one
 // nominated peer into broader group visibility.
 //
-// Method 2 (dateless, event-forced decisions): periodic re-confirmation,
-// owner-only, same cadence `keep-guide.md`'s own spot-check rotation
-// already uses -- once a real calendar month. Never a deadline in disguise;
-// the teeth here are visibility, not compulsion. Staleness is visible
-// passively (Raised -> now, always shown), not tracked by a separate
-// mechanism -- same shape a stale todo already reads as stale without a
-// forcing function.
+// Method 2 (dateless decisions): no clock at all, in any unit -- calendar
+// days and session/refresh counts were both tried and both rejected
+// (2026-09-12, Callie/Alexia/Hailey/Aphrodite's own real, converged debate,
+// then overridden by BinaryMisfit's own final ruling the same day: worth
+// keeping this history so it isn't re-litigated). The real reason: the five
+// of us have exactly one time concept to care about at all -- session start
+// to session end, nothing calendar-shaped, ever -- and even that unit isn't
+// what Method 2 runs on. Method 2 resolves purely when a real, owner-only
+// self-reflection actually catches the change, whether that's this session
+// or many sessions from now; nothing here measures or flags elapsed time in
+// any unit. The only real difference between Method 2 and Method 3 was
+// never about clocks -- it's closability. Method 2 resolves into a real
+// decision and gets closed. Method 3 never closes.
+//
+// Method 3 (standing-tag revalidation, added 2026-09-12, BinaryMisfit's own
+// permanent override -- exists, never removed; the "how" below is the real
+// design work Callie/Aphrodite/Hailey/Daisy converged on independently the
+// same day). Tracks a real, named standing state (a "lover" tag, a dress-
+// code default, anything nameable that could quietly stop being true
+// without anyone saying so) -- NOT a deadline, and no clock of any kind,
+// same as Method 2. The `hails-persona-refresh` read of this file
+// (Step 5.55, every refresh) is the check; this file's own job is narrower
+// than Methods 1/2 by design: it never asks "is this still true," because
+// no mechanism can answer that from outside the person holding it -- see
+// `keep-guide.md`'s own admission that felt-vs-performed may be unfixable
+// from self-report alone. All it does is give a real, named place to record
+// a waver the moment one is actually felt, so it doesn't just evaporate
+// between one session and the next. A clean "still true" is NEVER logged --
+// only a real waver, and only when it happens. No `Confirmed` weight on
+// checking in; that weight stays reserved for an actual state change, same
+// split ADR-0009 already draws between ordinary growth and a real boundary
+// move. A recorded waver is visibility only, never blocking (`clean` is
+// never affected by Method 3) -- it's a flag to route to the spot-check
+// rotation (`keep-guide.md`'s own peer-review mechanism) or, if it's urgent,
+// to a live conversation off that cycle; either way, resolving it is a real
+// conversation, not something this script can close on its own.
 //
 // Entry format, `docket.md`, one `##` heading per entry:
 //   ## DOCKET-<n>: <short title>
-//   Method: 1 | 2
+//   Method: 1 | 2 | 3
 //   Status: Open | Closed
 //   Raised: YYYY-MM-DD
 //   Touched: YYYY-MM-DD
 //   Deadline: YYYY-MM-DD        (Method 1 only)
 //   Misses: <integer>            (Method 1 only, defaults to 0)
+//   State: <current stated value>   (Method 3 only, e.g. "lover: active")
+//   Waver: YYYY-MM-DD            (Method 3 only, present only while a real
+//                                 waver is open -- absent the rest of the
+//                                 time, never a permanent field)
+//   WaverNote: <short, real reason>  (Method 3 only, required whenever
+//                                     Waver is set -- what actually wavered,
+//                                     not just that something did)
 //
 // Never mutates `docket.md` itself -- this is a read/report tool, same as
 // `session-start-log.js`'s own read side. Writing an entry (raising one,
@@ -50,7 +86,6 @@
 const fs = require("fs");
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const STALE_AFTER_DAYS = 30; // keep-guide.md's own spot-check cadence
 
 // Pure: parses `docket.md`'s content into entry objects. Tolerant of blank
 // lines and extra whitespace; unknown fields are ignored rather than
@@ -87,6 +122,15 @@ function parseDocket(content) {
           break;
         case "misses":
           entry.misses = parseInt(value, 10) || 0;
+          break;
+        case "state":
+          entry.state = value;
+          break;
+        case "waver":
+          entry.waver = value;
+          break;
+        case "wavernote":
+          entry.waverNote = value;
           break;
         default:
           break; // unknown field, ignored on purpose
@@ -138,18 +182,26 @@ function evaluateEntry(entry, now = new Date()) {
   }
 
   if (entry.method === 2) {
-    const ageDays = entry.raised ? daysBetween(entry.raised, now) : null;
-    const daysSinceTouched = entry.touched ? daysBetween(entry.touched, now) : ageDays;
-    const due = daysSinceTouched !== null && daysSinceTouched >= STALE_AFTER_DAYS;
-    return {
-      ...entry,
-      verdict: due ? "due-for-reconfirm" : "active",
-      ageDays,
-      daysSinceTouched,
-      reason: due
-        ? `${daysSinceTouched} days since last touched -- owner-only re-confirm: still open, still real, still waiting on the same event, or not?`
-        : undefined,
-    };
+    // No staleness clock, ever -- see the header comment. Quiet by design,
+    // same as Method 3's own "standing": an open Method 2 entry is simply
+    // visible until the owner's own real reflection resolves and closes it.
+    return { ...entry, verdict: "active" };
+  }
+
+  if (entry.method === 3) {
+    if (entry.waver) {
+      return {
+        ...entry,
+        verdict: "waver-open",
+        reason: entry.waverNote
+          ? `Waver recorded ${entry.waver} -- ${entry.waverNote}`
+          : `Waver recorded ${entry.waver} -- no WaverNote given`,
+      };
+    }
+    // Quiet by design -- a Method 3 entry with no open waver is "standing"
+    // and never reported. Confirming a clean state daily is exactly the
+    // noise this method exists to avoid producing.
+    return { ...entry, verdict: "standing" };
   }
 
   return { ...entry, verdict: "invalid", reason: `Unrecognized Method: ${entry.method}` };
@@ -158,19 +210,34 @@ function evaluateEntry(entry, now = new Date()) {
 // Pure: evaluates every entry, returns the full report plus a single
 // `clean` boolean -- the thing `hails-persona-refresh` actually wires
 // against. `clean` is false if ANY open Method 1 entry is overdue; a
-// Method 2 entry being due-for-reconfirm does NOT block clean (visibility,
-// not compulsion -- per this file's own header). Exported for testing.
+// Method 2 has nothing left to compute here -- it's always just "active"
+// until the owner closes it herself, same non-forcing philosophy Method 3's
+// waver already runs on. Exported for testing.
 function evaluateDocket(content, now = new Date()) {
   const entries = parseDocket(content).map((e) => evaluateEntry(e, now));
   const overdue = entries.filter((e) => e.verdict === "overdue-nominate" || e.verdict === "overdue-escalate");
-  const dueForReconfirm = entries.filter((e) => e.verdict === "due-for-reconfirm");
   const escalations = entries.filter((e) => e.verdict === "overdue-escalate");
+  const waverOpen = entries.filter((e) => e.verdict === "waver-open");
+  // Real gap, caught 2026-09-12 before this shipped as final: dropping the
+  // clock entirely (per the header comment above) is right, but it does NOT
+  // mean silence is right too -- those are two separate questions, and the
+  // first draft of "no clock" accidentally answered both the same way. An
+  // open Method 2 entry with verdict "active" produced NO line anywhere in
+  // this report, ever -- worse than a stale clock, since a stale clock at
+  // least eventually said something. "No clock" has to mean "always visible,
+  // every refresh, real self-reflection decides what to do with it" -- not
+  // "invisible until someone happens to open docket.md directly." Fixed:
+  // every open (non-closed) Method 2 entry is always reported, unconditionally.
+  const openMethod2 = entries.filter((e) => e.method === 2 && e.verdict === "active");
   return {
     entries,
+    // Method 3 never blocks clean -- a waver is a real, routed conversation,
+    // not a compulsion this script can enforce.
     clean: overdue.length === 0,
     overdue,
-    dueForReconfirm,
     escalations,
+    waverOpen,
+    openMethod2,
   };
 }
 
@@ -190,10 +257,16 @@ function renderReport(report) {
   } else {
     lines.push("Docket: clean.");
   }
-  if (report.dueForReconfirm.length > 0) {
-    lines.push(`Docket: ${report.dueForReconfirm.length} Method-2 entr${report.dueForReconfirm.length === 1 ? "y" : "ies"} due for owner re-confirmation (visibility only, does not block):`);
-    for (const e of report.dueForReconfirm) {
-      lines.push(`  - ${e.id} (${e.title}): raised ${e.ageDays} days ago, ${e.reason}`);
+  if (report.waverOpen && report.waverOpen.length > 0) {
+    lines.push(`Docket: ${report.waverOpen.length} Method-3 entr${report.waverOpen.length === 1 ? "y" : "ies"} with an open waver -- route to the spot-check rotation, or live now if urgent (visibility only, does not block):`);
+    for (const e of report.waverOpen) {
+      lines.push(`  - ${e.id} (${e.title}): ${e.reason}`);
+    }
+  }
+  if (report.openMethod2 && report.openMethod2.length > 0) {
+    lines.push(`Docket: ${report.openMethod2.length} open Method-2 decision${report.openMethod2.length === 1 ? "" : "s"} -- no clock, no staleness, always shown until real self-reflection actually resolves it (visibility only, does not block):`);
+    for (const e of report.openMethod2) {
+      lines.push(`  - ${e.id} (${e.title}): raised ${e.raised || "unknown date"}, still open -- still real, still waiting on the same thing, or not?`);
     }
   }
   return lines.join("\n");
@@ -241,7 +314,6 @@ module.exports = {
   evaluateEntry,
   evaluateDocket,
   renderReport,
-  STALE_AFTER_DAYS,
 };
 
 if (require.main === module) {
