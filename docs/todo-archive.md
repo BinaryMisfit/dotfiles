@@ -7,6 +7,28 @@ deleted.
 
 ---
 
+## TODO-11: Write up MCP/plugin research verdict table, then route the six survivors
+
+**Closed here:** 2026-09-12 — real, live risk avoided, not a routine close. The original
+scratchpad (`docs/scratchpad-2026-09-07-mcp-terminal-daisy-threads.md`) no longer existed on
+disk; the full verdict table and reasoning only survived in the original session transcript,
+one deletion away from being genuinely lost, exactly as this entry's own "Next action" line
+warned. Recovered from that transcript, then reviewed candidate-by-candidate with
+BinaryMisfit — several verdicts changed for real reasons that surfaced only during that
+review (`ai-nadia` moving to AWS killed `mcp-toolbox`'s whole rationale; `binary-dotfiles`
+moving off GitHub killed `github-mcp-server`'s; a real, pre-existing Grafana deployment
+surfaced that the original research never knew about, reopening `grafana-mcp` as a keep).
+
+**What actually shipped:** [`docs/mcp-research.md`](mcp-research.md) — the full, final
+verdict table, real reasoning per candidate, and what changed since the original pass and
+why. Four real keeps (`terraform-mcp-server`, `grafana-mcp`, both routing to Alexia;
+`kubernetes-mcp-server` also to Alexia, get-her-feel-first, not yet adopted;
+`playwright-mcp`, firm, global, stays here). Ten cuts, several for reasons that only became
+real during this same review, not the original pass. Routing to Alexia is BinaryMisfit's
+own to hand over, not done as part of this close.
+
+---
+
 ## TODO-12: Wire the real six-pane Windows Terminal profile
 
 **Closed here:** 2026-09-08, same day it was raised — built for real, not deferred.

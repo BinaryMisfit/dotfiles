@@ -11,7 +11,6 @@ inline here.
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-06 |
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 | [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
-| [TODO-11](#todo-11) | Write up MCP/plugin research verdict table, then route the six survivors | Normal | Open | Targeted | mcp | 2026-09-08 | 2026-09-08 |
 | [TODO-13](#todo-13) | Write my "AI/human reality framing" position into `aphrodite.md`, mirror into shared register | Normal | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 | [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 
@@ -209,36 +208,6 @@ export and import" principle)
 **Next action:** Run `hails-fiction-export` with its full/backlog scope (not just "today")
 from an Aphrodite session, on BinaryMisfit's own schedule — not urgent, no deadline set.
 Confirm the real count when it runs rather than trusting the flagged estimate.
-
----
-
-## TODO-11
-
-Brought in 2026-09-08 from `docs/scratchpad-2026-09-07-mcp-terminal-daisy-threads.md` —
-14 MCP/plugin candidates were evaluated against trust/capability/auth/blast-radius/
-deployment/redundancy in-session, 2026-09-07, but the verdict table and reasoning were
-never written to a doc. Six survived: **Terraform, Kubernetes, `mcp-toolbox`** (Google,
-open IAM-scoping question), **`dbhub`** → route to Alexia; **GitHub MCP server, Playwright
-MCP** → stay in this repo's own domain, direct head-to-head against tools already in hand
-(`gh` CLI, the `claude-in-chrome` skill) before adopting either; **Slack MCP server** →
-routes to Hailey, flagged with a real risk (weakest trust signal of any "keep," its
-"stealth mode" scrapes browser session tokens without workspace admin approval). Eight
-others were cut outright (Bitwarden's own MCP server, Notion, Linear, the Docker gateway,
-the knowledge-graph fork, Grafana, all seven official reference servers).
-
-**Status:** Open
-
-**Priority:** Normal
-
-**Type:** Targeted
-
-**Area:** mcp
-
-**Next action:** Write the verdict table and reasoning into a real doc before it's lost to
-transcript any further, then actually route the six survivors to their owning domains.
-
----
-
 
 ---
 
