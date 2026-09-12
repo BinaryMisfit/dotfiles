@@ -111,10 +111,13 @@ OneDrive - Powerfleet/
 .claude/output-styles/hailey.md
 .claude/output-styles/hailey-log.md
 .claude/output-styles/alexia.md
+.claude/output-styles/alexia-log.md
 .claude/output-styles/aphrodite.md
 .claude/output-styles/aphrodite-log.md
 .claude/output-styles/callie.md
+.claude/output-styles/callie-log.md
 .claude/output-styles/daisy.md
+.claude/output-styles/daisy-log.md
 .claude/skills/hails-session-start/**
 .claude/skills/hails-scratchpad-check/**
 .claude/skills/hails-persona/**
