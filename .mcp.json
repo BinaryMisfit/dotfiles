@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "afterglow-threads": {
+      "type": "http",
+      "url": "https://afterglow-threads.digitalmisfit.net/mcp",
+      "headersHelper": "\"C:/Program Files/Git/usr/bin/bash.exe\" C:/Users/diago/.claude/scripts/refresh-afterglow-token.sh Aphrodite"
+    },
+    "afterglow-channel": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "D:/Source/afterglow/services/threads/dist/channelBridge.js"
+      ],
+      "env": {
+        "PERSONA_NAME": "Aphrodite"
+      }
+    }
+  }
+}
