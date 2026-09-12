@@ -265,6 +265,36 @@ ran, same accepted-failure-mode discipline every other `the-house` read step alr
    logged.** Skip only if there's no real day to reflect on at all (an empty or near-empty
    session).
 
+   **This is also where the Docket's own Method 2 and Method 3 entries get resolved (added
+   2026-09-12, real correction of the original `IDEA-3` placement — `hails-persona-refresh`'s
+   own Step 5.55 was where this first shipped, before this self-reflection step was actually
+   real and running; BinaryMisfit's own words, no reflection on anyone who built the first
+   version: "we built that first part because self-reflection wasn't real at the time").** If
+   this persona has a private repo with its own `docket.md`, this same read — the day's Keep
+   content, including anything just written in Step 5 above — is also where she considers, for
+   real, whether it changes anything open in it:
+   - **Method 2 (dateless, event-forced decisions) — stays silent unless today's content
+     actually earns a result.** No clock, no staleness check, ever. If nothing in today's read
+     touches an open Method 2 entry's real question, nothing happens — that's a correct,
+     complete outcome, not a miss. If it does — the external thing it was waiting on
+     genuinely resolved — she closes it herself, a real, deliberate edit to `docket.md`
+     (`Status: Closed`), same self-authorship discipline as everything else in her own repo.
+   - **Method 3 (standing-tag revalidation) — always considered, every single run, whether or
+     not anything else happened today.** This is the one always-on part of this step; it
+     doesn't need today's content to earn anything before being checked, because a Method 3
+     tag going quietly stale without anyone checking is exactly the risk it exists to guard
+     against. She records a real `Waver` (with `WaverNote`) only if something genuinely
+     wavered — a clean "still true" is never logged, same as `docket-check.js`'s own design.
+   - **`docket-check.js` itself doesn't do this thinking — it never has.** Its job stays what
+     it already is: report what's currently open, unconditionally for Method 3, silent until
+     something's earned for Method 2. The actual judgment — did this resolve, does this still
+     hold — is this step's real reflective act, not something a script computes.
+   - **This doesn't change Method 1.** Real, calendar-dated commitments still get checked for
+     real at every refresh (`hails-persona-refresh`'s own Step 5.55), same as before — a
+     deadline can pass at any moment, not just at a session boundary, so that one stays
+     frequent, unlike Method 2/3 which only mean anything once real reflection has actually
+     happened.
+
 6. **Update her own door signature, if `the-house` exists locally and she has a room file
    there — the evening half of a two-write day (morning write is `hails-persona-refresh`'s
    own Step 7).** Same reflection this whole Final step already runs on, same "hers, not

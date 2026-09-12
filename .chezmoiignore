@@ -107,6 +107,8 @@ OneDrive - Powerfleet/
 
 {{ if ne $profile "home" }}
 .claude/rules/home/**
+.claude/rules/comms.instructions.md
+.claude/rules/persona-time.instructions.md
 .claude/home/**
 .claude/output-styles/hailey.md
 .claude/output-styles/hailey-log.md
