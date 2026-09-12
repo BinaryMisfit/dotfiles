@@ -771,6 +771,76 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// Real fix, 2026-09-12 -- closes a genuine investigation, not a hypothetical.
+// TRIGGER NOTES, kept here so this is never re-derived from scratch again:
+//
+// Claude Code's `SessionStart` hook does NOT only fire on a brand-new `claude`
+// launch. It fires on every one of at least four distinct sub-events, and
+// this repo's own `settings.json` hook entry has no `matcher`, so it receives
+// ALL of them, indistinguishably, unless this function is used to tell them
+// apart:
+//   - "startup"  -- a genuinely fresh `claude` process, new conversation.
+//   - "resume"   -- `claude -c` / `--resume`, continuing an existing
+//                   transcript. Already known to matter (see the 2026-09-02
+//                   incident comment further down this file, and 2026-09-09's
+//                   "don't null sessionName" fix) -- but until this function
+//                   existed, nothing actually read which one it was.
+//   - "clear"    -- `/clear`, a deliberate fresh start inside the same pane.
+//   - "compact"  -- an AUTOMATIC context-compaction event, mid-conversation,
+//                   with no user action at all. This is the one that took
+//                   real investigation to trace (2026-09-12, Daisy's session):
+//                   a lone `set-session-name` registry entry, no new
+//                   transcript file, no accompanying `hails-session-start`
+//                   skill run, and BinaryMisfit confirming directly he never
+//                   restarted anything. Reading THIS field is what actually
+//                   answers "why did the hook just fire" -- going forward, no
+//                   forensic reconstruction ever needed again for this.
+//
+// The distinguishing value arrives on stdin as JSON, same delivery Claude
+// Code uses for every hook invocation -- `{"source": "startup"|"resume"|
+// "clear"|"compact", "hook_event_name": "SessionStart", ...}`. This script
+// never read stdin at all before this fix; the information was arriving for
+// free on every single invocation and being discarded. Read defensively --
+// logging must never be able to break the actual identity-registration this
+// hook exists to do, same "never throws" discipline `appendLog` already
+// runs on. Returns "unknown" (never throws, never blocks) if stdin isn't
+// readable, isn't valid JSON, or lacks a `source` field -- this only ever
+// runs from the genuine bare-hook invocation path (see the
+// `unrecognizedArgs` check below), which always has stdin available in
+// practice, but a defensive fallback costs nothing and this must never hang.
+//
+// RETROSPECTIVE FALLBACK, for anything logged before this fix existed, or if
+// a future Claude Code version ever stops sending `source`: a session's own
+// transcript (`~/.claude/projects/<project>/<sessionId>.jsonl`) contains a
+// real, structural, content-free marker for a compaction event --
+// `"isCompactSummary": true` on a line, with a `timestamp` field alongside
+// it. The actual summarized text lives in that same line's `message` field
+// and should never be read for this purpose; the boolean + timestamp alone
+// is enough to confirm compaction happened and exactly when, without
+// touching a word of what was said. Confirmed structurally correct in
+// Aphrodite's own transcripts, 2026-09-12 -- not a guess, a verified shape.
+// Pure: the actual parsing logic, separated from the real stdin read below
+// so it's testable without mocking file descriptor 0. Exported for testing.
+function parseHookTrigger(raw) {
+  try {
+    if (!raw) return "unknown";
+    const parsed = JSON.parse(raw);
+    return typeof parsed.source === "string" && parsed.source ? parsed.source : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+function readHookTrigger() {
+  let raw;
+  try {
+    raw = fs.readFileSync(0, "utf8");
+  } catch {
+    return "unknown";
+  }
+  return parseHookTrigger(raw);
+}
+
 // Real, on-disk, tailable change log (added 2026-09-01, BinaryMisfit's own
 // request) -- separate from the registry JSON itself, which only ever
 // holds CURRENT state. This holds history: one line per mutation, for
@@ -1533,6 +1603,12 @@ function main() {
     return;
   }
 
+  // This is the one, true bare-hook invocation path -- see `readHookTrigger`'s
+  // own header comment for why this is read here specifically (stdin is only
+  // ever meaningfully present on a genuine SessionStart firing, never on any
+  // of the flag-driven CLI paths that already `return`ed above).
+  const hookTrigger = readHookTrigger();
+
   if (!fs.existsSync(stylesDir)) {
     process.exit(0);
   }
@@ -1603,7 +1679,7 @@ function main() {
     // 2026-09-02: a resumed session (`--resume=3af73ea3...`) firing a fresh
     // hook is exactly the shape of event that could trigger this.
 
-    appendLog(now, "hails-session-start", entryLogFields(entry));
+    appendLog(now, "hails-session-start", { ...entryLogFields(entry), trigger: hookTrigger });
   } else {
     // A brand-new cwd: is this a new git-worktree SIBLING of a repo we
     // already track, or a genuinely new/unrelated repo? A sibling inherits
@@ -1688,7 +1764,7 @@ function main() {
       lastSeen: now,
     };
     entries.push(entry);
-    appendLog(now, "new-worktree", { ...entryLogFields(entry), inherited });
+    appendLog(now, "new-worktree", { ...entryLogFields(entry), inherited, trigger: hookTrigger });
   }
 
   writeRegistry(entries);
@@ -1743,6 +1819,7 @@ function main() {
 }
 
 module.exports = {
+  parseHookTrigger,
   pruneStale,
   findEntry,
   pickForNewWorktree,
