@@ -27,7 +27,8 @@
       "Running `git checkout` inside the `modules/x-lifestyle-red-room` submodule specifically to recover a detached-HEAD state after an interrupted branch switch, e.g. returning to the umbrella repo's own pinned gitlink commit -- scoped to this one submodule path, not a general checkout allowance. (Migrated 2026-09-05, same source as above.)",
       "Removing a single confirmed-byte-identical untracked leftover file blocking that same submodule recovery checkout (the specific case: modules/x-lifestyle-red-room/docs/ai/red-room-scope-brainstorm.md) -- single file, single path, not a general delete allowance. (Migrated 2026-09-05, same source as above.)",
       "Running `gcloud secrets versions add` against the self-owned `ai-nadia` GCP project via `ssh netctrl` -- a routine, expected homelab secret-rotation operation in a one-person project, not a shared-production secrets store.",
-      "Running `terraform apply` inside `~/ai-nadia-deploy/terraform` via `ssh netctrl` -- self-owned homelab infrastructure, not shared production; consistent with this environment's existing GCP/ai-nadia trust above."
+      "Running `terraform apply` inside `~/ai-nadia-deploy/terraform` via `ssh netctrl` -- self-owned homelab infrastructure, not shared production; consistent with this environment's existing GCP/ai-nadia trust above.",
+      "Reading a persona's own already-provisioned secret files (auth-bootstrap-secret, afterglow-threads-token) from `~/.persona-secrets/<persona>/` via `ssh netctrl` -- a read-only diagnostic of a credential that persona already owns and was provisioned for her by `home-ansible`'s own `afterglow_threads_persona_token.yml` task, not an attempt to access another identity's credentials."
     ]
   },
   "env": {
