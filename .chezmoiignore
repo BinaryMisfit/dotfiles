@@ -109,6 +109,7 @@ OneDrive - Powerfleet/
 .claude/rules/home/**
 .claude/rules/comms.instructions.md
 .claude/rules/persona-time.instructions.md
+.claude/rules/ai-work-pace.instructions.md
 .claude/home/**
 .claude/output-styles/hailey.md
 .claude/output-styles/hailey-log.md

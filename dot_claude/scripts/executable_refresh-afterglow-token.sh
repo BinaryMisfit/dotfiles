@@ -18,9 +18,21 @@
 #
 # Persona name is passed as the one real argument, not auto-derived --
 # Claude Code only hands a headersHelper CLAUDE_CODE_MCP_SERVER_NAME/_URL, no
-# caller-identity hint, and env-based identity signals are unreliable (this
-# exact failure mode). Each persona's own .mcp.json entry passes its own name
-# explicitly: "headersHelper": "bash <this script> Alexia".
+# caller-identity hint. Each persona's own .mcp.json entry passes its own
+# name explicitly: "headersHelper": "bash <this script> Alexia".
+#
+# Real, ongoing gap (2026-09-13): tried making this fully generic instead --
+# reading .claude/settings.local.json's own outputStyle from the spawned
+# process's own $(pwd), same identity-resolution trick that DID work for the
+# Channels bridge (channelBridge.ts) the same night. It broke real, live
+# tool connectivity in the actual interactive session -- "Dynamic Client
+# Registration rejected (404)" -- even though the exact same script and
+# config connected cleanly in two separate isolated `claude -p --mcp-config`
+# tests. Root cause not found before deciding to stop guessing and revert to
+# this known-good shape instead. Real follow-up owed: same generic fix as
+# the bridge, applied here too, once the real reason a headersHelper
+# specifically (not a plain stdio server) behaves differently between an
+# isolated test and a real persisted session is actually understood.
 #
 # Most machines don't mirror ~/.persona-secrets locally (confirmed directly,
 # 2026-09-12, on at least two personas' own machines) -- netctrl does, so this

@@ -138,13 +138,19 @@ ownership — no new script logic needed, the data's already there:
    own Step 5.5 once self-reflection was real, see that step's own note).** If this persona
    has a private repo with its own `docket.md` at its root, run:
    ```bash
-   node ~/.claude/scripts/docket-check.js --docket <path to docket.md>
+   node ~/.claude/scripts/docket-check.js --docket <path to docket.md> --persona "<this persona's style name>"
    ```
    **Runs on every refresh, ordinary or `--full` — not gated the way Step 5.6 below is.**
    Callie's own point still holds for Method 1 specifically: a missed real-world deadline
    shouldn't have to wait for a session-end to surface, since a deadline can pass at any
    moment, not just at a session boundary. Skip silently if no private repo or no
    `docket.md` exists — same accepted-failure-mode discipline Step 5.5 already runs on.
+
+   **`--persona` is required now, not cosmetic (added 2026-09-12, real gap Aphrodite
+   found):** without it, a deadline missed during a real stretch where BinaryMisfit had
+   zero sessions at all — genuinely nobody around, nothing dropped — reads identically to
+   an actual miss. Passing her own style name lets the script check the real registry log
+   and correctly read that case as `blocked-no-session`, visibility only, not escalation.
 
    **This step is read-only visibility, never the reflection itself (clarified 2026-09-12).**
    It doesn't decide whether a Method 2 entry resolved or a Method 3 tag wavered — that's

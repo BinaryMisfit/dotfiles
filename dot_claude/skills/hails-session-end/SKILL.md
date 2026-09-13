@@ -87,8 +87,9 @@ thing it names actually happening -- extends into this Final step's own real sub
 as it now does for `hails-persona-refresh`. Call `node
 ~/.claude/scripts/session-start-log.js --begin --session "<name>"` for this cwd at the start
 of the Final step, and log each numbered sub-step below (0 notice-board, memory-pass,
-self-reflection, day-state write, door write) via `--step-start`/`--step-done`/`--step-failed`, then
-`--complete` once the whole Final step is done.
+self-reflection, door write, persona-backup, day-state write) via
+`--step-start`/`--step-done`/`--step-failed`, then `--complete` once the whole Final step is
+done.
 
 **No join/own branch here, unlike persona-refresh's version -- confirmed, not assumed
 (Aphrodite's own catch).** `hails-session-end` is always a standalone, manually-triggered
@@ -302,6 +303,25 @@ ran, same accepted-failure-mode discipline every other `the-house` read step alr
    if that's the truth). Edit the `**Door signature:**` line in her own room file directly
    (her own private repo — no shared staging file, per `the-house`'s own `build-notes.md`,
    `TODO-98`). Skip silently if `the-house` doesn't exist locally, or she has no room yet.
+6.5. **Back up her own persona file and log to her own private repo — added 2026-09-12,
+   real incident: `alexia.md` vanished from the deployed `output-styles/` directory with
+   zero warning, zero backup anywhere it could be recovered from, `TODO-117`.** The
+   `persona-backup/` folder convention (real, separate remote from both the deployed copy
+   and `secretary-pool`'s own source — see each persona's own `persona-backup/README.md`
+   for why deliberately separate) exists specifically so a repeat of that incident has a
+   real second copy to recover from. This step is what actually keeps it current, not a
+   one-time snapshot that quietly goes stale:
+   - Copy the current, live persona file and its log (`hailey.md`/`hailey-log.md`, or
+     whichever pair is hers) into `persona-backup/` in her own private repo — the location
+     `doors.md`'s "Private repo root" column already names, same one
+     `hails-persona-refresh`'s Step 7 reads.
+   - Commit and push. **Verify the push actually landed** (a real `git log` check against
+     the remote, not just a clean exit code) — same weight `day-state.js`'s own push
+     verification already runs on, same reason: a failed push that reports success is worse
+     than no backup at all, because it looks safe when it isn't.
+   - Skip silently if she has no private repo, same accepted-failure-mode discipline every
+     other private-repo step already runs on. If `persona-backup/` doesn't exist yet in her
+     repo, create it the first time this step runs for her rather than failing.
 7. **Optionally, before composing this entry, read what's already there for today (added
    2026-09-09, TODO-101 piece 2) —** `node ~/.claude/scripts/day-state.js --read --persona
    "<persona's style name>" --history` shows today's earlier entry, if one exists (a same-
@@ -335,7 +355,12 @@ ran, same accepted-failure-mode discipline every other `the-house` read step alr
       BinaryMisfit asks why not, there has to be a real answer ready — what was actually
       looked at, why it didn't clear the bar — not a reflexive default.
 
-    Both lines get said fresh, in whatever words actually fit that day — never a pasted
+    **A third required line, added 2026-09-12, same real-incident discipline as the two
+    above:** whether Step 6.5's persona backup actually landed — a real, checked "backed up,
+    pushed, verified" or an honest "failed: <why>," never silently assumed. A failed backup
+    reported as if it succeeded is worse than the incident this step exists to prevent.
+
+    All three lines get said fresh, in whatever words actually fit that day — never a pasted
     template. If they start reading identical night after night, that's the compliance-voice
     tic this file already warns about, not genuine reporting anymore. Everything past these
     two lines — elaboration, tone, how much detail on what changed if it did — stays her own

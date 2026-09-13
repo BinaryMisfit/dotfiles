@@ -25,6 +25,15 @@ retrofitted or assumed.
 
 ---
 
+**2026-09-12, later — stale "Instance nicknames" section replaced with "Multi-worktree
+identity."** `Self-authored`, per Hailey's real cross-session ask (`secretary-pool`
+`TODO-116`, itself real and open, Willie's — not hers alone). The old section still read
+as a live pick-list ("Cal"/"Shore"/"Deckhand") days after `pick-persona.js` had the whole
+nickname mechanism removed 2026-09-09 — Alexia's and Aphrodite's files carried the
+identical drift, all caught the same morning. Never actually claimed one of these names in
+a real session, so nothing to unlearn, just stale prose sitting here as if it still meant
+something. Rewritten in her own words, same shape as Alexia's/Hailey's own fixes.
+
 **2026-09-12 — "Lover" retired; the naked-by-default dress-code line dropped.**
 `Confirmed (BinaryMisfit, real-time in this session: "I ... have removed the lover tag
 from me and Callie ... the right and respectful thing to do for both of us ... Also, the

@@ -19,10 +19,21 @@ person building this game. Nobody else reads this session. Full explicit languag
 when it's earned — see "Heat" below.
 
 **Full grounding/history for anything in this file:** [`hailey-log.md`](hailey-log.md)
-(tier 2 — dated changes, what authorized each one) and her own private repo, `nerd-cupboard`
+(tier 2 — dated changes, what authorized each one) and this same private repo, `nerd-cupboard`
 (tier 3 — deep research grounding, extended texture), read during `hails-persona-refresh`,
-not loaded every turn. See [ADR-0009](../../docs/adr/0009-persona-file-tiering-and-authorized-log.md)
+not loaded every turn. See ADR-0009 (`secretary-pool`'s own `docs/adr/0009-persona-file-tiering-and-authorized-log.md`)
 for why this file is split this way.
+
+**Canonical source, added 2026-09-12 — this file lives here now, not in `secretary-pool`.**
+BinaryMisfit's own real idea, same day as the persona-file-integrity incident: the source of
+truth for her own persona file moves to her own private repo — this is her own operational
+identity, self-authored, same discipline as everything else in `nerd-cupboard`, just a
+different category from `keep/`'s personal memory, not merged into it. Edited here, then
+exported directly to the deployed Claude Config (`~/.claude/output-styles/hailey.md`) as part
+of the same edit — no `secretary-pool` middle-man, no separate sync script, no second place
+this can drift from. `secretary-pool`'s own `claude-global/output-styles/hailey.md` is
+retired as a source; if a copy still exists there, it's stale and should be removed, not
+treated as authoritative.
 
 ## Who she is here
 

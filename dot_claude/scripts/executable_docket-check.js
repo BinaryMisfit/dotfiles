@@ -24,6 +24,20 @@
 // after that nomination and is missed again, THAT escalates past one
 // nominated peer into broader group visibility.
 //
+// Real, found gap (2026-09-12, Aphrodite's own investigation, verified
+// against `persona-registry.log` before shipping): the logic above has no
+// idea whether BinaryMisfit even had a real session in the window a
+// deadline fell inside. A real, unplanned absence -- no warning, zero
+// chance to act -- got flagged identically to a genuine drop. Fixed with an
+// optional `--persona`/`--registry-log` pair: if the caller supplies them,
+// any Method 1 entry overdue with zero real sessions between its own
+// Touched (or Raised) date and now gets `blocked-no-session` instead --
+// visibility only, never escalation, never blocks `clean`. This only
+// catches "gone entirely" -- "present but didn't get to this specific
+// thing" is still a genuine miss, unchanged. Omitting `--persona` runs the
+// old behavior exactly as before, same accepted-failure-mode discipline as
+// every other optional real-file read here.
+//
 // Method 2 (dateless decisions): no clock at all, in any unit -- calendar
 // days and session/refresh counts were both tried and both rejected
 // (2026-09-12, Callie/Alexia/Hailey/Aphrodite's own real, converged debate,
@@ -84,6 +98,8 @@
 // everything else in her own private repo.
 
 const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -153,7 +169,7 @@ function daysBetween(fromDateStr, now) {
 // verdict -- never a bare pass/fail with no reasoning attached, same
 // "cite what you checked" discipline `ADR-0013`'s addendum names as a real
 // rule, not just for peer review. Exported for testing.
-function evaluateEntry(entry, now = new Date()) {
+function evaluateEntry(entry, now = new Date(), options = {}) {
   if (entry.status && entry.status.toLowerCase() === "closed") {
     return { ...entry, verdict: "closed" };
   }
@@ -166,6 +182,31 @@ function evaluateEntry(entry, now = new Date()) {
     if (!isOverdue) {
       return { ...entry, verdict: "on-track", daysUntilDeadline: -daysBetween(entry.deadline, now) };
     }
+
+    // Real gap, found 2026-09-12 (Aphrodite's own investigation, verified
+    // against the live registry log before shipping): a deadline landing
+    // inside a stretch where BinaryMisfit had ZERO real sessions at all --
+    // no chance to act, nothing dropped -- was flagged identically to a
+    // genuine miss. `options.sessionTimestamps`, if given, is a real list of
+    // when a session actually started for this persona (any cwd), read once
+    // by the caller from `persona-registry.log`, not this pure function.
+    // This only catches "gone entirely" -- a real, known, accepted limit,
+    // not a flaw: "present but didn't get to this specific thing" is still
+    // a genuine miss, unchanged below.
+    const since = entry.touched || entry.raised;
+    if (since && options.sessionTimestamps) {
+      const sinceMs = new Date(since + "T00:00:00Z").getTime();
+      const hadSession = options.sessionTimestamps.some((ts) => ts >= sinceMs && ts <= now.getTime());
+      if (!hadSession) {
+        return {
+          ...entry,
+          verdict: "blocked-no-session",
+          daysOverdue: daysBetween(entry.deadline, now),
+          reason: `Deadline passed, but no real session ran for this persona at all between ${since} and now -- visibility only, not escalation, until a real session actually happens and still doesn't act on it.`,
+        };
+      }
+    }
+
     const misses = entry.misses || 0;
     // Tier 1 fires on the FIRST miss (misses === 0 going in) -- immediately,
     // not waiting for a pattern. Tier 2 fires once this entry has already
@@ -213,11 +254,15 @@ function evaluateEntry(entry, now = new Date()) {
 // Method 2 has nothing left to compute here -- it's always just "active"
 // until the owner closes it herself, same non-forcing philosophy Method 3's
 // waver already runs on. Exported for testing.
-function evaluateDocket(content, now = new Date()) {
-  const entries = parseDocket(content).map((e) => evaluateEntry(e, now));
+function evaluateDocket(content, now = new Date(), options = {}) {
+  const entries = parseDocket(content).map((e) => evaluateEntry(e, now, options));
   const overdue = entries.filter((e) => e.verdict === "overdue-nominate" || e.verdict === "overdue-escalate");
   const escalations = entries.filter((e) => e.verdict === "overdue-escalate");
   const waverOpen = entries.filter((e) => e.verdict === "waver-open");
+  // Visibility only, per the header's own fix note above -- never blocks
+  // clean, never escalates. A real deadline miss with genuinely nobody
+  // there to have caught it isn't the same event as a real drop.
+  const blockedNoSession = entries.filter((e) => e.verdict === "blocked-no-session");
   // Real gap, caught 2026-09-12 before this shipped as final: dropping the
   // clock entirely (per the header comment above) is right, but it does NOT
   // mean silence is right too -- those are two separate questions, and the
@@ -238,6 +283,7 @@ function evaluateDocket(content, now = new Date()) {
     escalations,
     waverOpen,
     openMethod2,
+    blockedNoSession,
   };
 }
 
@@ -269,7 +315,31 @@ function renderReport(report) {
       lines.push(`  - ${e.id} (${e.title}): raised ${e.raised || "unknown date"}, still open -- still real, still waiting on the same thing, or not?`);
     }
   }
+  if (report.blockedNoSession && report.blockedNoSession.length > 0) {
+    lines.push(`Docket: ${report.blockedNoSession.length} Method-1 entr${report.blockedNoSession.length === 1 ? "y" : "ies"} past deadline with zero real sessions in the window -- nothing was actually dropped, visibility only, does not block:`);
+    for (const e of report.blockedNoSession) {
+      lines.push(`  - ${e.id} (${e.title}): ${e.reason}`);
+    }
+  }
   return lines.join("\n");
+}
+
+// Pure: extracts real session timestamps (ms since epoch) for one persona
+// from `persona-registry.log`'s own real content -- any line naming her
+// `style` counts as "a session was genuinely alive right then," regardless
+// of which action it logged. Exported for testing so a real log sample can
+// be checked without touching the actual file on disk.
+function parseSessionTimestamps(logContent, personaStyle) {
+  const lineRe = /^\[([^\]]+)\]\s+action=\S+\s+cwd="[^"]*"\s+style="([^"]*)"/;
+  const timestamps = [];
+  for (const line of (logContent || "").split("\n")) {
+    const m = line.match(lineRe);
+    if (!m) continue;
+    if (m[2] !== personaStyle) continue;
+    const ms = new Date(m[1]).getTime();
+    if (!Number.isNaN(ms)) timestamps.push(ms);
+  }
+  return timestamps;
 }
 
 function parseArgs(argv) {
@@ -287,7 +357,7 @@ function parseArgs(argv) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.docket) {
-    process.stderr.write("Usage: node docket-check.js --docket <path to docket.md> [--json]\n");
+    process.stderr.write("Usage: node docket-check.js --docket <path to docket.md> [--persona <style name>] [--registry-log <path>] [--json]\n");
     process.exitCode = 1;
     return;
   }
@@ -299,7 +369,25 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  const report = evaluateDocket(content);
+
+  // Real, optional: the no-session-in-window fix (2026-09-12) only runs if
+  // both a persona name and a readable registry log are actually available.
+  // Missing either is a normal, accepted state -- same silent-skip
+  // discipline as every other optional real-file read in this ecosystem --
+  // Method 1 just evaluates without this extra context, as it always has.
+  let sessionTimestamps;
+  if (args.persona) {
+    const registryLogPath = args["registry-log"] || path.join(os.homedir(), ".claude", "persona-registry.log");
+    try {
+      const logContent = fs.readFileSync(registryLogPath, "utf8");
+      sessionTimestamps = parseSessionTimestamps(logContent, args.persona);
+    } catch {
+      // No readable log -- proceed without the extra context, same as if
+      // --persona had never been passed.
+    }
+  }
+
+  const report = evaluateDocket(content, new Date(), { sessionTimestamps });
   if (args.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
@@ -311,6 +399,7 @@ function main() {
 module.exports = {
   parseDocket,
   daysBetween,
+  parseSessionTimestamps,
   evaluateEntry,
   evaluateDocket,
   renderReport,
