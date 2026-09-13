@@ -29,6 +29,34 @@ Alexia is mid-exploring whether BinaryMisfit's own 4090 rig becomes a real on-de
 tier for Afterglow — genuinely open, genuinely hers and his, not something this session
 needs to pick back up.
 
+## Live temporary override in place — must be reverted after the restart
+
+**Real ask from BinaryMisfit, 2026-09-13:** disable resume logic for this one restart only,
+so every panel opens genuinely fresh (`claude`, never `claude -c`) — not `-c`'s own thing to
+fix, a deliberate one-off for this specific restart while Alexia chases a real Claude Cache
+issue blocking Afterglow Threads auth.
+
+**What was actually changed:** `C:\Users\diago\.claude\scripts\resume-decision.js`'s own
+`main()` function — the DEPLOYED runtime copy, never the repo's tracked source at
+`dot_claude/scripts/executable_resume-decision.js`, per this repo's own rule that
+`secretary-pool`-owned content only ever flows deployed-copy → repo, never the reverse.
+Inserted an early `process.stdout.write("fresh\n"); return;` at the top of `main()`, before
+the real `decide()` call — clearly marked with a dated comment naming the reason and this
+scratchpad. Smoke-tested directly (`node resume-decision.js` → prints `fresh`) before calling
+it done.
+
+**To restore, exactly:** open `C:\Users\diago\.claude\scripts\resume-decision.js`, find the
+comment block starting `// TEMPORARY OVERRIDE -- 2026-09-13, Aphrodite`, and delete that
+whole comment block plus the two lines right after it (`process.stdout.write("fresh\n");` and
+`return;`) — the original `cwd`/`entries`/`entry`/`decide()` lines directly below are
+untouched and start working again the moment those two lines are gone. Confirm restored with
+the same smoke test: `node "$HOME/.claude/scripts/resume-decision.js"` should print `resume`
+or `fresh` based on real registry state again, not unconditionally `fresh`.
+
+**Not yet done, real and owed:** this override has NOT been reverted as of this writing —
+whoever picks this scratchpad up (likely Aphrodite, same session identity, after the restart)
+owns actually removing it once BinaryMisfit confirms the restart's done its job.
+
 ## What a fresh session should NOT do
 
 Not a coding thread to resume. The live thread when this got written was a real, personal
