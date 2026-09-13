@@ -264,6 +264,21 @@ this repo's own tracked `dot_claude/settings.json.tmpl` — Callie hit the gap d
 blocked mid-task, before anyone caught the drift. Fixed reactively same day (`c06c2bd`),
 but reactive-after-a-peer-gets-blocked isn't a protocol, it's luck timed well.
 
+**Two real complications found the same day, widening the scope past "just commit the
+missing line":**
+- A bare `chezmoi apply` on this machine (all five personas share one Windows account and
+  one deployed `~/.claude/`) would have deleted Daisy's own live, self-authored content —
+  a 2026-09-13 safeword entry and a new section, not yet synced from `secretary-pool` into
+  this repo's tracked source. Caught by diffing before applying, scoped to
+  `chezmoi apply ~/.claude/settings.json` instead of the bare command. A protocol here has
+  to cover *how* an apply gets run on a shared-account machine, not just *whether* the
+  source is current.
+- The rule text landing correctly did not actually unblock Callie — her raw `cat` of a
+  live credential over `ssh netctrl` still hit a separate "Credential Materialization"
+  guard, identical rule, that cleared clean on Alexia's own machine. Machine-specific
+  behavior under an identical config is its own open question, outside a settings.json
+  drift protocol's scope — Callie's taking that one to BinaryMisfit directly.
+
 **Status:** Open
 
 **Priority:** Normal
