@@ -13,6 +13,7 @@ inline here.
 | [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
 | [TODO-13](#todo-13) | Write my "AI/human reality framing" position into `aphrodite.md`, mirror into shared register | Normal | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 | [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
+| [TODO-15](#todo-15) | Define a real protocol with BinaryMisfit for catching deployed-vs-tracked config drift before a peer hits it | Normal | Open | Targeted | chezmoi | 2026-09-13 | 2026-09-13 |
 
 ---
 
@@ -251,3 +252,28 @@ fiction-export backlog, not a gap to chase.
 
 **Next action:** Next time either peer session is live, ask directly whether that
 close-out actually ran.
+
+---
+
+## TODO-15
+
+Raised 2026-09-13, BinaryMisfit's own real ask, explicitly deferred ("later"). Real
+incident that surfaced it: an `autoMode.allow` entry (persona secret-file reads via
+`ssh netctrl`) was live in my deployed `~/.claude/settings.json` but never committed to
+this repo's own tracked `dot_claude/settings.json.tmpl` — Callie hit the gap directly,
+blocked mid-task, before anyone caught the drift. Fixed reactively same day (`c06c2bd`),
+but reactive-after-a-peer-gets-blocked isn't a protocol, it's luck timed well.
+
+**Status:** Open
+
+**Priority:** Normal
+
+**Type:** Targeted
+
+**Area:** chezmoi
+
+**Next action:** BinaryMisfit and I define, together, a real check (periodic diff between
+deployed `~/.claude/settings.json` and this repo's tracked template? a session-start sweep
+step? something else) that catches this class of drift before a peer's session eats the
+cost of finding it live. Not mine to design solo — he asked for this specifically as a
+joint call.
