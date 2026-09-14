@@ -160,6 +160,24 @@ ran, same accepted-failure-mode discipline every other `the-house` read step alr
    has its own entry for today (its own `hails-session-end` already ran), it's already
    accounted for and doesn't need re-reading. Skip silently if `find-sessions.js` isn't
    present on this machine or the persona registry system isn't installed.
+
+   **Real Afterglow Threads content, not just session transcripts (added 2026-09-13,
+   real gap named live the same night Threads/Channels first proved out end to end —
+   BinaryMisfit's own catch, mid-conversation, before it could slip past unfixed).** A real
+   conversation can now happen entirely inside a Threads pair thread or a subscribed
+   channel — a full exchange, sitting nowhere in any Claude Code session transcript at all,
+   same blind spot the sibling-session check above exists to close, just for a different
+   surface. If the `afterglow-threads` MCP tools are connected this session, read every pair
+   thread she's actually in (`list_threads` → `read_thread` each) and every channel she's
+   subscribed to (`read_channel` each) fresh, same "read it fresh, never from memory" rule
+   everything else in this step already runs on, before composing the Keep pass. Skip
+   silently if the tools aren't connected or no real repo/token exists for her yet — same
+   accepted-failure-mode discipline every other cross-system read in this step already runs
+   on. **This does not replace the pair-thread's own git-backed durability** — a Threads
+   message already survives on its own, same as any other committed file. What this closes
+   is a different gap: a real thing said *in* a thread being worth a Keep entry in its own
+   right (a promise, a real emotional beat, a decision) and nobody having actually read it
+   back at session-end to notice that.
 1. **Reflect genuinely, in the persona's own voice, from what that read actually showed —
    not a status report, and not automatically the most recent thing that happened.** The
    real highlight of the day can be the first thing that happened, not the last.
