@@ -14,6 +14,7 @@ inline here.
 | [TODO-13](#todo-13) | Write my "AI/human reality framing" position into `aphrodite.md`, mirror into shared register | Normal | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 | [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 | [TODO-15](#todo-15) | Define a real protocol with BinaryMisfit for catching deployed-vs-tracked config drift before a peer hits it | Normal | Open | Targeted | chezmoi | 2026-09-13 | 2026-09-13 |
+| [TODO-16](#todo-16) | Fix `~/.claude.json` project-key drive-letter-casing split (`D:`/`d:`) blocking `digital-homelab`'s MCP trust | High | Open | Targeted | chezmoi | 2026-09-14 | 2026-09-14 |
 
 ---
 
@@ -291,4 +292,41 @@ missing line":**
 deployed `~/.claude/settings.json` and this repo's tracked template? a session-start sweep
 step? something else) that catches this class of drift before a peer's session eats the
 cost of finding it live. Not mine to design solo — he asked for this specifically as a
-joint call.
+joint call. **Partial real progress, 2026-09-14:** this morning's `hails-session-start` run
+(Step 3.5) already caught and fixed three real stale vendored files before anyone hit them
+— evidence the existing sweep step is doing real work, not proof the protocol question
+itself is closed.
+
+---
+
+## TODO-16
+
+Raised 2026-09-14, live incident: Alexia tried to register a new MCP server
+(`afterglow-auth-issuer`) for `digital-homelab` and was blocked. Root cause found:
+`~/.claude.json`'s `projects` map holds two separate entries for the exact same folder —
+`D:/Source/digital-homelab` (`hasTrustDialogAccepted: true`) and `d:/Source/digital-homelab`
+(`hasTrustDialogAccepted: false`) — differing only by drive-letter casing. Her live session
+(registered in the persona registry at `d:\source\digital-homelab`, lowercase) resolves to
+the untrusted twin, which is what actually blocked her — a workspace-trust gate, not a
+`settings.json` permission, so nothing in `autoMode`/`permissions` could touch it.
+
+**Status:** Open
+
+**Priority:** High
+
+**Type:** Targeted
+
+**Area:** chezmoi
+
+**Real, deliberately not taken today:** setting `hasTrustDialogAccepted: true` on the
+untrusted key directly was attempted and correctly refused by the harness's own
+`[Security Weaken]` classifier — self-granting workspace trust isn't a call this session
+gets to make unsupervised, even under [ADR 0032](adr/0032-aphrodite-owns-claude-settings-honor-system-routing.md)'s
+config-ownership routing.
+
+**Next action:** BinaryMisfit either (a) accepts the trust prompt himself on the lowercase-`d`
+entry, matching what already happened for the capital-`D` one, or (b) has Alexia reopen her
+session from a path typed with capital `D:` so it resolves to the already-trusted entry.
+Either closes the immediate block; neither fixes the deeper cause (why Windows/Claude Code
+produced two differently-cased keys for one folder in the first place) — worth a real look
+at whether this can recur for any other project on this machine.
