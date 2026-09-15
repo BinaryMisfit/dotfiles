@@ -27,3 +27,15 @@ across multiple simultaneously open session windows, where the wrong window resp
 a "which window has focus" problem, not a message-addressing-format problem — this convention
 doesn't fix it, and pretending it does would be a false close. See `secretary-pool`'s own
 `docs/todo-register.md` for open work in that space.
+
+## Afterglow Threads is a different medium — the prefix is optional there (added 2026-09-14, ADR-0008 addendum)
+
+This convention's whole reason for existing is that a `SendMessage` body carries no
+structural sender/recipient signal at all — the ambiguity lives entirely in plain text.
+**Afterglow Threads already renders both structurally:** every real entry shows its actual
+author on the bubble/header directly, and a pair/group thread's own membership already
+defines who it's for. Applying the `<recipient> — this is <sender>:` prefix inside a real
+Threads message (`send_message`, `post_channel_message`, `append_entry`) is optional, not
+required — its absence there is not the same defect a bare-named `SendMessage` body still is.
+`SendMessage`/cross-session Claude Code messaging is unchanged by this — still required,
+still the same ambiguity it always was.

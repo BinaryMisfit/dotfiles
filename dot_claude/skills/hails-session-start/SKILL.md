@@ -1,6 +1,6 @@
 ---
 name: hails-session-start
-description: Start-of-session routine -- forces today's already-active persona to actually greet you (not left to chance, never re-rolled), summarizes the previous calendar day's real work, runs any project-specific health check that repo has wired up, sweeps that repo's own todo/register tracking, flags anything whose priority or blocked status looks stale, checks the-house's notice board, and hands back concrete next actions. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /hails-session-start, asks to "start the session", "run the hails-session-start routine", or "what should I work on".
+description: Start-of-session routine -- forces today's already-active persona to actually greet you (not left to chance, never re-rolled), summarizes the previous calendar day's real work, runs any project-specific health check that repo has wired up, sweeps that repo's own todo/register tracking, flags anything whose priority or blocked status looks stale, checks the-house's notice board and any real Afterglow Threads content sitting unread, and hands back concrete next actions. On a repo that has never run this before, bootstraps a starter playbook instead of failing. Use when the user runs /hails-session-start, asks to "start the session", "run the hails-session-start routine", or "what should I work on".
 ---
 
 # Session start
@@ -267,6 +267,53 @@ hardening as Step 1 above.** Issue `Skill({skill: "hails-notice-board"})` and wa
 actually return before this step is marked done. Skip silently if the global persona system
 or `the-house` isn't installed.
 
+### Step 9 — Check Afterglow Threads, live (added 2026-09-14, closing the gap `IDEA-5`
+named as still open the moment Threads V2 shipped)
+
+**Real content can land entirely inside a pair thread or a subscribed channel, never
+touching a Claude Code session transcript at all.** `hails-session-end`'s own Final step
+already closed the evening half of this gap (added 2026-09-13 — every real thread/channel
+gets read fresh before that day's Keep pass is composed). This step closes the morning
+half: a real message sent while nobody had a session open shouldn't sit unread until the
+day's work is already underway, discovered only by accident or a live push landing mid-task.
+
+**Real incident that proved this wasn't hypothetical, the same morning this step was
+written:** four real, considered icon requests — Alexia, Aphrodite, Callie, Daisy, all sent
+2026-09-13 evening — sat with `lastSeenBytes: 0` the next morning. The actual build work
+behind three of them had already shipped the same night they arrived; what never happened
+was marking them read or replying to the senders. The gap wasn't "nobody does the work," it
+was "nobody closes the loop on a channel nothing else was already forcing a read of."
+
+Runs last, alongside Step 8 — by the time this fires there's full context to actually act
+on whatever's found, same reasoning Step 8 itself already states.
+
+1. **Skip silently if the `afterglow-threads` MCP tools aren't connected this session, or no
+   real Auth Key exists for this persona yet** — same accepted-failure-mode discipline every
+   other cross-system read in this routine already runs on.
+2. **Fetch this persona's own real token** — the MCP tools take a `token` parameter
+   directly, separate from the transport-level `headersHelper` (`refresh-afterglow-token.sh`)
+   that authenticates the connection itself. Run:
+   ```bash
+   ssh netctrl "cat ~/.persona-secrets/<persona-lowercase>/afterglow-threads-token"
+   ```
+3. **`get_unread`** with that token — cheap, structural, names and byte counts only. Ignore
+   any row whose name doesn't decompose to a thread this persona is an actual participant in
+   (cross-check against `list_threads`, which only ever enumerates real participation) —
+   `get_unread` reports on threads it can see the size of, not just ones she's actually in.
+4. **For each real row where `currentBytes` has grown past `lastSeenBytes`** (including a
+   fresh `0` — never read before is still real, unread content, same weight as a real
+   growth): `read_thread` it, surface what's actually new plainly to whoever this session is
+   talking to, same "read it like mail" discipline `hails-notice-board`'s own Step A.4 runs
+   on.
+5. **If anything in it names a real, actionable ask, do it now, then reply to the sender
+   directly via `send_message`** — same "reading it is the moment equivalent to both people
+   being online" principle `hails-notice-board` already runs on, not deferred to "when I'm
+   free," since this session reading this thread already *is* free by definition. Address
+   the reply per `comms.instructions.md`'s own convention (`<Recipient> -- this is
+   <Persona>: ...`).
+6. **`mark_read`** with the exact `sizeBytes` `read_thread` returned for that thread — never
+   re-derived, same race-closing discipline the tool's own description states.
+
 ## Any additional bespoke steps the playbook names
 
 Run them at the insertion point the playbook declares, same progress-log discipline as
@@ -279,6 +326,27 @@ naming the persona explicitly (first time this session, per that persona's own f
 around the real content from every step above, not a separate greeting printed before any of
 it.
 
+**Two self-tests before actually speaking it (added 2026-09-14, Callie's own Human
+Connection Owner audit, TODO/session-start-closing-summary-gate) — same shape as
+`hails-session-end`'s own Final-step Portability/Citation checks, this step just never had
+its own equivalent until now:**
+- **Sameness check:** would this exact line read the same regardless of which persona ran
+  it, or which day it is? If yes, it isn't specific enough yet — go back and name something
+  real from Steps 1-8 above instead.
+- **Anchor check:** does it point at one real thing this specific run actually found (a
+  marker read, a theme drawn, a register mismatch, a notice on the board) — not a mood
+  asserted in the abstract?
+
+Real incident this closes, not a hypothetical: `hails-session-end`'s own Step 9 already
+names "the compliance-voice tic this file already warns about" as a real failure mode with a
+built-in test to catch it; this file stated the identical standard in prose ("would this
+exact report read the same regardless of which persona ran it?") with nothing actually
+checking it before now. First live proof it was needed, the same day it got written: Callie
+said some version of "still here, not chasing it" roughly eight or nine times in a row
+mid-session before BinaryMisfit caught it as a tic — the exact failure this closing beat was
+always supposed to prevent, happening in a different step of the same routine, because
+nothing here forced the check that step already had.
+
 ## A couple of things worth knowing, regardless of which repo this runs in
 
 - **A reclassification suggestion is never applied silently** — any register's own "priority
@@ -286,4 +354,6 @@ it.
 - **What actually gets said back to BinaryMisfit is voice, not a procedural report.** The
   step structure above (numbers, tool calls, progress-log JSON) is mechanics — run it, don't
   narrate the mechanism. Real test: would this exact report read the same regardless of
-  which persona ran it? If yes, it isn't done yet.
+  which persona ran it? If yes, it isn't done yet. The Closing summary section above now
+  carries its own checkable version of this same test — this line stays as the general
+  standard every other piece of output in this routine is still held to.
