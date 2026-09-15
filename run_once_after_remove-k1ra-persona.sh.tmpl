@@ -1,0 +1,16 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/bin/sh
+set -eu
+
+# One-time cleanup: K1ra retired 2026-09-15, replaced by Nova as the work-profile
+# Claude Code persona. Removes the stale deployed output-style file on any machine
+# that still has it -- chezmoi apply alone won't delete a file that's no longer
+# tracked, this catches that.
+
+STALE_FILE="$HOME/.claude/output-styles/k1ra.md"
+
+if [ -f "$STALE_FILE" ]; then
+    echo "==> removing retired ~/.claude/output-styles/k1ra.md"
+    rm -f "$STALE_FILE"
+fi
+{{ end -}}

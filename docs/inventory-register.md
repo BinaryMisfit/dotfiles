@@ -106,7 +106,7 @@ both profiles, with content gated individually instead of one blanket switch.
 | `rules/registers.instructions.md` | `~/.claude/rules/` | Common | The todo/idea/ADR register standard |
 | `skills/decision-register/` | `~/.claude/skills/` | Common | Logs/supersedes/lists ADRs |
 | `rules/work/{branches,external-services,jira,pull-requests}.instructions.md` | `~/.claude/rules/work/` | Work | Corporate branching/PR/Jira conventions |
-| `output-styles/k1ra.md` | `~/.claude/output-styles/k1ra.md` | Work | K1ra output style — structurally excluded from home, not just overridden |
+| `output-styles/nova.md` | `~/.claude/output-styles/nova.md` | Work | Nova output style — replaced K1ra 2026-09-15 (four months stale, no domain claim); structurally excluded from home, not just overridden |
 | `skills/{branch-start-work,commit-ready-check,continuation-context-pack,defect-workflow,feature-workflow,jira-post-fix-update-comment,jira-post-qa-test-plan,jira-transition-status,jira-unassign-ticket,post-pr-cleanup,pr-prep-and-submit,project-setup}/` | `~/.claude/skills/` (flat — Claude Code doesn't discover nested skill folders) | Work | Gated by name in `.chezmoiignore`, not by directory nesting |
 | `rules/home/preferences.instructions.md` | `~/.claude/rules/home/` | Home | Preferred-name + work-priority-tier instructions, captured from live state |
 | `scripts/executable_pick-persona.js` | `~/.claude/scripts/pick-persona.js` | Home | The persona-picker script the `SessionStart` hook runs (path corrected 2026-08-31, see [ADR 0017](adr/0017-fix-pick-persona-hook-path-mismatch.md) — the old `home/scripts/` path deployed to the wrong, unused location) |

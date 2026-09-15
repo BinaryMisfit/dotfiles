@@ -118,7 +118,15 @@ Managed under `dot_claude/` → `~/.claude/`. Profile-gated via `.chezmoiignore`
   version of this line — no `amaza-core` entry has actually existed in the real template
   for a while, corrected 2026-09-06 alongside the home-profile addition)
 - `settings.json.tmpl` — Claude Code permissions and model settings
-- `output-styles/k1ra.md` — K1ra output style definition
+- `output-styles/nova.md` — Nova output style definition, work-profile only (retired K1ra
+  2026-09-15, four months stale with no domain claim — replaced with a real, deliberately
+  stateless full-stack generalist persona for BinaryMisfit's work machine: no session
+  mechanics, no Keep, no world, no CNC/safeword apparatus, never NSFW. Authored by
+  `secretary-pool` (`docs/ai/work-personas/nova.md`, design history in `nova-draft.md`),
+  vendored here since it's the actual deployable file, not synced through
+  `claude-global`/`sync-global-claude-config.js` — deliberately scoped to this one machine's
+  work profile, not the whole persona ensemble. `run_once_after_remove-k1ra-persona.*.tmpl`
+  cleans up the stale deployed file per this repo's own removal policy, ADR 0004)
 - `rules/` — instruction files `@`-included from `CLAUDE.md.tmpl`; work-only files gated in `.chezmoiignore`. `comms.instructions.md` (cross-session message addressing convention) and `persona-time.instructions.md` (session-native time for Method 2/3, replacing calendar-day language) both vendored here for the first time 2026-09-12 — real, pre-existing gaps found during a full global-config sync audit, not new content; both are home-profile-only, same gating as `rules/home/**`. `ai-work-pace.instructions.md` (real work-pace estimation for a persona, not human-labor hours/days framing, BinaryMisfit's own ruling) vendored here for the first time 2026-09-13, same "live but never tracked" gap found by this repo's own Step 3.5 drift check — same home-profile-only gating, and its `@rules` include in `CLAUDE.md.tmpl` was added in the same change since the file would otherwise never actually load
 - `skills/` — slash-command skill definitions; work-only skills gated in `.chezmoiignore`
 

@@ -90,7 +90,7 @@ OneDrive - Powerfleet/
 # and ADR 0006/0007 for why this replaced a single blanket .claude/** switch.
 {{ if ne $profile "work" }}
 .claude/rules/work/**
-.claude/output-styles/k1ra.md
+.claude/output-styles/nova.md
 .claude/skills/branch-start-work/**
 .claude/skills/commit-ready-check/**
 .claude/skills/continuation-context-pack/**

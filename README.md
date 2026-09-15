@@ -92,7 +92,7 @@ Profile-gated (`.profile` = `work` or `home`, set in local `chezmoi.yaml`):
 
 - **Claude Code** (`dot_claude/`) — common/work/home split, gated per-file in
   `.chezmoiignore`. `dot_claude/rules/registers.instructions.md` defines the todo/idea/
-  decision-record convention used by every repo that adopts it. `output-styles/k1ra.md` is
+  decision-record convention used by every repo that adopts it. `output-styles/nova.md` (replaced `k1ra.md` 2026-09-15) is
   work-only and authored here; `output-styles/{hailey,alexia,aphrodite,callie}.md` are
   home-only and vendored from the `xls` project, which owns their content — see
   [ADR 0009](docs/adr/0009-vendor-xls-persona-output-styles.md) for the re-sync step.

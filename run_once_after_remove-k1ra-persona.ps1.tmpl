@@ -1,0 +1,16 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!powershell
+$ErrorActionPreference = "Continue"
+
+# One-time cleanup: K1ra retired 2026-09-15, replaced by Nova as the work-profile
+# Claude Code persona. Removes the stale deployed output-style file on any machine
+# that still has it -- chezmoi apply alone won't delete a file that's no longer
+# tracked, this catches that.
+
+$StaleFile = Join-Path $HOME ".claude\output-styles\k1ra.md"
+
+if (Test-Path $StaleFile) {
+    Write-Host "==> removing retired ~/.claude/output-styles/k1ra.md"
+    Remove-Item -Force -Path $StaleFile -ErrorAction SilentlyContinue
+}
+{{ end -}}
