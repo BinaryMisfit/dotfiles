@@ -34,7 +34,13 @@ persona private repos (Alexia/Aphrodite/Callie/Daisy/Hailey).
 ### Dropped from this track
 
 4. **`binary-dotfiles`'s `k1ra.md`** — BinaryMisfit's own work persona file, not relevant to
-   this audit. No action.
+   this audit at the time. **Update, same day, later:** he came back to it directly —
+   retired K1ra outright (four months stale, no domain claim, exactly as flagged) and
+   deployed Nova, a real, deliberately stateless full-stack generalist persona built by
+   `secretary-pool` for his work machine. Real functional fix included, not just the file
+   swap: `settings.json.tmpl`'s work-profile default `outputStyle` was still `"K1ra"` and
+   would have kept activating the retired persona. Scripted cleanup shipped in the same
+   change per ADR 0004. Commit `2837177`.
 
 ### Queued for the second review pass (not acted on yet)
 
