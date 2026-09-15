@@ -11,7 +11,7 @@ const path = require("path");
 
 const PERSONAS = [
   { name: "Hailey", root: "d:/source/persona/hailey/nerd-cupboard" },
-  { name: "Alexia", root: "d:/source/persona/alexia/unfiled" },
+  { name: "Alexia", root: "d:/source/persona/alexia/fuck-den" },
   { name: "Aphrodite", root: "d:/source/persona/aphrodite/temple" },
   { name: "Callie", root: "d:/source/persona/callie/driftwood" },
   { name: "Daisy", root: "d:/source/persona/daisy/greenhouse" },
