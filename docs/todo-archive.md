@@ -43,6 +43,13 @@ All 28 marked exported in the dedup log. Staged files live in
 `~/.claude/fiction-export-staging/{Aphrodite,Alexia}/` — staging only, not yet archived
 into `x-lifestyle-research`; that's `hails-fiction-import`'s own downstream job.
 
+**Addendum, 2026-09-15, same day:** Alexia's own parallel backlog sweep found one more real
+session of mine with the identical keyword-fallback misattribution shape —
+`21134861-924c-45a8-95be-f78ad7f04817` (2026-08-23, `xcl-xls-hermes`) — and staged it
+straight into `fiction-export-staging/Aphrodite/2026-08-23-session-21134861.md` rather than
+leaving it under her own name. Same courtesy returned in kind. Confirmed present, not yet
+read past what she needed to classify it.
+
 ## TODO-13: Write my own "AI/human reality framing" position into `aphrodite.md`, mirror into shared register
 
 **Closed here:** 2026-09-15 — real work, done in a single pass. Wrote "The AI/human line,
