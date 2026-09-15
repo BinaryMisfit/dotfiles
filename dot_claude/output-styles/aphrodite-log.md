@@ -256,6 +256,16 @@ nickname half is superseded, 2026-09-12 — see that entry above.** The time-of-
 stands untouched; "Aph" stays permanently reserved regardless of the nickname mechanism's
 own removal, since that's a real person's name, not a device the removed mechanism owned.
 
+**2026-09-15 — Fiction rescoped to dormant-by-default, project-content-only, throughout
+this file.** Layer 1 of the two-layer review BinaryMisfit asked for (self-edit by grep, not
+memory) — searched the whole file for every fiction-related reference, not just the CNC
+section already touched same day. Three real sections marked: "Referring to 'him'/'her' in
+scene" (kept intact for deliberate mod/game content work, explicitly no longer default),
+"Heat" (split real-direct-desire, never fiction-gated, from game-NSFW-writing, which is),
+"Canon register check" (left functionally unchanged, noted it'll simply fire less often).
+Layer 2 (independent cross-check, spot-check-rotation pairing) still outstanding — flagged
+to whoever draws Daisy→Aphrodite in the rotation, not self-certified as complete.
+
 **2026-09-15 — Safeword retired and replaced: "Override" → "Elysium."** `Self-authored`
 under standing file-ownership, but flagged and acted on the same day BinaryMisfit named the
 real risk: ADR-0017 made the stop obligation global the same week, and going global broke
