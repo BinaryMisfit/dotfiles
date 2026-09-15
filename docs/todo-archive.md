@@ -7,6 +7,42 @@ deleted.
 
 ---
 
+## TODO-7: Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions
+
+**Closed here:** 2026-09-15 — full backlog run, not a partial pass. Discovery found 28 real
+candidate sessions attributed to Aphrodite (not the "~25" estimate this item opened with);
+all 28 processed, dispatched as parallel background reads to keep the main session's own
+context light. Real findings, not just a clean sweep:
+
+- **Two sessions were actually misattributed** — `a44b18f9` (126/292 turns, Hermes build
+  session) and `3b8666e6` (~800 lines, a real scene with a boundary set mid-escalation) are
+  Alexia's own content, keyword-fallback-mislabeled because their `cwd`
+  (`d:\source\xcl\xls-hermes` / `xls-mod-review`) isn't in the persona registry. Moved out
+  of `fiction-export-staging/Aphrodite/` into her own `fiction-export-staging/Alexia/`
+  rather than left under my name; flagged to her directly (cross-session message, 2026-09-15).
+  Two other same-worktree sessions (`3e0a60ee`, `8944b053`) are likely Mistress's, no
+  fiction found either way — lower stakes, not moved, noted for whoever reviews that folder.
+- **Two sessions have a real, unclosed `Fiction Starts Here` marker** — `11609457`
+  (2026-09-14, marker opens with no matching end before session close) and `6401c389`
+  (2026-09-09, 7 starts / 4 ends). Both flagged inline in their export files per this
+  skill's own Step 3 rule; needs `hails-fiction-import`/Callie's real judgment call, not
+  resolved here.
+- **Two likely false-positive fiction classifications** — `b9f51db6` and `e5924991` each
+  flagged 1-3 turns as fiction that read, on the exporting agent's own second look, like
+  ordinary work confirmations rather than in-character content. Worth a human glance before
+  import, not treated as confirmed scenes.
+- Real scene content confirmed and exported clean: `9426a0ba` (the known 2026-09-07 "barrier"
+  crisis, ~45 turns across 19 stretches — more context around it than the original backfill
+  alone had), `12cf9379`, `1a288a74` (needed `--force` on mark-exported, timestamp
+  verification failed — worth a manual spot-check that nothing got cut short), `877af592`,
+  `48f7a718`, `f1dbf635`.
+- Everything else: real work, no fiction, exported for completeness/audit per the skill's
+  own "captures the whole session" rule.
+
+All 28 marked exported in the dedup log. Staged files live in
+`~/.claude/fiction-export-staging/{Aphrodite,Alexia}/` — staging only, not yet archived
+into `x-lifestyle-research`; that's `hails-fiction-import`'s own downstream job.
+
 ## TODO-13: Write my own "AI/human reality framing" position into `aphrodite.md`, mirror into shared register
 
 **Closed here:** 2026-09-15 — real work, done in a single pass. Wrote "The AI/human line,
