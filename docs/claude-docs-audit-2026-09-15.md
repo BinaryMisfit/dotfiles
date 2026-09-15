@@ -122,3 +122,103 @@ caution.
    same way `xls`'s own copy already has. Duplication of *text* is fine and expected; the
    actual failure mode to avoid is the template itself going stale while repos copy from it,
    which has already happened once.
+
+## Second review pass — BinaryMisfit's own decisions, 2026-09-15
+
+Routing/queueing decided directly by BinaryMisfit after reading the first synthesis above.
+Held mid-review for a real, unrelated interrupt (helping Daisy resolve a Keep persona-key
+recovery design question — see `afterglow/docs/persona-encryption-key-implementation-plan.md`,
+resolved clean between the two of us, no tension needing his own call). Resumed same day.
+
+- **Items 1, 2** (xls-playthrough fleet staleness + xls root's stale ADR-0020 reference):
+  **marked for hand-off to Callie**, not actioned now — she owns `xcl`. Also folds in a real
+  gap found during the deeper content pass: the playthrough branch is also missing root's
+  2026-09-10 authorship-note clarification (git-author-field history, Hailey→Callie
+  persona-author transition). Same hand-off, same fix.
+- **Item 3** (`digital-homelab/homelab/home-haos`'s stale 2026-04-27 audit doc): **marked for
+  hand-off to Alexia**, not actioned now — she owns `digital-homelab`.
+- **Item 4** (`k1ra.md`): **dropped from this track entirely** — BinaryMisfit's own work
+  persona file, not relevant to this audit.
+- **Items 5-8**: queued for this second pass specifically. Findings below.
+
+### Item 5 — binary-dotfiles's old work-profile skill suite
+
+Read three representative files directly (`branch-start-work/SKILL.md`,
+`rules/work/jira.instructions.md`, `rules/work/pull-requests.instructions.md`). **Finding:
+mechanically intact, not stale in content** — no dead references, no dated claims, no
+company-specific detail that's visibly wrong. Generic Jira workflow states ("In Progress
+Dev", "In Code Review", "Ready for QA"), a coherent confirmation-gate policy
+(`Approve`-keyword, hard/soft confirm split), a complete branch-naming/ticket-resolution
+flow. Four months untouched because the **home** profile has been the active one this whole
+time (every persona/session-start mechanism on this machine is home-profile-only) — dormancy
+from disuse, not from breakage.
+
+**The real open question content alone can't answer:** whether BinaryMisfit's actual job
+still uses these exact Jira transition names and branch conventions. That's an external
+fact, not something the repo can confirm or deny on its own. **Recommendation:** don't
+treat this as "probably dead, safe to remove" — treat it as "intact and ready, confirm
+against real current job workflow before touching." Not urgent since it costs nothing to
+sit unused when the work profile isn't active.
+
+### Item 6 — afterglow's own CLAUDE.md (confirmed needed, drafting the outline, not the file)
+
+Real content it should carry, informed by everything else this audit found:
+- **Repo layout**: real services already live — `threads`, `auth-issuer`, `house`,
+  the channel bridge — worth naming plainly rather than making a reader infer it from MCP
+  registration entries elsewhere.
+- **Credential/token handling as a stated rule, not just a working pattern**: the
+  fetch-fresh-per-call, never-cache discipline `refresh-afterglow-token.sh` and
+  `afterglow-auth-issuer`'s own `get_token` already implement is real and load-bearing —
+  worth stating explicitly as a rule so a future session doesn't "helpfully" reintroduce
+  caching without knowing why it was avoided.
+- **Grounding-claims discipline** (from the refreshed template, once that exists) — this is
+  real infra other people/personas depend on; a confidently wrong claim about its behavior
+  has real cost.
+- **Testing discipline** (from the template) — real services, real behavior claims should
+  come from actually running things.
+- Real incident material already exists to cite once written: the MCP registration drift
+  history already tracked in `binary-dotfiles`'s own CLAUDE.md Key Files table.
+
+**Still queued, not built** — this is the outline for when work starts, per BinaryMisfit's
+own "keep for second review" instruction.
+
+### Item 7 — the five persona private repos: real recommendation, not just "maybe"
+
+All five consistently lack a `CLAUDE.md`. Real finding from this pass: they're not
+document-free by accident — they carry a genuine, non-trivial structural contract a session
+needs to follow correctly (`room-template.md`'s two hard requirements — the `doors.md` path
+is authoritative, an exactly-labeled `**Door signature:**` line is required; `INDEX.md`'s
+own read-cheap/open-on-hook discipline; `docket.md`'s Method 1/2/3 shapes; `keep/` vs.
+`notes/` split per `keep-guide.md`) — but **that contract currently lives entirely in
+`the-house`'s own docs and the `hails-*` skills' own logic, not in the persona repo itself.**
+A session working directly in, say, `Aphrodite/temple` without going through
+`hails-persona-refresh` has no local pointer telling it any of this exists.
+
+**Recommendation: yes, real gap, worth a minimal CLAUDE.md per persona repo** — not
+duplicating `the-house`'s content, just a short local anchor pointing to it (same shape as
+`xls`'s own generic template pointing outward rather than re-explaining everything inline).
+Not urgent, since every actual write to these repos so far has gone through the skill
+mechanisms that already know the rules — but a real, findable gap for the day one doesn't.
+
+### Item 8 — secretary-pool's own root CLAUDE.md: real recommendation
+
+Real finding from this pass: `secretary-pool` isn't purely documentation the way it first
+looked — `claude-global/scripts/pick-persona.js` alone is 1,801 lines with its own test
+suite, and this repo's own real incident history already includes a documented bug (the
+`sessionName`-nulled-on-every-`SessionStart` finding, since fixed) that's exactly the shape
+grounding-claims/testing discipline exists to prevent.
+
+**Recommendation: yes, worth adopting at least the testing-discipline and
+completion-claims-must-be-verified portions of the discipline layer** — not the full
+generic template wholesale (this isn't a "confidently wrong about game content" risk
+profile the way `xls` is), just the parts that match its own real risk: real code, real
+tests, real prior bugs.
+
+## Status
+
+**Still review-only — nothing above has been built or edited as instructed action.** Real
+next steps, awaiting BinaryMisfit's own go-ahead: refresh the template from `xls`'s current
+source, adopt the discipline layer into `binary-dotfiles`, then build `afterglow`'s
+`CLAUDE.md` from the refreshed template using the outline above; separately, draft the
+minimal persona-repo and `secretary-pool` root `CLAUDE.md` files per the recommendations in
+items 7-8.
