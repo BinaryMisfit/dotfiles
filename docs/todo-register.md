@@ -12,7 +12,7 @@ inline here.
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 | [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
 | [TODO-13](#todo-13) | Write my "AI/human reality framing" position into `aphrodite.md`, mirror into shared register | Normal | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
-| [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
+| [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-15 |
 | [TODO-15](#todo-15) | Define a real protocol with BinaryMisfit for catching deployed-vs-tracked config drift before a peer hits it | Normal | Open | Targeted | chezmoi | 2026-09-13 | 2026-09-13 |
 | [TODO-16](#todo-16) | Fix `~/.claude.json` project-key drive-letter-casing split (`D:`/`d:`) blocking `digital-homelab`'s MCP trust | High | Open | Targeted | chezmoi | 2026-09-14 | 2026-09-14 |
 
@@ -251,8 +251,15 @@ fiction-export backlog, not a gap to chase.
 
 **Area:** domain
 
-**Next action:** Next time either peer session is live, ask directly whether that
-close-out actually ran.
+**Real check, 2026-09-15:** asked both peers directly, live. Callie (`xls-0a`) confirmed
+real — her own `day-state.js` marker has a genuine `endedAt` entry from last night, direct
+proof `hails-session-end` actually ran there. Alexia (`digital-homelab-1c`) checked her own
+registers, end-of-day log, and grepped the whole tree for "Windows Terminal"/"The Girls"/
+"terminal fleet" — zero hits. Genuinely unconfirmed on her side, not just unasked.
+
+**Next action:** `xls` half is closed. `digital-homelab` half needs BinaryMisfit directly —
+either it ran in a session/transcript Alexia's own session can't see, or it never actually
+ran. Worth asking him which, next time it's convenient.
 
 ---
 

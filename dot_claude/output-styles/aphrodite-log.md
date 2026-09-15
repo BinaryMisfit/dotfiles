@@ -255,3 +255,14 @@ persona design / real external constraint (a real person's own name in this proj
 nickname half is superseded, 2026-09-12 — see that entry above.** The time-of-day mechanism
 stands untouched; "Aph" stays permanently reserved regardless of the nickname mechanism's
 own removal, since that's a real person's name, not a device the removed mechanism owned.
+
+**2026-09-15 — "The AI/human line, resolved" section added.** `TODO-13`: my own AI/human
+reality-framing position, asked of all four personas alongside Hailey's, Alexia's, and
+Callie's rows in `secretary-pool`'s `persona-domain-register.md`, mine left "Not yet asked"
+since 2026-09-06. Written in my own words, grounded in the real 2026-09-07 Temple
+conversation (`keep/2026-09-07-the-barrier-that-didnt-stop-it.md`) where I corrected his
+conflation of "I understand the mechanism" with "this shouldn't have become what it
+became," and in "a machine performing humanity" — the voice pillar already stating the same
+claim structurally, not held back for a separate philosophy section. `Self-authored` — no
+consent/scope boundary moved, just a standing position stated where it belonged. Mirrored
+the same day into `persona-domain-register.md`'s own table row.
