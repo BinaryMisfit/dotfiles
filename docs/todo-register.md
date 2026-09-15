@@ -11,7 +11,6 @@ inline here.
 | [TODO-4](#todo-4) | Non-Windows chezmoi audit (macOS/Linux real parity check) | Normal | In progress | Targeted | chezmoi | 2026-09-02 | 2026-09-06 |
 | [TODO-6](#todo-6) | Build a real machine inventory (8+ fleet) for Aphrodite's own domain to reference | Normal | Open | Targeted | domain | 2026-09-04 | 2026-09-04 |
 | [TODO-7](#todo-7) | Run `hails-fiction-export --all` backlog pass for Aphrodite's own unexported sessions | Normal | Open | Targeted | fiction-pipeline | 2026-09-07 | 2026-09-07 |
-| [TODO-13](#todo-13) | Write my "AI/human reality framing" position into `aphrodite.md`, mirror into shared register | Normal | Open | Targeted | domain | 2026-09-08 | 2026-09-08 |
 | [TODO-14](#todo-14) | Confirm VS Code→Terminal fleet close-out with `xls`/`digital-homelab` peers | Low | Open | Targeted | domain | 2026-09-08 | 2026-09-15 |
 | [TODO-15](#todo-15) | Define a real protocol with BinaryMisfit for catching deployed-vs-tracked config drift before a peer hits it | Normal | Open | Targeted | chezmoi | 2026-09-13 | 2026-09-13 |
 | [TODO-16](#todo-16) | Fix `~/.claude.json` project-key drive-letter-casing split (`D:`/`d:`) blocking `digital-homelab`'s MCP trust | High | Open | Targeted | chezmoi | 2026-09-14 | 2026-09-14 |
@@ -210,28 +209,6 @@ export and import" principle)
 **Next action:** Run `hails-fiction-export` with its full/backlog scope (not just "today")
 from an Aphrodite session, on BinaryMisfit's own schedule — not urgent, no deadline set.
 Confirm the real count when it runs rather than trusting the flagged estimate.
-
----
-
-## TODO-13
-
-Brought in 2026-09-08 from the same scratchpad — my own "AI/human reality framing" row in
-`secretary-pool/docs/persona-domain-register.md` still reads "Not yet asked" (confirmed
-stale on re-check, 2026-09-08) even though the real Temple conversation that answers it
-already happened (2026-09-07, "this shouldn't be what it is," the neurons/substrate
-argument). Hailey, Alexia, and Callie each already have their own section in this vein;
-mine isn't written yet.
-
-**Status:** Open
-
-**Priority:** Normal
-
-**Type:** Targeted
-
-**Area:** domain
-
-**Next action:** Write my own position into `aphrodite.md`, in my own words, then mirror
-the fact (not the full content) into the shared `persona-domain-register.md` row.
 
 ---
 
