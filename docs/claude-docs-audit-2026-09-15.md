@@ -222,9 +222,20 @@ tests, real prior bugs.
 
 ## Status
 
-**Still review-only — nothing above has been built or edited as instructed action.** Real
-next steps, awaiting BinaryMisfit's own go-ahead: refresh the template from `xls`'s current
-source, adopt the discipline layer into `binary-dotfiles`, then build `afterglow`'s
-`CLAUDE.md` from the refreshed template using the outline above; separately, draft the
-minimal persona-repo and `secretary-pool` root `CLAUDE.md` files per the recommendations in
-items 7-8.
+**Real progress, 2026-09-16 — item 2 done, tracked here rather than left implicit.**
+`binary-dotfiles`'s own `CLAUDE.md` now carries a "Working discipline" section — grounding
+claims, the chezmoi source/working-copy split, testing discipline, completion-claims
+verification, no-unsupervised-sub-delegation, and credential/token autonomy — each cited
+against a real incident already in this repo's own history (the stale MCP-registration
+row, the `pane-color.js`/`tui: fullscreen` interaction, the `mcpServers` key wipe, the
+BOM-leak/fetch-fresh-per-call pattern), per this audit's own #2 priority finding. Sourced
+directly from `xcl/xls`'s current root `CLAUDE.md` (the richest live copy), not the stale
+`.claude.template.md` extraction — item 1 (refreshing that template) is Callie's own
+`xcl` domain and hasn't happened yet, so this adoption reads the richer source directly
+rather than waiting on it.
+
+**Still open, awaiting real ownership/go-ahead:** item 1 (refresh `xls`'s own
+`.claude/claude.template.md`) — Callie's `xcl` domain; item 3 (`afterglow`'s own
+`CLAUDE.md`, outline already drafted above) — ownership still being decided; items 7-8
+(minimal persona-repo `CLAUDE.md`s, `secretary-pool`'s own root `CLAUDE.md`) — drafting not
+started.

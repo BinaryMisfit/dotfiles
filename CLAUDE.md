@@ -26,6 +26,68 @@ These override any global Claude Code or git configuration:
   confuse a future session without its reasoning; a one-line tweak with no real "why"
   doesn't need one. See [ADR 0016](docs/adr/0016-no-change-without-documentation.md).
 
+## Working discipline
+
+Adopted 2026-09-16, per `docs/claude-docs-audit-2026-09-15.md`'s own finding: this repo
+was the real priority adoption target for a discipline layer already proven elsewhere on
+this machine (`xcl/xls`, `digital-homelab`) — not because it's a template to copy for its
+own sake, but because this repo already has its own real incidents matching every category
+below, just never written down as standing rules until now.
+
+### Grounding claims — verify against the deployed artifact, never trust an earlier read
+
+Real incident: the MCP registration row in this file's own Key Files table went stale for
+two days, undetected, before a real registration gap for `afterglow-house` forced a fresh
+look (2026-09-14) — an earlier read was trusted in place of a fresh `claude mcp list` + a
+direct read of `~/.claude.json`. **Any claim in this file about current settings/MCP state
+must trace to a fresh, direct check of the actual deployed file** — never a prior session's
+summary of it, however recent that summary is.
+
+### The chezmoi source/working-copy split is this repo's version of a stale-pin bug
+
+Already covered under "Common Commands" below, restated as the general shape: two copies
+of the same truth exist on this machine (`~/.local/share/chezmoi` vs. whichever working
+copy is open), only one is current, and nothing signals when they diverge. Treat any
+`chezmoi apply`/`diff` run against a possibly-stale source the same way a stale submodule
+pin gets treated elsewhere — verify freshness before trusting the result, not after.
+
+### Testing discipline — a claim about what `chezmoi apply` actually does comes from running it
+
+Real incident: `pane-color.js`'s interaction with `theme: "auto"` and `tui: "fullscreen"`
+(see the Key Files table) was only understood by actually watching a real `chezmoi apply`
+render and observing the primary-buffer paint get discarded — not from reading the script
+and assuming it worked. A claim about what a template, run script, or settings change
+actually does on apply needs a real `chezmoi apply`/`chezmoi diff` behind it, not a code
+read alone.
+
+### Completion claims about git/chezmoi state are claims, not facts, until checked
+
+Real incident: `~/.claude.json`'s entire top-level `mcpServers` key was briefly wiped by a
+hand-rolled PowerShell `Set-Content` test against the live file (2026-09-12) — caught only
+by checking the file directly afterward, never because the edit itself reported failure.
+"Committed," "pushed," "nothing uncommitted," "the settings file now has X" — every one of
+these gets verified with a real `git status`/`git diff`/direct file read before being
+relayed or built on, the same standard applied to a peer session's or dispatched agent's
+own claim as to this session's own.
+
+### No unsupervised sub-delegation for a task assigned to this session
+
+If work here is ever split across parallel agents, no two agents get write access to the
+same file in the same batch — this repo's own settings/template files are shared truth the
+same way a corpus doc is elsewhere, and a silent double-edit is exactly as costly here.
+Anything genuinely requiring a shared file touched more than once stays serial, done by
+this session directly, not parallelized.
+
+### Credential/token autonomy — the pattern, stated as a rule, not left implicit
+
+This repo touches real secrets machinery (Bitwarden Secrets Manager tokens, age-encrypted
+files, per-persona Afterglow tokens) without holding any actual secret value itself.
+**Fetch fresh per use, never cache, never let a real value land in a command history,
+process list, or session transcript** — the BOM-leak incident behind
+`bitwarden_shared_env_pattern` and the fetch-fresh-per-call discipline
+`refresh-afterglow-token.sh`/`afterglow-auth-issuer`'s `get_token` already implement are
+both real, lived proof of why, not abstract caution.
+
 ## Common Commands
 
 ```sh
