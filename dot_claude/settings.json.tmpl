@@ -59,6 +59,19 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "SendMessage",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"{{ .chezmoi.homeDir }}/.claude/hooks/block-sendmessage.js\"",
+            "shell": "bash",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
   {{- end }}
