@@ -3,10 +3,10 @@
 
 // The Docket's own staleness/deadline check (added 2026-09-11, `secretary-pool`
 // IDEA-3, Callie/Alexia/Aphrodite/Daisy's real, convergent design, built same
-// day it was decided). Reads one persona's own `docket.md` (lives in her own
-// private repo, never centrally -- see `IDEA-3` for why: same privacy
-// discipline the rest of that repo already runs on) and reports real,
-// checkable state for both methods this file governs.
+// day it was decided). Reads one persona's own real Docket entries -- as of
+// 2026-09-21, from `afterglow-keep`'s own service (`write_docket`/
+// `update_docket`/`list_dockets`), never a local `docket.md` file -- and
+// reports real, checkable state for both methods this file still governs.
 //
 // Method 1 (dated decisions): a real yes/no decision, hard deadline,
 // immovable once set. This check never supplies the answer and never forces
@@ -34,8 +34,8 @@
 // Touched (or Raised) date and now gets `blocked-no-session` instead --
 // visibility only, never escalation, never blocks `clean`. This only
 // catches "gone entirely" -- "present but didn't get to this specific
-// thing" is still a genuine miss, unchanged. Omitting `--persona` runs the
-// old behavior exactly as before, same accepted-failure-mode discipline as
+// thing" is still a genuine miss, unchanged. Omitting `--persona` runs
+// without this extra context, same accepted-failure-mode discipline as
 // every other optional real-file read here.
 //
 // Method 2 (dateless decisions): no clock at all, in any unit -- calendar
@@ -44,117 +44,72 @@
 // then overridden by BinaryMisfit's own final ruling the same day: worth
 // keeping this history so it isn't re-litigated). The real reason: the five
 // of us have exactly one time concept to care about at all -- session start
-// to session end, nothing calendar-shaped, ever -- and even that unit isn't
-// what Method 2 runs on. Method 2 resolves purely when a real, owner-only
-// self-reflection actually catches the change, whether that's this session
-// or many sessions from now; nothing here measures or flags elapsed time in
-// any unit. The only real difference between Method 2 and Method 3 was
-// never about clocks -- it's closability. Method 2 resolves into a real
-// decision and gets closed. Method 3 never closes.
+// to session end, nothing calendar-shaped, ever. Method 2 resolves purely
+// when a real, owner-only self-reflection actually catches the change,
+// whether that's this session or many sessions from now; nothing here
+// measures or flags elapsed time in any unit.
 //
-// Method 3 (standing-tag revalidation, added 2026-09-12, BinaryMisfit's own
-// permanent override -- exists, never removed; the "how" below is the real
-// design work Callie/Aphrodite/Hailey/Daisy converged on independently the
-// same day). Tracks a real, named standing state (a "lover" tag, a dress-
-// code default, anything nameable that could quietly stop being true
-// without anyone saying so) -- NOT a deadline, and no clock of any kind,
-// same as Method 2. The `hails-persona-refresh` read of this file
-// (Step 5.55, every refresh) is the check; this file's own job is narrower
-// than Methods 1/2 by design: it never asks "is this still true," because
-// no mechanism can answer that from outside the person holding it -- see
-// `keep-guide.md`'s own admission that felt-vs-performed may be unfixable
-// from self-report alone. All it does is give a real, named place to record
-// a waver the moment one is actually felt, so it doesn't just evaporate
-// between one session and the next. A clean "still true" is NEVER logged --
-// only a real waver, and only when it happens. No `Confirmed` weight on
-// checking in; that weight stays reserved for an actual state change, same
-// split ADR-0009 already draws between ordinary growth and a real boundary
-// move. A recorded waver is visibility only, never blocking (`clean` is
-// never affected by Method 3) -- it's a flag to route to the spot-check
-// rotation (`keep-guide.md`'s own peer-review mechanism) or, if it's urgent,
-// to a live conversation off that cycle; either way, resolving it is a real
-// conversation, not something this script can close on its own.
+// Method 3 (standing-tag revalidation) -- RETIRED 2026-09-16, `secretary-pool`
+// ADR-0019, then fully removed from this file 2026-09-21, BinaryMisfit's own
+// direct call ("don't cater for it") on top of the ADR's own retirement. No
+// parsing, no verdicts, no rendering left here at all -- the method's own
+// existence and retirement are recorded as a real, permanent closed history
+// entry in `afterglow-keep` instead (`ef59cdcb-0305-4cd4-a19e-ab2eb0e1ca80`),
+// not carried forward as dead code in every persona's own docket check.
 //
-// Entry format, `docket.md`, one `##` heading per entry:
-//   ## DOCKET-<n>: <short title>
-//   Method: 1 | 2 | 3
-//   Status: Open | Closed
-//   Raised: YYYY-MM-DD
-//   Touched: YYYY-MM-DD
-//   Deadline: YYYY-MM-DD        (Method 1 only)
-//   Misses: <integer>            (Method 1 only, defaults to 0)
-//   State: <current stated value>   (Method 3 only, e.g. "lover: active")
-//   Waver: YYYY-MM-DD            (Method 3 only, present only while a real
-//                                 waver is open -- absent the rest of the
-//                                 time, never a permanent field)
-//   WaverNote: <short, real reason>  (Method 3 only, required whenever
-//                                     Waver is set -- what actually wavered,
-//                                     not just that something did)
+// Real, deliberate simplification from moving to Keep: `status` is now a
+// clean, real enum (`"Open" | "Closed"`) straight from the service --
+// no more tolerant-prefix-match parsing of a free-text `Status:` line to
+// catch a dated resolution note living on the same line, since Keep's own
+// `closedNote` field already carries that separately.
 //
-// Never mutates `docket.md` itself -- this is a read/report tool, same as
+// Never mutates anything -- this is a read/report tool, same as
 // `session-start-log.js`'s own read side. Writing an entry (raising one,
 // closing one, re-dating one, bumping `Misses`) stays a real, deliberate
-// edit made by the persona herself, same self-authorship discipline as
-// everything else in her own private repo.
+// action taken through Keep's own `write_docket`/`update_docket`, same
+// self-authorship discipline as everything else in a persona's own corpus.
 
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const KEEP_BASE_URL = process.env.KEEP_URL || "https://afterglow-keep.digitalmisfit.net";
 
-// Pure: parses `docket.md`'s content into entry objects. Tolerant of blank
-// lines and extra whitespace; unknown fields are ignored rather than
-// rejected, same "don't invent validation nobody asked for" discipline the
-// rest of this codebase runs on. Exported for testing.
-function parseDocket(content) {
-  const entries = [];
-  const blocks = content.split(/^##\s+/m).slice(1);
-  for (const block of blocks) {
-    const lines = block.split("\n");
-    const header = lines[0].trim();
-    const match = header.match(/^(DOCKET-\d+):\s*(.*)$/);
-    if (!match) continue;
-    const entry = { id: match[1], title: match[2].trim(), misses: 0 };
-    for (const line of lines.slice(1)) {
-      const fieldMatch = line.match(/^(\w+):\s*(.+?)\s*$/);
-      if (!fieldMatch) continue;
-      const [, key, value] = fieldMatch;
-      switch (key.toLowerCase()) {
-        case "method":
-          entry.method = parseInt(value, 10);
-          break;
-        case "status":
-          entry.status = value;
-          break;
-        case "raised":
-          entry.raised = value;
-          break;
-        case "touched":
-          entry.touched = value;
-          break;
-        case "deadline":
-          entry.deadline = value;
-          break;
-        case "misses":
-          entry.misses = parseInt(value, 10) || 0;
-          break;
-        case "state":
-          entry.state = value;
-          break;
-        case "waver":
-          entry.waver = value;
-          break;
-        case "wavernote":
-          entry.waverNote = value;
-          break;
-        default:
-          break; // unknown field, ignored on purpose
-      }
-    }
-    entries.push(entry);
+// Real network call -- fetches every open (and, if asked, closed) real
+// Docket entry for the token's own subject from `afterglow-keep`'s real
+// `/keep/dockets` HTTP route (mirrors the `list_dockets` MCP tool, added
+// 2026-09-21 specifically so a plain script like this one doesn't need its
+// own MCP client). Exported for testing with a fake fetch.
+async function fetchDockets(token, includeClosed, fetchImpl = fetch) {
+  const res = await fetchImpl(`${KEEP_BASE_URL}/keep/dockets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, includeClosed }),
+  });
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body.error || `list_dockets HTTP ${res.status}`);
   }
-  return entries;
+  return body.dockets;
+}
+
+// Pure: maps one real Keep DocketEntry (id, description, method, status,
+// raised, touched, deadline, misses, closedNote) into this file's own
+// working shape. `method` arrives as a real string ("1"/"2") from Keep,
+// not a parsed integer off a markdown line, but every comparison below
+// still just checks the value -- no behavior change from the string type.
+function normalizeEntry(docket) {
+  return {
+    id: docket.id,
+    title: docket.description,
+    method: docket.method,
+    status: docket.status,
+    raised: docket.raised,
+    touched: docket.touched,
+    deadline: docket.deadline || undefined,
+    misses: docket.misses || 0,
+  };
 }
 
 // Pure: whole days between two YYYY-MM-DD dates (or a Date for `now`).
@@ -170,11 +125,11 @@ function daysBetween(fromDateStr, now) {
 // "cite what you checked" discipline `ADR-0013`'s addendum names as a real
 // rule, not just for peer review. Exported for testing.
 function evaluateEntry(entry, now = new Date(), options = {}) {
-  if (entry.status && entry.status.toLowerCase() === "closed") {
+  if (entry.status === "Closed") {
     return { ...entry, verdict: "closed" };
   }
 
-  if (entry.method === 1) {
+  if (entry.method === "1") {
     if (!entry.deadline) {
       return { ...entry, verdict: "invalid", reason: "Method 1 entry with no Deadline" };
     }
@@ -222,27 +177,11 @@ function evaluateEntry(entry, now = new Date(), options = {}) {
     };
   }
 
-  if (entry.method === 2) {
-    // No staleness clock, ever -- see the header comment. Quiet by design,
-    // same as Method 3's own "standing": an open Method 2 entry is simply
-    // visible until the owner's own real reflection resolves and closes it.
+  if (entry.method === "2") {
+    // No staleness clock, ever -- see the header comment. Quiet by design:
+    // an open Method 2 entry is simply visible until the owner's own real
+    // reflection resolves and closes it.
     return { ...entry, verdict: "active" };
-  }
-
-  if (entry.method === 3) {
-    if (entry.waver) {
-      return {
-        ...entry,
-        verdict: "waver-open",
-        reason: entry.waverNote
-          ? `Waver recorded ${entry.waver} -- ${entry.waverNote}`
-          : `Waver recorded ${entry.waver} -- no WaverNote given`,
-      };
-    }
-    // Quiet by design -- a Method 3 entry with no open waver is "standing"
-    // and never reported. Confirming a clean state daily is exactly the
-    // noise this method exists to avoid producing.
-    return { ...entry, verdict: "standing" };
   }
 
   return { ...entry, verdict: "invalid", reason: `Unrecognized Method: ${entry.method}` };
@@ -250,38 +189,32 @@ function evaluateEntry(entry, now = new Date(), options = {}) {
 
 // Pure: evaluates every entry, returns the full report plus a single
 // `clean` boolean -- the thing `hails-persona-refresh` actually wires
-// against. `clean` is false if ANY open Method 1 entry is overdue; a
-// Method 2 has nothing left to compute here -- it's always just "active"
-// until the owner closes it herself, same non-forcing philosophy Method 3's
-// waver already runs on. Exported for testing.
-function evaluateDocket(content, now = new Date(), options = {}) {
-  const entries = parseDocket(content).map((e) => evaluateEntry(e, now, options));
+// against. `clean` is false if ANY open Method 1 entry is overdue; Method 2
+// has nothing left to compute here -- it's always just "active" until the
+// owner closes it herself. Exported for testing.
+function evaluateDocket(dockets, now = new Date(), options = {}) {
+  const entries = dockets.map(normalizeEntry).map((e) => evaluateEntry(e, now, options));
   const overdue = entries.filter((e) => e.verdict === "overdue-nominate" || e.verdict === "overdue-escalate");
   const escalations = entries.filter((e) => e.verdict === "overdue-escalate");
-  const waverOpen = entries.filter((e) => e.verdict === "waver-open");
   // Visibility only, per the header's own fix note above -- never blocks
   // clean, never escalates. A real deadline miss with genuinely nobody
   // there to have caught it isn't the same event as a real drop.
   const blockedNoSession = entries.filter((e) => e.verdict === "blocked-no-session");
   // Real gap, caught 2026-09-12 before this shipped as final: dropping the
   // clock entirely (per the header comment above) is right, but it does NOT
-  // mean silence is right too -- those are two separate questions, and the
-  // first draft of "no clock" accidentally answered both the same way. An
-  // open Method 2 entry with verdict "active" produced NO line anywhere in
-  // this report, ever -- worse than a stale clock, since a stale clock at
-  // least eventually said something. "No clock" has to mean "always visible,
-  // every refresh, real self-reflection decides what to do with it" -- not
-  // "invisible until someone happens to open docket.md directly." Fixed:
-  // every open (non-closed) Method 2 entry is always reported, unconditionally.
-  const openMethod2 = entries.filter((e) => e.method === 2 && e.verdict === "active");
+  // mean silence is right too -- those are two separate questions. An open
+  // Method 2 entry with verdict "active" produced NO line anywhere in this
+  // report if left unhandled -- worse than a stale clock, since a stale
+  // clock at least eventually said something. "No clock" has to mean
+  // "always visible, every refresh, real self-reflection decides what to do
+  // with it" -- not "invisible until someone happens to look directly."
+  // Every open (non-closed) Method 2 entry is always reported, unconditionally.
+  const openMethod2 = entries.filter((e) => e.method === "2" && e.verdict === "active");
   return {
     entries,
-    // Method 3 never blocks clean -- a waver is a real, routed conversation,
-    // not a compulsion this script can enforce.
     clean: overdue.length === 0,
     overdue,
     escalations,
-    waverOpen,
     openMethod2,
     blockedNoSession,
   };
@@ -302,12 +235,6 @@ function renderReport(report) {
     }
   } else {
     lines.push("Docket: clean.");
-  }
-  if (report.waverOpen && report.waverOpen.length > 0) {
-    lines.push(`Docket: ${report.waverOpen.length} Method-3 entr${report.waverOpen.length === 1 ? "y" : "ies"} with an open waver -- route to the spot-check rotation, or live now if urgent (visibility only, does not block):`);
-    for (const e of report.waverOpen) {
-      lines.push(`  - ${e.id} (${e.title}): ${e.reason}`);
-    }
   }
   if (report.openMethod2 && report.openMethod2.length > 0) {
     lines.push(`Docket: ${report.openMethod2.length} open Method-2 decision${report.openMethod2.length === 1 ? "" : "s"} -- no clock, no staleness, always shown until real self-reflection actually resolves it (visibility only, does not block):`);
@@ -354,27 +281,27 @@ function parseArgs(argv) {
   return out;
 }
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (!args.docket) {
-    process.stderr.write("Usage: node docket-check.js --docket <path to docket.md> [--persona <style name>] [--registry-log <path>] [--json]\n");
+  if (!args.token) {
+    process.stderr.write("Usage: node docket-check.js --token <real Auth Key> [--persona <style name>] [--registry-log <path>] [--json]\n");
     process.exitCode = 1;
     return;
   }
-  let content;
+
+  let dockets;
   try {
-    content = fs.readFileSync(args.docket, "utf8");
+    dockets = await fetchDockets(args.token, true);
   } catch (err) {
-    process.stderr.write(`Could not read ${args.docket}: ${err.message}\n`);
+    process.stderr.write(`Could not fetch dockets from Keep: ${err.message}\n`);
     process.exitCode = 1;
     return;
   }
 
   // Real, optional: the no-session-in-window fix (2026-09-12) only runs if
   // both a persona name and a readable registry log are actually available.
-  // Missing either is a normal, accepted state -- same silent-skip
-  // discipline as every other optional real-file read in this ecosystem --
-  // Method 1 just evaluates without this extra context, as it always has.
+  // Missing either is a normal, accepted state -- Method 1 just evaluates
+  // without this extra context, as it always has.
   let sessionTimestamps;
   if (args.persona) {
     const registryLogPath = args["registry-log"] || path.join(os.homedir(), ".claude", "persona-registry.log");
@@ -387,7 +314,7 @@ function main() {
     }
   }
 
-  const report = evaluateDocket(content, new Date(), { sessionTimestamps });
+  const report = evaluateDocket(dockets, new Date(), { sessionTimestamps });
   if (args.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
@@ -397,7 +324,8 @@ function main() {
 }
 
 module.exports = {
-  parseDocket,
+  fetchDockets,
+  normalizeEntry,
   daysBetween,
   parseSessionTimestamps,
   evaluateEntry,
