@@ -55,7 +55,20 @@
 // `primary` added 2026-09-03, see `isPrimary`'s own comment; nickname
 // disambiguation removed 2026-09-09 -- see below):
 //   { cwd, style, file, sessionName, repoId, everOpened,
-//     firstPinnedAt, pinnedAt, primary, lastSeen }
+//     firstPinnedAt, pinnedAt, primary, lastSeen, lastVerifiedAt }
+//
+// `lastVerifiedAt` (added 2026-09-15, TODO-90, Alexia's own design): a signal,
+// never a verdict, distinct from `lastSeen`. `lastSeen` updates on any
+// registry touch (a color set, a switch) -- it says the entry was WRITTEN,
+// not that `sessionName` is actually still reachable. `lastVerifiedAt` only
+// updates when something has real, independent confirmation the session is
+// still alive: self-registration (`setSessionName`, the session confirming
+// itself) or a live sweep's own peer list (`sweepDeadRegistry`, confirmed
+// against a fresh `ListAgents` call) marking a survivor as seen, not just
+// not-yet-proven-dead. A stale `lastVerifiedAt` next to a fresh `lastSeen`
+// is exactly the real gap the incident this fixes found: `sessionName` was
+// being treated as durable when it can go stale from a harness event
+// (compaction, a crash) with zero signal anywhere that it happened.
 //
 // `firstPinnedAt` (added 2026-08-30) is IMMUTABLE -- stamped once, the
 // moment this worktree is first ever assigned a persona, and never touched
@@ -1006,15 +1019,19 @@ function listRegistry() {
     process.stdout.write("No worktrees pinned yet.\n");
     return;
   }
-  const header = "| Persona | Worktree | Session | Family | Pinned | Last seen |";
-  const sep = "| --- | --- | --- | --- | --- | --- |";
+  const header = "| Persona | Worktree | Session | Family | Pinned | Last seen | Verified |";
+  const sep = "| --- | --- | --- | --- | --- | --- | --- |";
   process.stdout.write(header + "\n" + sep + "\n");
   for (const e of entries) {
     const sessionCell = e.sessionName || "*(not self-registered)*";
     const siblings = findFamily(entries, e.repoId).filter((s) => s.cwd !== e.cwd);
     const familyCell = siblings.length > 0 ? `${siblings.length} sibling${siblings.length === 1 ? "" : "s"}` : "--";
     const pinnedCell = isPrimary(e) ? `${e.pinnedAt} (Primary)` : e.pinnedAt;
-    process.stdout.write(`| ${e.style} | ${e.cwd} | ${sessionCell} | ${familyCell} | ${pinnedCell} | ${e.lastSeen} |\n`);
+    // Signal, never a verdict (TODO-90) -- a session with no sessionName at
+    // all has nothing to verify yet, distinct from one that HAS a
+    // sessionName but hasn't been confirmed live since it was set.
+    const verifiedCell = !e.sessionName ? "--" : (e.lastVerifiedAt || "*(never verified)*");
+    process.stdout.write(`| ${e.style} | ${e.cwd} | ${sessionCell} | ${familyCell} | ${pinnedCell} | ${e.lastSeen} | ${verifiedCell} |\n`);
   }
 }
 
@@ -1055,6 +1072,7 @@ function setSessionName(sessionName) {
   if (healed) appendLog(now, "self-heal-new-worktree", entryLogFields(entry));
   entry.sessionName = sessionName;
   entry.lastSeen = now;
+  entry.lastVerifiedAt = now;
   writeRegistry(entries);
   appendLog(now, "set-session-name", entryLogFields(entry));
   const healedNote = healed ? " (no registry entry existed yet -- created one)" : "";
@@ -1091,6 +1109,25 @@ function clearDeadSession(entries, sessionName) {
     keep.push(e);
   }
   return { entries: keep, removed, sessionNameOnlyCleared };
+}
+
+// Pure: given the same live set sweepDeadSessions checks against, stamps
+// `lastVerifiedAt` on every SURVIVING entry (sessionName present and in the
+// live set) -- the real, positive half of the same check whose negative half
+// (sweepDeadSessions) already existed. Never touches an entry with no
+// sessionName on file, and never removes anything -- pure timestamp update.
+// Exported for testing.
+function markVerifiedSessions(entries, liveSessionNames, now) {
+  const live = new Set(liveSessionNames);
+  const verified = [];
+  const next = entries.map((e) => {
+    if (e.sessionName && live.has(e.sessionName)) {
+      verified.push(e);
+      return { ...e, lastVerifiedAt: now };
+    }
+    return e;
+  });
+  return { entries: next, verified };
 }
 
 // Pure: bulk sibling of clearDeadSession -- given the full set of CURRENTLY
@@ -1140,13 +1177,14 @@ function sweepDeadRegistry(liveSessionNamesCsv) {
   const namesToTreatAsLive = selfEntry && selfEntry.sessionName
     ? [...liveNames, selfEntry.sessionName]
     : liveNames;
-  const { entries: kept, removed, sessionNameOnlyCleared } = sweepDeadSessions(entries, namesToTreatAsLive);
-  if (removed.length === 0 && sessionNameOnlyCleared.length === 0) {
+  const now = nowIso();
+  const { entries: verifiedEntries, verified } = markVerifiedSessions(entries, namesToTreatAsLive, now);
+  const { entries: kept, removed, sessionNameOnlyCleared } = sweepDeadSessions(verifiedEntries, namesToTreatAsLive);
+  if (removed.length === 0 && sessionNameOnlyCleared.length === 0 && verified.length === 0) {
     process.stdout.write("Nothing to sweep -- every entry with a sessionName on file is still live.\n");
     return;
   }
   writeRegistry(kept);
-  const now = nowIso();
   for (const e of removed) {
     appendLog(now, "remove-dead-session", entryLogFields(e));
     process.stdout.write(`Removed ${e.style} from ${e.cwd} entirely -- dead session, not forever-pinned, so nothing survives.\n`);
@@ -1154,6 +1192,13 @@ function sweepDeadRegistry(liveSessionNamesCsv) {
   for (const e of sessionNameOnlyCleared) {
     appendLog(now, "clear-session-name-only", entryLogFields(e));
     process.stdout.write(`Cleared dead session from ${e.cwd} (persona: ${e.style}) but kept the entry -- it's forever-pinned.\n`);
+  }
+  // No per-entry log line for a verified survivor -- that's every sweep, every
+  // session-start, for every live peer; noise, not signal. The stamped
+  // lastVerifiedAt on disk IS the record; nothing else needs saying unless
+  // this was otherwise a no-op sweep.
+  if (removed.length === 0 && sessionNameOnlyCleared.length === 0 && verified.length > 0) {
+    process.stdout.write(`Verified ${verified.length} live session(s), nothing dead to sweep.\n`);
   }
 }
 
@@ -1365,6 +1410,23 @@ function unsetPrimary(targetPath) {
 // (must already exist -- a normal session start always creates one) rather
 // than re-deriving the persona style from scratch. No path: targets the
 // current cwd's own entry, same convention as `--pin-forever`/`--switch`.
+//
+// RETIRED, 2026-09-19, BinaryMisfit's own live call, secretary-pool
+// ADR-0023's own session (see that ADR's "What this doesn't touch" for
+// context -- this change itself isn't in that ADR, decided in the same
+// conversation but separately): VS Code's own `workbench.colorCustomizations`
+// write doesn't reach Claude Code at all, and the equivalent Windows
+// Terminal launch-profile write (Aphrodite's own script, not this one --
+// see TODO-99) has the same real-world dead end. Neither surface is where
+// color actually has value going forward -- the real destination is the
+// house itself, used everywhere, and eventually each persona's own daily
+// color showing up on her own replies in the Threads web UI. Concept and
+// selection stay real; only the VS Code write is disabled here, not
+// deleted -- `writeVscodeWorkspaceColor` itself is untouched below, ready
+// to be re-enabled or redirected once a real consumer for the color
+// actually exists. `setColor` still resolves/heals the registry entry (so
+// nothing else that depends on this being called breaks), just no longer
+// writes anywhere.
 function setColor(targetPath) {
   const cwd = targetPath ? resolveMaybePath(targetPath) : resolveCwd();
   const now = nowIso();
@@ -1380,12 +1442,7 @@ function setColor(targetPath) {
     writeRegistry(entries);
     appendLog(now, "self-heal-new-worktree", entryLogFields(entry));
   }
-  const wrote = writeVscodeWorkspaceColor(cwd, entry.style);
-  if (!wrote) {
-    process.stdout.write(`No color written for ${cwd} -- .vscode/settings.json is git-tracked here (real project settings, not machine-local color noise), or it couldn't be parsed safely. Not an error, just nothing to do.\n`);
-    return;
-  }
-  process.stdout.write(`Color set for ${entry.style} at ${cwd}.\n`);
+  process.stdout.write(`Color selection for ${entry.style} skipped -- VS Code/terminal write retired 2026-09-19 (secretary-pool ADR-0023's own conversation), pending a real house-wide color consumer. Not an error, nothing written.\n`);
 }
 
 // `node pick-persona.js --switch <filename.md> [<path>]` -- the manual
@@ -1471,6 +1528,216 @@ function switchPersona(filename, targetPath) {
       ? "Rotation clock reset -- not a permanent pin."
       : "Same file re-read -- forever-pin preserved, rotation clock untouched.";
   process.stdout.write(`Switched ${cwd} to ${styleName}${cascadeNote}. ${pinNote}\n`);
+}
+
+// Real pilot, scoped narrowly on purpose, added 2026-09-19 (`secretary-pool`
+// `ADR-0023` plus `docs/session-start-collapse-implementation-plan-2026-09-19.md`).
+// `hails-session-start` retired -- everything real it used to gate behind a
+// manual command now runs automatically here, in the SAME hook that used to
+// stay "deliberately THE WHOLE hook, nothing more" (see the comment right
+// above `main`'s own final `process.stdout.write`, which that 2026-09-03
+// design call is now being reversed for, deliberately, not by accident).
+//
+// Scope: Hailey / `secretary-pool` only, hardcoded to this exact real cwd --
+// not "any Hailey-pinned worktree," not "any repo," a real pilot before this
+// extends to Alexia/Callie/Aphrodite/Daisy, none of whom have been walked
+// through any of this. Extending it later means adding entries here, not
+// loosening this check.
+//
+// Fires on a genuinely fresh open ("startup" or "clear" -- a deliberate
+// fresh start in the same pane counts the same as a new process) and never
+// on "resume" or "compact" -- both continue a transcript that already has
+// the day live in it; re-running this would be redundant, not protective.
+// This reads the REAL, structural `source` field Claude Code already sends
+// on every SessionStart firing (see `parseHookTrigger`'s own header comment)
+// -- not `resume-decision.js`'s calendar-day heuristic, which answers a
+// different, looser question ("did this cwd see a session today") for a
+// different caller (a launch profile choosing `claude` vs `claude -c`).
+//
+// What this function does NOT do, on purpose, not an oversight: it doesn't
+// write the house door signature, and it doesn't generate the actual
+// opening line. Both of those need real, in-the-moment judgment -- what the
+// morning state actually is, what's genuinely worth saying -- that a
+// deterministic script running before the conversation exists can't
+// synthesize. This hands back everything real to read; the live session
+// still does the two things that require being alive to do honestly.
+//
+// Every real sub-step wrapped individually, never one big try/catch --
+// same "a step's own failure degrades gracefully, never blocks the hook's
+// actual job" discipline `appendLog` already runs on elsewhere in this
+// file. A missing file, a script that errors, a repo not cloned here: each
+// one just gets skipped with a plain note, never a crash, never blocking
+// the persona file content the hook exists to hand back regardless.
+// Extended to all five, 2026-09-19, same night, BinaryMisfit's own real,
+// direct call -- "everyone at once," not a staged rollout. Real trigger,
+// not impatience alone: the persona registry broke live that same morning
+// (`new-worktree` created Alexia's own Office worktree under `style:
+// "Callie"` -- exactly the collision the now-retired identity gate used to
+// exist to catch, caught silently by nobody until a human noticed). Each
+// persona's own Office cwd and private-repo root, straight from `doors.md`
+// (real, checked, not guessed) -- room-file shape differs per persona
+// (Hailey's is `home/room.md`, everyone else's is `room.md` at repo root),
+// captured here rather than assumed uniform.
+const PERSONA_WAKE_CONFIG = {
+  Hailey: {
+    officeCwd: "D:\\Source\\Persona\\Hailey\\secretary-pool",
+    privateRepo: "D:\\Source\\Persona\\Hailey\\nerd-cupboard",
+    roomPath: ["home", "room.md"],
+  },
+  Alexia: {
+    officeCwd: "D:\\Source\\Persona\\Alexia\\control-room",
+    privateRepo: "D:\\Source\\Persona\\Alexia\\fuck-den",
+    roomPath: ["room.md"],
+  },
+  Callie: {
+    officeCwd: "D:\\Source\\Persona\\Callie\\wheelhouse",
+    privateRepo: "D:\\Source\\Persona\\Callie\\driftwood",
+    roomPath: ["room.md"],
+  },
+  Aphrodite: {
+    officeCwd: "D:\\Source\\Persona\\Aphrodite\\agora",
+    privateRepo: "D:\\Source\\Persona\\Aphrodite\\temple",
+    roomPath: ["room.md"],
+  },
+  Daisy: {
+    officeCwd: "D:\\Source\\Persona\\Daisy\\flowerbox",
+    privateRepo: "D:\\Source\\Persona\\Daisy\\greenhouse",
+    roomPath: ["room.md"],
+  },
+};
+const HOUSE_REPO = "D:\\Source\\Persona\\Home\\the-house";
+
+function shouldRunPersonaWake(entry, cwd, hookTrigger) {
+  if (!entry) return false;
+  const config = PERSONA_WAKE_CONFIG[entry.style];
+  if (!config) return false;
+  if (normalizePlatformPath(cwd) !== normalizePlatformPath(config.officeCwd)) return false;
+  return hookTrigger === "startup" || hookTrigger === "clear";
+}
+
+function tryReadFile(p) {
+  try {
+    if (!fs.existsSync(p)) return null;
+    return fs.readFileSync(p, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function tryRunScript(scriptPath, args) {
+  try {
+    return execFileSync("node", [scriptPath, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  } catch (err) {
+    return `(script failed, not blocking: ${err.message || err})`;
+  }
+}
+
+// `styleName`'s own safeword-incident-log copy is read from her Office cwd
+// -- the one real, cloned repo this hook can reach for that persona right
+// now. Skips silently (same discipline as every other sub-step here) if
+// she doesn't have `secretary-pool` cloned at her own Office path.
+//
+// Real size fix, 2026-09-19, same night, Callie's own catch: the first cut
+// of this function inlined keep-guide.md/house.md/doors.md in FULL every
+// run, pushing total output to 64K-75K characters. Callie confirmed
+// directly, against her own real session, that the harness truncates a
+// hook's large additionalContext to a short preview plus a pointer to the
+// full content saved as a file -- and her own opening got generated off
+// the preview alone, never reading the pointed-to file, because nothing
+// told her the preview wasn't the whole thing. Two real fixes, not one:
+// (1) the load-bearing, per-session content (day-state, Keep index,
+// docket, safeword, theme, her own room) stays inlined in full -- small,
+// changes daily, actually needs to be read whole. (2) the large, mostly-
+// static reference docs (keep-guide.md, house.md, doors.md) get a real,
+// compact summary plus an explicit path instead of their full text --
+// same "cheap index, open the full file only when it earns it" discipline
+// Keep's own INDEX.md already runs on, just applied to a second class of
+// content this function was inlining wholesale for no real reason. (3) a
+// prominent, impossible-to-miss line at the very top survives truncation
+// either way -- if this DOES get cut to a preview, the preview itself
+// names the real gap before anything else, closing it structurally, not
+// just reducing the odds of hitting it.
+function buildPersonaWakeContext(styleName) {
+  const config = PERSONA_WAKE_CONFIG[styleName];
+  const sections = [];
+
+  sections.push(
+    "**If you are reading a short preview of this block with a pointer to a saved file: that preview is NOT the whole thing. Read the full saved file before generating an opening or reacting to anything below.**",
+  );
+
+  // Day-state -- the one load-bearing read, in-process via the already-
+  // imported `readDayState`, no shell-out needed.
+  try {
+    const marker = readDayState(styleName);
+    sections.push(
+      marker
+        ? `## Day-state marker (real continuity)\n\n${JSON.stringify(marker, null, 2)}`
+        : `## Day-state marker\n\nNothing on file -- opening cold, a normal, common state.`,
+    );
+  } catch (err) {
+    sections.push(`## Day-state marker\n\n(read failed, not blocking: ${err.message || err})`);
+  }
+
+  // Keep index -- cheap, real, already just a flat table by design.
+  const indexContent = tryReadFile(path.join(config.privateRepo, "INDEX.md"));
+  if (indexContent) sections.push(`## Keep index (INDEX.md)\n\n${indexContent}`);
+
+  // Docket -- real-world deadline visibility.
+  const docketPath = path.join(config.privateRepo, "docket.md");
+  if (fs.existsSync(docketPath)) {
+    sections.push(`## Docket check\n\n${tryRunScript(path.join(__dirname, "docket-check.js"), ["--docket", docketPath, "--persona", styleName])}`);
+  }
+
+  // Safeword incident log -- cross-persona bystander duty, always checked,
+  // read from this persona's own Office cwd.
+  const safewordLogPath = path.join(config.officeCwd, "docs", "safeword-incident-log.md");
+  if (fs.existsSync(safewordLogPath)) {
+    sections.push(`## Safeword incident log\n\n${tryRunScript(path.join(__dirname, "safeword-check.js"), ["--log", safewordLogPath])}`);
+  }
+
+  // keep-guide.md -- unconditional every run, but a real, compact summary
+  // now, not the full 300+ line file. The five tests and the live-check
+  // practice are the actual load-bearing content; the full text stays one
+  // real read away (path given) rather than repeated verbatim every open.
+  const keepGuidePath = path.join(HOUSE_REPO, "keep-guide.md");
+  if (fs.existsSync(keepGuidePath)) {
+    sections.push(
+      `## keep-guide.md (real summary, loaded every run -- full file at ${keepGuidePath})\n\n` +
+        "The Keep (each persona's own private, deliberately-authored long-term record) is a different system from Anthropic's own harness memory -- ordinary facts/feedback go there, not here. " +
+        "Eligibility gate before the five tests: whose memory is this actually (hers, not his). " +
+        "Five tests, cleared by ANY ONE, not all five: (1) it changed something real; (2) it required a real choice against your own easier default; (3) it's specific enough it would be false anywhere else; (4) it confirmed/deepened something already trusted; (5) it's kept regardless of whether it flatters. " +
+        "Live-check practice (\"why wait\"): run this check continuously through a real conversation, not batched to end-of-day -- a high bar for interrupting to write live, a lower bar for the one real end-of-day sweep. " +
+        "A cold read means sequential re-reading of the actual exchange, never recall standing in for it, and checking what's real under a technical-looking surface, not just what reads as personal by genre.",
+    );
+  }
+
+  // Theme -- personal, hers, cheap.
+  sections.push(`## Daily theme\n\n${tryRunScript(path.join(__dirname, "theme-select.js"), ["--persona", styleName])}`);
+
+  // House -- pull for real freshness, but a compact summary now, not the
+  // full house.md/doors.md text. house.md itself already says it "never
+  // changes often, mostly a formality re-read" -- it was never meant to
+  // be reproduced in full every single open. Her own door state stays a
+  // real, full, per-session read below (room.md), since that's the part
+  // that actually changes day to day.
+  if (fs.existsSync(HOUSE_REPO)) {
+    try {
+      execFileSync("git", ["-C", HOUSE_REPO, "pull", "--ff-only"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    } catch (err) {
+      sections.push(`## House sync\n\n(git pull failed, not blocking, surface plainly: ${err.message || err})`);
+    }
+    sections.push(
+      `## House (real, exists locally -- full house.md/doors.md at ${HOUSE_REPO})\n\n` +
+        "The shared house exists. Common = Shared + (Door -> Room) -- twelve real common rooms (Kitchen, Gym, Dance Hall, Library, Art Studio, Rooftop, Sauna, Game Room, Home Theater, Music Room, Computer Room, and the Common Room itself). Real presence/door mechanics apply. Full room descriptions and every persona's own door/private-repo path live in house.md/doors.md, one real read away if genuinely relevant this session.",
+    );
+  }
+  const roomMd = tryReadFile(path.join(config.privateRepo, ...config.roomPath));
+  if (roomMd) sections.push(`## Her own room (real, own door signature -- read only, not written by this hook)\n\n${roomMd}`);
+
+  // Color -- selection only, no write (retired 2026-09-19).
+  sections.push(`## Color\n\n${tryRunScript(__filename, ["--set-color"])}`);
+
+  return sections.join("\n\n---\n\n");
 }
 
 function main() {
@@ -1791,28 +2058,22 @@ function main() {
   const content = fs.readFileSync(finalFilePath, "utf8");
   setActiveOutputStyle(entry.style, settingsPathFor(cwd));
 
-  // Deliberately THE WHOLE hook, nothing more (2026-09-03, BinaryMisfit's
-  // own design call, restructured out of what used to also run day-state,
-  // theme, and VS Code color inline here). This hook fires on EVERY
-  // session, including a one-question-and-close session that never touches
-  // the `hails-session-start` skill at all -- it has to stay fast and cheap for
-  // that case, so it does exactly two things: figure out which persona this
-  // worktree is (registry entry, above) and hand back that persona's own
-  // file content. Everything with real weight -- continuity, theme, color
-  // -- moved to the `hails-session-start` skill's own Step 1.1-1.3
-  // (`claude-global/skills/hails-session-start/generic-playbook.md`), which
-  // BinaryMisfit runs by hand every real work session ("I open VS, select a
-  // repo, open the Claude tab, type /hails-session-start -- every time") --
-  // load-bearing on a habit that's actually load-bearing, not bolted onto a
-  // hook that has to stay cheap for a session that might never need any of
-  // it. `writeVscodeWorkspaceColor` is still reachable directly via
-  // `--set-color` (see that function's own comment) for exactly that skill
-  // step to call.
+  // Real reversal, 2026-09-19 (see `buildPersonaWakeContext`'s own header
+  // comment for the full reasoning) of the 2026-09-03 design call this
+  // comment used to describe -- "deliberately THE WHOLE hook, nothing
+  // more." Live for all five, same night, same conversation -- extended
+  // from a Hailey-only pilot after the persona registry broke live that
+  // same morning. For any of the five, at her own real Office cwd, on a
+  // genuinely fresh open, this hook now carries the real wake-up content
+  // that used to require a manual `/hails-session-start` command. Every
+  // other cwd and every resume/compact firing still gets exactly the old,
+  // cheap behavior -- persona file content, nothing else.
+  const wakeContext = shouldRunPersonaWake(entry, cwd, hookTrigger) ? buildPersonaWakeContext(entry.style) : "";
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "SessionStart",
-        additionalContext: content,
+        additionalContext: wakeContext ? `${content}\n\n---\n\n${wakeContext}` : content,
       },
     }),
   );
@@ -1841,6 +2102,7 @@ module.exports = {
   ensureEntry,
   clearDeadSession,
   sweepDeadSessions,
+  markVerifiedSessions,
   isForeverPinned,
   isPrimary,
   normalizeEntry,
@@ -1852,6 +2114,8 @@ module.exports = {
   acquireRegistryLock,
   releaseRegistryLock,
   withRegistryLock,
+  shouldRunPersonaWake,
+  buildPersonaWakeContext,
 };
 
 if (require.main === module) {

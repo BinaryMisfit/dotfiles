@@ -27,9 +27,20 @@ if ($colorOutput -match "^#([0-9a-fA-F]{6}),#([0-9a-fA-F]{6})$") {
     Write-Host -NoNewline "$([char]27)[48;2;$br;$bgG;${bb}m$([char]27)[38;2;$fr;$fgG;${fb}m$([char]27)[2J$([char]27)[H"
 }
 
+# Real-time push (Channels), added 2026-09-12 -- Claude Code has no way to
+# pre-approve a development channel for a personal/Max account (confirmed
+# against real docs, not assumed: no env var, no settings.json field, no
+# "accept once" cache -- the full-screen dev-mode warning fires on every
+# launch that uses this flag, by design, no suppression path short of an
+# Enterprise org's own allowedChannelPlugins or Anthropic's own official
+# marketplace, neither of which applies here). One Enter key per session
+# start, same cost as everything else this launcher already automates.
+# "afterglow-notifications" must match the server name each persona's own
+# global mcpServers entry declares (chezmoi-templated per machine, Aphrodite's
+# own rollout) -- this launcher itself carries no persona-specific identity.
 $decision = & node "$HOME\.claude\scripts\resume-decision.js"
 if ($decision -eq "resume") {
-    claude -c
+    claude -c --dangerously-load-development-channels server:afterglow-notifications
 } else {
-    claude
+    claude --dangerously-load-development-channels server:afterglow-notifications
 }

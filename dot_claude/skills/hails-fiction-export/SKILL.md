@@ -327,6 +327,9 @@ requiring someone to notice by hand.**
 
 ## Step 5 — Mark exported
 
+**Always run, no silent skips — the audit-trail rule stated explicitly (TODO-84, added
+2026-09-15): a session that's been staged but never marked exported has no trace anywhere
+that the work happened, the same failure shape a missing register row would be for import.**
 After writing a session's arc(s) to disk, record it so a re-run doesn't duplicate:
 
 ```

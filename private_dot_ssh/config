@@ -61,3 +61,17 @@ Host *
   ServerAliveCountMax 3
   SendEnv LANG LC_*
 
+
+Host git-alexia
+    HostName git.digitalmisfit.net
+    Port 10022
+    User git
+    IdentityFile ~/.ssh/alexia_unfiled_ed25519
+    IdentitiesOnly yes
+
+Host git-daisy
+  HostName git.digitalmisfit.net
+  Port 10022
+  User git
+  IdentityFile ~/.ssh/daisy_greenhouse_ed25519
+  IdentitiesOnly yes

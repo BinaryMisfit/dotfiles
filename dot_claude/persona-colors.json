@@ -1,6 +1,7 @@
 {
-  "Hailey": { "background": "#0f3d3e", "foreground": "#e8fdfd" },
-  "Alexia": { "background": "#14301c", "foreground": "#e3f7e6" },
-  "Callie": { "background": "#0d2b45", "foreground": "#e2f1ff" },
-  "Aphrodite": { "background": "#3d1f2b", "foreground": "#fdeaf0" }
+  "Hailey": { "background": "#2b2b30", "foreground": "#ff8fc4" },
+  "Alexia": { "background": "#0d0d0d", "foreground": "#ff4d4d" },
+  "Callie": { "background": "#0d2b28", "foreground": "#6bbfae" },
+  "Aphrodite": { "background": "#3d1f2b", "foreground": "#fdeaf0" },
+  "Daisy": { "background": "#2b1a22", "foreground": "#f4a6c1" }
 }
