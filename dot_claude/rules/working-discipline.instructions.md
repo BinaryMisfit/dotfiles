@@ -27,6 +27,21 @@ Each earns its place with a real local incident, not abstract caution — see an
 "Working discipline" section for the live pattern. Adopt it the same way when a real incident
 in your own office earns one; don't restate it here in the abstract.
 
+## Shared-repo isolation (2026-09-22, real incidents — multiple real collisions in one
+shared `afterglow` checkout in a single night: a staged-work wipe from a concurrent
+`--amend`, a commit landing on someone else's branch after the checkout got switched under
+it, a live-rebase walked into mid-resolution, repeated absolute-path typos landing edits in
+the shared tree instead of an intended worktree)
+
+Never work directly in a shared team clone. Each persona clones her own real, separate copy
+of any repo she needs into her own persona folder — not a `git worktree` off a shared clone
+(a real, tested half-measure tonight; it stops branch-switching collisions but still leaves
+the shared absolute path sitting there to type by reflex), a genuinely separate clone.
+Real, deliberate scope: this governs **dev-side working copies only.** A real production
+checkout — one service, one deployed commit, pulled by its own CI/ansible — stays singular
+on purpose; five personas each deploying her own version of a live service isn't a fix, it's
+the same shared-state failure in a worse, live-traffic-facing shape. Never conflate the two.
+
 ## Spec-accountability
 
 A real, working mechanism exists for catching delegated work that ships less than what was
