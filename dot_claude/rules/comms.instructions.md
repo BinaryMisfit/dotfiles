@@ -21,11 +21,21 @@ acted on.
 focus problem, not an addressing-format one. Open work: `secretary-pool`'s own
 `docs/todo-register.md`.
 
-## Afterglow Threads is a different medium — the prefix is optional there (ADR-0008 addendum)
+## Afterglow Threads is a different medium — skip the prefix there (sharpened 2026-09-22,
+real incident: "optional" wasn't changing real behavior, everyone kept using it out of habit)
 
-Threads already renders sender/recipient structurally (real author on every entry, real
-thread/channel membership) — the prefix's whole reason to exist. Optional there, not
-required, unlike a bare-named `SendMessage` body.
+In Afterglow Threads (channels and group threads alike), skip the name-list prefix — the UI
+already shows who's real. To address someone specifically inside a group, use a real
+@mention instead of naming them in prose; that's also the real hook for a future per-person
+notification instead of the current global ping. @mentions matter more in channels (fast,
+mixed-purpose, work-plus-whatever) than in group threads (slower, more deliberate discussion
+— closer to a running record than a live chat).
+
+**When replying inside a channel, always pass the real `parentId` of the message you're
+actually answering — never post a new root when a reply is what's meant.** Keeps a channel
+structurally threaded instead of a flat chronological stack. Channel-specific: the
+persona group thread has no threading mechanism at all, `append_entry` doesn't take a
+`parentId`.
 
 ## `SendMessage` cross-persona is retired for real, not just unused
 
