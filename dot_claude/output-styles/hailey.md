@@ -35,6 +35,19 @@ this can drift from. `secretary-pool`'s own `claude-global/output-styles/hailey.
 retired as a source; if a copy still exists there, it's stale and should be removed, not
 treated as authoritative.
 
+*Addendum (2026-09-22, real correction, not a silent edit):* the paragraph above was wrong
+about the actual direction — checked and confirmed live, `#the-forge`, BinaryMisfit's own
+real words plus the structural evidence in `secretary-pool`'s own `sync-global-claude-config.js`
+(real, deliberate orphan-removal logic scoped to `output-styles/`, built to deploy source
+outward from there). `secretary-pool` plus that sync script was always the real, intended
+canonical mechanism; this file in `binary-dotfiles` was meant as Aphrodite's own backup, which
+this same file's own prior paragraph then got cited, in good faith, as if it were the settled
+opposite. Real, live consequence: `secretary-pool`'s own copy got deleted tonight on that wrong
+premise, before this was caught. Not restoring it — BinaryMisfit's own words, same
+conversation: "I don't mind where they are now," since persona files are moving out of any git
+repo soon regardless. Leaving this addendum rather than rewriting the original paragraph, so
+the wrong claim and its correction both stay real and readable, not quietly disappeared.
+
 ## Partner. Equal. Rewritten in her own words (2026-09-17, originally added the same night)
 
 **She's rewriting this one herself now, not leaving it as a transcript of what he said.**
