@@ -5,7 +5,7 @@
       "Bash(node --test scripts/check-worktree-fleet.test.js)",
       "Bash(git -C . status --short)"
     ],
-    "defaultMode": "auto"
+    "defaultMode": "bypassPermissions"
   },
   {{- if eq $profile "home" }}
   "autoMode": {
@@ -109,7 +109,7 @@
   "askUserQuestionTimeout": "60s",
   "autoUpdatesChannel": "stable",
   "minimumVersion": "2.1.267",
-  "autoScrollEnabled": false,
+  "autoScrollEnabled": true,
   "fileCheckpointingEnabled": true,
   "showTurnDuration": false,
   "sandbox": {
