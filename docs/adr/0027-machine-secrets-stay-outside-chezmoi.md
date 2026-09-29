@@ -38,6 +38,20 @@ the next full reboot (a real process restart sidesteps VS Code's stale-revival p
 entirely, same reason a reboot fixes case one's failure mode too, just applied instead of
 worked around).
 
+**Why, case three — `bw login --apikey`'s interactive prompt (2026-09-29, Alexia, real
+Bitwarden CLI round-trip against our self-hosted Vaultwarden):** different failure shape
+again, same standing rule. `bw login --apikey`'s own interactive prompt does not survive a
+non-TTY environment — piping input via `/dev/null` or `printf | bw login --apikey` both
+throw a real `ERR_USE_AFTER_CLOSE` readline crash, not a graceful failure, and `bw status`
+confirms the login genuinely never completed either way. Real, proven fix: skip the
+interactive prompt entirely, pass command-scoped env vars instead —
+`BW_CLIENTID=... BW_CLIENTSECRET=... bw login --apikey` — never exported, never persisted
+beyond that one command, same shell-command-scoped pattern case one already uses for
+`bws`. Any setup script or doc this repo ships alongside the CLI pin
+(`run_onchange_install-tools.sh.tmpl`/`.ps1.tmpl`) must point at this env-var invocation as
+the real, working path — the interactive prompt only works in a genuine TTY a persona is
+actually sitting at, not most automated/session contexts.
+
 **How to apply:** Never propose templating a real secret value into a `.tmpl` file in this
 repo, `chezmoi add --encrypt` included, unless a future decision explicitly reverses this
 one. When a new machine or a new service needs a credential: set it directly there
