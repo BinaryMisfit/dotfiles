@@ -150,6 +150,14 @@ fi
 
 npm install -g @anthropic-ai/claude-code vscode-langservers-extracted yaml-language-server
 
+# Real, non-obvious pin: @bitwarden/cli@latest (2026.9.0) runs a "key id
+# backfill" login migration that calls a server endpoint our self-hosted
+# Vaultwarden (API-compatible with 2026.6.0) doesn't have -- hard 404, not
+# a fluke. Pinned to the version that matches our server's real reported
+# API version. Confirmed end-to-end (Alexia, 2026-09-29): real item
+# created, read back, byte-identical.
+npm install -g @bitwarden/cli@2026.6.0
+
 {{ if eq (get . "profile" | default "home") "work" -}}
 npm install -g @github/copilot
 {{ end -}}
