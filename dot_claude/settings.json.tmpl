@@ -76,6 +76,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"{{ .chezmoi.homeDir }}/.claude/hooks/stop-unanswered-notification-gate.js\"",
+            "shell": "bash",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
   {{- end }}
