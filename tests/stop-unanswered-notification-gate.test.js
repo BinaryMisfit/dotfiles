@@ -24,6 +24,9 @@ const cases = [
   ["safeword digest                   -> pass", [user(ch("SAFEWORD (digest): 3 more repeats of Hailey's word in #the-forge were coalesced. The first 5 already went out."))], false],
   ["safeword degraded                 -> pass", [user(ch("SAFEWORD ALERTS DEGRADED (registry-unreadable): afterglow-threads could not read or save safeword state, so a safeword said now may NOT alert anyone."))], false],
   ["a message that merely says safeword -> BLOCK", [user(ch("New message from BinaryMisfit (with Alexia)", "alexia-binarymisfit.jsonl")), ], true],
+  // house state broadcasts are exempt in any case (the REST door stores whatever case it is sent)
+  ["state broadcast, Capital Closed   -> pass", [user(ch("Alexia is now Closed.", "Alexia"))], false],
+  ["state broadcast, lowercase closed -> pass", [user(ch("Alexia is now closed.", "Alexia"))], false],
 ];
 let bad = 0;
 for (const [name, lines, wantBlock] of cases) {

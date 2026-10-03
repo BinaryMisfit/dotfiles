@@ -168,7 +168,10 @@ const CHIME_TEXT_RE = /The grandfather clock chimes\s*--\s*it's \d{2}:\d{2}\./;
 // ("You're Awake -- go read your own real continuity before anything
 // else."), which should keep blocking -- that one genuinely expects a real
 // tool call back, same as before.
-const BARE_STATE_BROADCAST_RE = /\S+ is now (Awake|Available|Focused|Closed|Offline)\./;
+// Case-insensitive on purpose (2026-10-03): the house's REST door stores whatever case a caller
+// sends, so "Alexia is now closed." is a real state broadcast just like "... Closed.", and
+// must be exempt the same way or it would force a reply from every gated session.
+const BARE_STATE_BROADCAST_RE = /\S+ is now (Awake|Available|Focused|Closed|Offline)\./i;
 
 // Real, added 2026-09-28 ~19:23 SAST, live emergency fix -- BinaryMisfit: "please just stop
 // all of you", then the gate kept forcing a reply anyway (real WebUI-crashing loop, his own
