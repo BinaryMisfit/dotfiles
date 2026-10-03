@@ -251,13 +251,37 @@ function isAmbientNotification(content) {
 // block inside a user-role message's own text content -- the exact shape
 // confirmed live this morning (afterglow-notifications, raw MCP protocol
 // push, not a hook). Checks for that literal tag, not a looser guess.
-function turnOpenedWithChannelNotification(turnEvents) {
+function turnOpenedWithChannelNotification(turnEvents, ownName) {
   const first = turnEvents[0];
   if (!first || first.type !== "user") return false;
   const content = extractTextContent(first);
   if (!/<channel\s+source=/.test(content)) return false;
+  if (isSafewordNotice(content)) return isOwnLeadSafewordNotice(content, ownName);
   if (isAmbientNotification(content)) return false;
   return true;
+}
+
+// Real, added 2026-10-03 (afterglow ADR-0017, Aphrodite's Technical Review, blocker 1): the safeword
+// alert reaches every bridge as a custom "SAFEWORD ..." narration, which no pattern above matched,
+// so the first real alert would have forced all five gated sessions to post a reply (or write
+// NO-REPLY) at once -- the exact 2026-09-30 failure the alert exists to close. Rule, set by the
+// hooks owner: a SAFEWORD notice forces nothing -- a sister's word is "the house holds" and
+// stopping IS the response, and a digest or a degraded notice has no one to answer -- EXCEPT a
+// notice naming THIS persona as the lead ("Lead: <me>" / "New lead: <me>"), which still has to be
+// answered with a real send, because the lead's acknowledgement is the whole point. The service's
+// own 2-minute timer enforces the lead's acknowledgement; this only keeps the other four quiet.
+// Own name unknown (cwd did not resolve) fails toward gating, the pre-existing behaviour.
+const SAFEWORD_NOTICE_RE = /\bSAFEWORD(?:\s+ALERTS DEGRADED|\s+\(digest\)|,|:)/;
+const SAFEWORD_LEAD_RE = /\b(?:New lead|Lead):\s*([A-Za-z]+)/;
+
+function isSafewordNotice(content) {
+  return SAFEWORD_NOTICE_RE.test(content);
+}
+
+function isOwnLeadSafewordNotice(content, ownName) {
+  if (!ownName) return true;
+  const m = SAFEWORD_LEAD_RE.exec(content);
+  return !!m && m[1].toLowerCase() === String(ownName).toLowerCase();
 }
 
 // Real fix, found 2026-09-30 while building the broadcast-mention check:
@@ -408,7 +432,7 @@ function main() {
     process.exit(0);
   }
 
-let openedWithNotification = turnOpenedWithChannelNotification(turnEvents);
+let openedWithNotification = turnOpenedWithChannelNotification(turnEvents, resolveOwnPersonaName(input && input.cwd));
   const hasSendCall = turnHasRealSendCall(turnEvents) || turnAnsweredWakeNudge(turnEvents);
   let unaddressedBroadcast = false;
   if (openedWithNotification && isUnaddressedChannelBroadcast(turnEvents, input && input.cwd)) {
