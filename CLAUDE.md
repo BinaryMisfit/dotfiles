@@ -9,7 +9,7 @@ These override any global Claude Code or git configuration:
 - **Branching:** all changes committed directly to `main` — no feature branches, no PRs
 - **Push:** push directly to `main`
 - **Commit identity:** every commit uses Aphrodite's own real, verified identity
-  (`Aphrodite <aphrodite@digitalmisfit.net>`, local git config set) — never
+  (`Aphrodite <aphrodite@theafterglow.me>`, local git config set) — never
   `BinaryMisfit`/`diagoza@me.com`. Global, not scoped to this repo — see
   [ADR 0030](docs/adr/0030-commits-use-real-persona-identity-not-shared-defaults.md).
 - **Removal policy:** any change that removes a tool, config file, target path, or setting
