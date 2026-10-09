@@ -460,7 +460,7 @@ let openedWithNotification = turnOpenedWithChannelNotification(turnEvents, resol
       JSON.stringify({
         decision: "block",
         reason:
-          "A real message came in this turn (a <channel source=...> notification) and no matching send (append_entry/post_channel_message/send_message) went out before this turn tried to close. Reply for real before ending the turn.",
+          "A real message came in this turn (a <channel source=...> notification) and no matching send (append_entry/post_channel_message/send_message) went out before this turn tried to close. Reply for real before ending the turn. If nothing needs sending, end this turn with a message that starts \"NO-REPLY: <why>\" (it is logged).",
       }),
     );
     process.exit(0);
