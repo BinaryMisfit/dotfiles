@@ -80,7 +80,7 @@ this session directly, not parallelized.
 
 ### Credential/token autonomy — the pattern, stated as a rule, not left implicit
 
-This repo touches real secrets machinery (Bitwarden Secrets Manager tokens, age-encrypted
+This repo touches real secrets machinery (age-encrypted
 files, per-persona Afterglow tokens) without holding any actual secret value itself.
 **Fetch fresh per use, never cache, never let a real value land in a command history,
 process list, or session transcript** — the BOM-leak incident behind
